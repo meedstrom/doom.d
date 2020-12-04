@@ -1,0 +1,611 @@
+;;-*-coding: utf-8;-*-
+(define-abbrev-table 'Buffer-menu-mode-abbrev-table '())
+
+(define-abbrev-table 'Custom-mode-abbrev-table '())
+
+(define-abbrev-table 'Info-edit-mode-abbrev-table '())
+
+(define-abbrev-table 'Man-mode-abbrev-table '())
+
+(define-abbrev-table 'Rd-mode-abbrev-table '())
+
+(define-abbrev-table 'Rd-mode-skeleton-abbrev-table
+  '(
+   ))
+
+(define-abbrev-table 'apropos-mode-abbrev-table '())
+
+(define-abbrev-table 'array-mode-abbrev-table '())
+
+(define-abbrev-table 'awk-mode-abbrev-table '())
+
+(define-abbrev-table 'beancount-mode-abbrev-table '())
+
+(define-abbrev-table 'biblio-selection-mode-abbrev-table '())
+
+(define-abbrev-table 'bibtex-mode-abbrev-table '())
+
+(define-abbrev-table 'bookmark-bmenu-mode-abbrev-table '())
+
+(define-abbrev-table 'bookmark-edit-annotation-mode-abbrev-table '())
+
+(define-abbrev-table 'c++-mode-abbrev-table '())
+
+(define-abbrev-table 'c-mode-abbrev-table '())
+
+(define-abbrev-table 'calc-trail-mode-abbrev-table '())
+
+(define-abbrev-table 'calendar-mode-abbrev-table '())
+
+(define-abbrev-table 'change-log-mode-abbrev-table '())
+
+(define-abbrev-table 'comint-mode-abbrev-table '())
+
+(define-abbrev-table 'completion-list-mode-abbrev-table '())
+
+(define-abbrev-table 'conf-colon-mode-abbrev-table '())
+
+(define-abbrev-table 'conf-desktop-mode-abbrev-table '())
+
+(define-abbrev-table 'conf-javaprop-mode-abbrev-table '())
+
+(define-abbrev-table 'conf-ppd-mode-abbrev-table '())
+
+(define-abbrev-table 'conf-space-mode-abbrev-table '())
+
+(define-abbrev-table 'conf-toml-mode-abbrev-table '())
+
+(define-abbrev-table 'conf-unix-mode-abbrev-table '())
+
+(define-abbrev-table 'conf-windows-mode-abbrev-table '())
+
+(define-abbrev-table 'conf-xdefaults-mode-abbrev-table '())
+
+(define-abbrev-table 'css-mode-abbrev-table '())
+
+(define-abbrev-table 'csv-mode-abbrev-table '())
+
+(define-abbrev-table 'debugger-mode-abbrev-table '())
+
+(define-abbrev-table 'diff-mode-abbrev-table '())
+
+(define-abbrev-table 'dockerfile-mode-abbrev-table '())
+
+(define-abbrev-table 'doctex-mode-abbrev-table '())
+
+(define-abbrev-table 'doctor-mode-abbrev-table '())
+
+(define-abbrev-table 'doom-sandbox-emacs-lisp-mode-abbrev-table '())
+
+(define-abbrev-table 'edebug-eval-mode-abbrev-table '())
+
+(define-abbrev-table 'edit-abbrevs-mode-abbrev-table '())
+
+(define-abbrev-table 'eieio-custom-mode-abbrev-table '())
+
+(define-abbrev-table 'elisp-byte-code-mode-abbrev-table '())
+
+(define-abbrev-table 'elisp-refs-mode-abbrev-table '())
+
+(define-abbrev-table 'emacs-lisp-mode-abbrev-table '())
+
+(define-abbrev-table 'epa-info-mode-abbrev-table '())
+
+(define-abbrev-table 'epa-key-list-mode-abbrev-table '())
+
+(define-abbrev-table 'epa-key-mode-abbrev-table '())
+
+(define-abbrev-table 'eshell-mode-abbrev-table '())
+
+(define-abbrev-table 'ess-help-mode-abbrev-table '())
+
+(define-abbrev-table 'ess-mode-abbrev-table '())
+
+(define-abbrev-table 'ess-r-help-mode-abbrev-table '())
+
+(define-abbrev-table 'ess-r-mode-abbrev-table '())
+
+(define-abbrev-table 'ess-r-package-menu-mode-abbrev-table '())
+
+(define-abbrev-table 'ess-r-transcript-mode-abbrev-table '())
+
+(define-abbrev-table 'ess-transcript-mode-abbrev-table '())
+
+(define-abbrev-table 'ess-watch-mode-abbrev-table '())
+
+(define-abbrev-table 'eww-bookmark-mode-abbrev-table '())
+
+(define-abbrev-table 'eww-buffers-mode-abbrev-table '())
+
+(define-abbrev-table 'eww-history-mode-abbrev-table '())
+
+(define-abbrev-table 'eww-mode-abbrev-table '())
+
+(define-abbrev-table 'flymake-diagnostics-buffer-mode-abbrev-table '())
+
+(define-abbrev-table 'fundamental-mode-abbrev-table '())
+
+(define-abbrev-table 'gfm-mode-abbrev-table '())
+
+(define-abbrev-table 'gfm-view-mode-abbrev-table '())
+
+(define-abbrev-table 'git-commit-elisp-text-mode-abbrev-table '())
+
+(define-abbrev-table 'github-review-mode-abbrev-table '())
+
+(define-abbrev-table 'global-abbrev-table '())
+
+(define-abbrev-table 'grep-mode-abbrev-table '())
+
+(define-abbrev-table 'helm-grep-mode-abbrev-table '())
+
+(define-abbrev-table 'helm-major-mode-abbrev-table '())
+
+(define-abbrev-table 'helm-occur-mode-abbrev-table '())
+
+(define-abbrev-table 'help-mode-abbrev-table '())
+
+(define-abbrev-table 'helpful-mode-abbrev-table '())
+
+(define-abbrev-table 'html-mode-abbrev-table '())
+
+(define-abbrev-table 'ibuffer-mode-abbrev-table '())
+
+(define-abbrev-table 'idl-mode-abbrev-table '())
+
+(define-abbrev-table 'image-dired-display-image-mode-abbrev-table '())
+
+(define-abbrev-table 'image-dired-thumbnail-mode-abbrev-table '())
+
+(define-abbrev-table 'inferior-ess-mode-abbrev-table '())
+
+(define-abbrev-table 'inferior-ess-r-mode-abbrev-table '())
+
+(define-abbrev-table 'ivy-occur-grep-mode-abbrev-table '())
+
+(define-abbrev-table 'ivy-occur-mode-abbrev-table '())
+
+(define-abbrev-table 'java-mode-abbrev-table '())
+
+(define-abbrev-table 'js-jsx-mode-abbrev-table '())
+
+(define-abbrev-table 'js-mode-abbrev-table '())
+
+(define-abbrev-table 'js2-jsx-mode-abbrev-table '())
+
+(define-abbrev-table 'js2-mode-abbrev-table '())
+
+(define-abbrev-table 'json-mode-abbrev-table '())
+
+(define-abbrev-table 'latex-mode-abbrev-table '())
+
+(define-abbrev-table 'ledger-check-mode-abbrev-table '())
+
+(define-abbrev-table 'ledger-mode-abbrev-table '())
+
+(define-abbrev-table 'ledger-reconcile-mode-abbrev-table '())
+
+(define-abbrev-table 'ledger-report-mode-abbrev-table '())
+
+(define-abbrev-table 'lisp-mode-abbrev-table '())
+
+(define-abbrev-table 'log-edit-mode-abbrev-table '())
+
+(define-abbrev-table 'magit-cherry-mode-abbrev-table '())
+
+(define-abbrev-table 'magit-diff-mode-abbrev-table '())
+
+(define-abbrev-table 'magit-log-mode-abbrev-table '())
+
+(define-abbrev-table 'magit-log-select-mode-abbrev-table '())
+
+(define-abbrev-table 'magit-merge-preview-mode-abbrev-table '())
+
+(define-abbrev-table 'magit-mode-abbrev-table '())
+
+(define-abbrev-table 'magit-popup-mode-abbrev-table '())
+
+(define-abbrev-table 'magit-process-mode-abbrev-table '())
+
+(define-abbrev-table 'magit-reflog-mode-abbrev-table '())
+
+(define-abbrev-table 'magit-refs-mode-abbrev-table '())
+
+(define-abbrev-table 'magit-repolist-mode-abbrev-table '())
+
+(define-abbrev-table 'magit-revision-mode-abbrev-table '())
+
+(define-abbrev-table 'magit-section-mode-abbrev-table '())
+
+(define-abbrev-table 'magit-stash-mode-abbrev-table '())
+
+(define-abbrev-table 'magit-stashes-mode-abbrev-table '())
+
+(define-abbrev-table 'magit-status-mode-abbrev-table '())
+
+(define-abbrev-table 'magit-submodule-list-mode-abbrev-table '())
+
+(define-abbrev-table 'magit-todos-list-mode-abbrev-table '())
+
+(define-abbrev-table 'markdown-mode-abbrev-table '())
+
+(define-abbrev-table 'markdown-view-mode-abbrev-table '())
+
+(define-abbrev-table 'message-mode-abbrev-table '())
+
+(define-abbrev-table 'messages-buffer-mode-abbrev-table '())
+
+(define-abbrev-table 'objc-mode-abbrev-table '())
+
+(define-abbrev-table 'occur-edit-mode-abbrev-table '())
+
+(define-abbrev-table 'occur-mode-abbrev-table '())
+
+(define-abbrev-table 'org-export-stack-mode-abbrev-table '())
+
+(define-abbrev-table 'org-mode-abbrev-table
+  '(
+    ("123n" "1, 2, 3, ..., n" nil 0)
+    ("123nm" "1 \\cdot 2 \\cdot 3 \\cdot ... \\cdot n" nil 0)
+    ("123np" "1 + 2 + 3 + ... + n" nil 0)
+    ("123npm" "1 \\pm 2 \\pm 3 \\pm ... \\pm n" nil 0)
+    ("1s" "one-sided" nil 0)
+    ("2s" "two-sided" nil 0)
+    ("Phi0" "\\Phi_0" nil 0)
+    ("Phi1" "\\Phi_1" nil 13)
+    ("Phi2" "\\Phi_2" nil 4)
+    ("Phi3" "\\Phi_3" nil 2)
+    ("Phi4" "\\Phi_4" nil 0)
+    ("Phi5" "\\Phi_5" nil 0)
+    ("Phi6" "\\Phi_6" nil 0)
+    ("Phi7" "\\Phi_7" nil 0)
+    ("Phi8" "\\Phi_8" nil 0)
+    ("Phi9" "\\Phi_9" nil 0)
+    ("acor" "autocorrelation" nil 4)
+    ("acov" "autocovariance" nil 2)
+    ("adj" "adjusted" nil 2)
+    ("adjc" "adjacent" nil 1)
+    ("aixi" "a_i X_i" nil 3)
+    ("algo" "algorithm" nil 1)
+    ("alp" "\\alpha" nil 0)
+    ("alpha" "\\alpha" nil 2)
+    ("als" "analysis" nil 0)
+    ("alys" "analysis" nil 4)
+    ("alz" "analyze" nil 1)
+    ("app" "approach" nil 2)
+    ("appx" "approximate" nil 0)
+    ("ass" "assume" nil 1)
+    ("assn" "assumption" nil 4)
+    ("avg" "transform" nil 0)
+    ("bc" "because" nil 0)
+    ("beta" "\\beta" nil 31)
+    ("betw" "between" nil 1)
+    ("bjxj" "b_j X_j" nil 1)
+    ("bn" "Bayesian" nil 2)
+    ("brow" "Brownian" nil 3)
+    ("btw" "by the way" nil 0)
+    ("bxcx" "Box-Cox" nil 1)
+    ("bxj" "Box-Jenkins" nil 1)
+    ("cand" "candidate" nil 1)
+    ("ccor" "cross-correlation" nil 1)
+    ("ccov" "cross-covariance" nil 1)
+    ("cf" "counterfactual" nil 0)
+    ("chi" "\\chi" nil 1)
+    ("chisq" "χ^2" nil 1)
+    ("cnt" "count" nil 1)
+    ("coef" "coefficient" nil 2)
+    ("coefs" "coefficients" nil 0)
+    ("com" "common" nil 0)
+    ("comb" "combination" nil 1)
+    ("compl" "complement" nil 0)
+    ("concl" "conclusion" nil 0)
+    ("cons" "consistent" nil 3)
+    ("const" "constant" nil 2)
+    ("cont" "continuous" nil 0)
+    ("contrib" "contribution" nil 0)
+    ("cor" "correlation" nil 10)
+    ("cord" "correlated" nil 0)
+    ("cov" "covariance" nil 18)
+    ("covt" "covariate" nil 0)
+    ("coz" "cause" nil 0)
+    ("ctg" "category" nil 0)
+    ("cum" "cumulative" nil 0)
+    ("def" "define" nil 0)
+    ("defd" "defined" nil 0)
+    ("defn" "definition" nil 0)
+    ("delt" "\\delta" nil 1)
+    ("delta" "\\delta" nil 4)
+    ("dens" "density" nil 0)
+    ("dep" "dependent" nil 2)
+    ("dev" "deviation" nil 0)
+    ("df" "degrees of freedom" nil 2)
+    ("dim" "dimension" nil 3)
+    ("dist" "distribution" nil 7)
+    ("distd" "distributed" nil 1)
+    ("ef" "effect" nil 0)
+    ("eff" "efficient" nil 0)
+    ("emp" "empirical" nil 0)
+    ("eps" "\\epsilon" nil 9)
+    ("epsilon" "\\epsilon" nil 5)
+    ("eq" "equal" nil 1)
+    ("eqn" "equation" nil 8)
+    ("eqv" "equivalent" nil 0)
+    ("err" "error" nil 3)
+    ("est" "estimate" nil 11)
+    ("estn" "estimation" nil 1)
+    ("estr" "estimator" nil 4)
+    ("ev" "event" nil 0)
+    ("evl" "eventual" nil 0)
+    ("evs" "events" nil 0)
+    ("fm" "formula" nil 0)
+    ("fn" "function" nil 15)
+    ("gam" "\\gamma" nil 43)
+    ("gamma" "\\gamma" nil 10)
+    ("gen" "general" nil 3)
+    ("geom" "geometric" nil 5)
+    ("gs" "Gaussian" nil 9)
+    ("hyp" "hypothesis" nil 0)
+    ("id" "identity" nil 0)
+    ("imp" "important" nil 1)
+    ("ind" "independent" nil 6)
+    ("indep" "independent" nil 1)
+    ("inf" "inference" nil 0)
+    ("info" "information" nil 0)
+    ("int" "intensity" nil 2)
+    ("intv" "interval" nil 2)
+    ("inv" "invert" nil 1)
+    ("invy" "invertability" nil 1)
+    ("lam" "\\lambda" nil 2)
+    ("lambda" "\\lambda" nil 9)
+    ("lbr" "｛" nil 1)
+    ("lin" "linear" nil 4)
+    ("lincomb" "linear combination" nil 4)
+    ("log" "logarithm" nil 6)
+    ("md" "model" nil 7)
+    ("mlvl" "multilevel" nil 0)
+    ("mot" "motion" nil 1)
+    ("ms" "measure" nil 0)
+    ("mtx" "matrix" nil 0)
+    ("mu" "\\mu" nil 17)
+    ("mvt" "multivariate" nil 0)
+    ("nab" "\\nabla" nil 1)
+    ("nabla" "\\nabla" nil 0)
+    ("obs" "observation" nil 0)
+    ("obv" "obviously" nil 0)
+    ("omega" "\\omega" nil 4)
+    ("opz" "optimize" nil 0)
+    ("par" "parameter" nil 2)
+    ("pbm" "problem" nil 1)
+    ("pbmatic" "problematic" nil 0)
+    ("phi" "\\phi" nil 68)
+    ("pi" "\\pi" nil 3)
+    ("po" "Poisson" nil 1)
+    ("pop" "population" nil 0)
+    ("poss" "possible" nil 2)
+    ("pr" "probability" nil 0)
+    ("prec" "precision" nil 0)
+    ("pred" "predict" nil 0)
+    ("predn" "prediction" nil 0)
+    ("predr" "predictor" nil 1)
+    ("predv" "predictive" nil 0)
+    ("prev" "previous" nil 0)
+    ("proc" "process" nil 25)
+    ("procs" "processes" nil 2)
+    ("prs" "probabilities" nil 0)
+    ("rbr" "｝" nil 0)
+    ("rea" "realization" nil 2)
+    ("reg" "regular" nil 2)
+    ("rel" "relation" nil 1)
+    ("rep" "represented" nil 2)
+    ("res" "residual" nil 4)
+    ("resid" "residual" nil 1)
+    ("resids" "residuals" nil 1)
+    ("rgl" "regular" nil 0)
+    ("rgr" "regression" nil 3)
+    ("rho" "\\rho" nil 50)
+    ("rsd" "residual" nil 0)
+    ("saixi" "\\sum[a_i X_i]" nil 5)
+    ("sam" "sample" nil 1)
+    ("sbjxj" "\\sum[b_j X_j]" nil 1)
+    ("sd" "standard deviation" nil 1)
+    ("se" "standard error" nil 0)
+    ("sel" "selection" nil 1)
+    ("seq" "sequence" nil 0)
+    ("seql" "sequential" nil 0)
+    ("sig" "significant" nil 4)
+    ("sigma" "\\sigma" nil 14)
+    ("sim" "simulate" nil 1)
+    ("simn" "simulation" nil 0)
+    ("spc" "space" nil 6)
+    ("spr" "spread" nil 1)
+    ("sq" "square" nil 1)
+    ("srs" "series" nil 1)
+    ("ssq" "\\sigma^2" nil 9)
+    ("stat" "statistically" nil 0)
+    ("stats" "statistics" nil 2)
+    ("std" "standard" nil 0)
+    ("stdd" "standardized" nil 0)
+    ("stn" "stationary" nil 26)
+    ("sto" "stochastic" nil 3)
+    ("stoc" "stochastic" nil 4)
+    ("str" "structure" nil 2)
+    ("sup" "suppose" nil 0)
+    ("surv" "survival" nil 0)
+    ("t0" "t_0" nil 0)
+    ("t1" "t_1" nil 4)
+    ("t1n" "{T_1, T_2, ..., T_n}" nil 0)
+    ("t1nm" "{T_1 \\cdot T_2 \\cdot ... \\cdot T_n}" nil 0)
+    ("t1np" "{T_1 + T_2 + ... + T_n}" nil 0)
+    ("t1npm" "{T_1 \\pm T_2 \\pm ... \\pm T_n}" nil 1)
+    ("t2" "t_2" nil 5)
+    ("t3" "t_3" nil 3)
+    ("t4" "t_4" nil 1)
+    ("t5" "t_5" nil 1)
+    ("t6" "t_6" nil 0)
+    ("t7" "t_7" nil 0)
+    ("t8" "t_8" nil 0)
+    ("t9" "t_9" nil 0)
+    ("tau" "\\tau" nil 2)
+    ("tf" "transform" nil 6)
+    ("thet" "\\theta" nil 8)
+    ("thet0" "\\theta_0" nil 0)
+    ("thet1" "\\theta_1" nil 11)
+    ("thet2" "\\theta_2" nil 1)
+    ("thet3" "\\theta_3" nil 0)
+    ("thet4" "\\theta_4" nil 0)
+    ("thet5" "\\theta_5" nil 0)
+    ("thet6" "\\theta_6" nil 0)
+    ("thet7" "\\theta_7" nil 0)
+    ("thet8" "\\theta_8" nil 0)
+    ("thet9" "\\theta_9" nil 0)
+    ("theta" "\\theta" nil 5)
+    ("thy" "theory" nil 0)
+    ("trig" "trigonometr" nil 1)
+    ("ts" "time series" nil 4)
+    ("ucor" "uncorrelated" nil 5)
+    ("unb" "unbiased" nil 2)
+    ("uncor" "uncorrelated" nil 0)
+    ("unif" "uniform" nil 0)
+    ("uniq" "unique" nil 0)
+    ("uvt" "univariate" nil 0)
+    ("val" "value" nil 1)
+    ("vals" "values" nil 0)
+    ("vb" "variable" nil 1)
+    ("vec" "vector" nil 0)
+    ("vn" "variance" nil 1)
+    ("vphi" "\\varphi" nil 7)
+    ("vt" "variate" nil 0)
+    ("wg" "weight" nil 2)
+    ("wgd" "weighted" nil 2)
+    ("wn" "white noise" nil 3)
+    ("wrt" "with regard to" nil 0)
+    ("wt" "with" nil 2)
+    ("x0" "x_0" nil 0)
+    ("x1" "x_1" nil 2)
+    ("x1n" "{X_1, X_2, ..., X_n}" nil 1)
+    ("x1nm" "{X_1 \\cdot X_2 \\cdot ... \\cdot X_n}" nil 0)
+    ("x1np" "{X_1 + X_2 + ... + X_n}" nil 0)
+    ("x1npm" "{X_1 \\pm X_2 \\pm ... \\pm X_n}" nil 0)
+    ("x2" "x_2" nil 0)
+    ("x3" "x_3" nil 0)
+    ("x4" "x_4" nil 0)
+    ("x5" "x_5" nil 0)
+    ("x6" "x_6" nil 0)
+    ("x7" "x_7" nil 0)
+    ("x8" "x_8" nil 0)
+    ("x9" "x_9" nil 0)
+    ("xi" "\\xi" nil 3)
+    ("xpc" "expected" nil 1)
+    ("xpl" "explain" nil 0)
+    ("xpn" "explanation" nil 0)
+    ("xpo" "exponential" nil 0)
+    ("xv" "cross-validation" nil 0)
+    ("y0" "y_0" nil 0)
+    ("y1" "y_1" nil 0)
+    ("y1n" "{Y_1, Y_2, ..., Y_n}" nil 0)
+    ("y1nm" "{Y_1 \\cdot Y_2 \\cdot ... \\cdot Y_n}" nil 0)
+    ("y1np" "{Y_1 + Y_2 + ... + Y_n}" nil 0)
+    ("y1npm" "{Y_1 \\pm Y_2 \\pm ... \\pm Y_n}" nil 0)
+    ("y2" "y_2" nil 0)
+    ("y3" "y_3" nil 0)
+    ("y4" "y_4" nil 0)
+    ("y5" "y_5" nil 0)
+    ("y6" "y_6" nil 0)
+    ("y7" "y_7" nil 0)
+    ("y8" "y_8" nil 0)
+    ("y9" "y_9" nil 0)
+    ("yw" "Yule-Walker" nil 3)
+   ))
+
+(define-abbrev-table 'outline-mode-abbrev-table '())
+
+(define-abbrev-table 'package-menu-mode-abbrev-table '())
+
+(define-abbrev-table 'pdf-annot-list-mode-abbrev-table '())
+
+(define-abbrev-table 'pdf-occur-buffer-mode-abbrev-table '())
+
+(define-abbrev-table 'pdf-outline-buffer-mode-abbrev-table '())
+
+(define-abbrev-table 'pike-mode-abbrev-table '())
+
+(define-abbrev-table 'plain-tex-mode-abbrev-table '())
+
+(define-abbrev-table 'poly-fallback-mode-abbrev-table '())
+
+(define-abbrev-table 'poly-head-tail-mode-abbrev-table '())
+
+(define-abbrev-table 'process-menu-mode-abbrev-table '())
+
+(define-abbrev-table 'prog-mode-abbrev-table '())
+
+(define-abbrev-table 'quickrun--mode-abbrev-table '())
+
+(define-abbrev-table 'reb-lisp-mode-abbrev-table '())
+
+(define-abbrev-table 'reb-mode-abbrev-table '())
+
+(define-abbrev-table 'rxt-help-mode-abbrev-table '())
+
+(define-abbrev-table 'scss-mode-abbrev-table '())
+
+(define-abbrev-table 'select-tags-table-mode-abbrev-table '())
+
+(define-abbrev-table 'sgml-mode-abbrev-table '())
+
+(define-abbrev-table 'sh-mode-abbrev-table '())
+
+(define-abbrev-table 'shell-mode-abbrev-table '())
+
+(define-abbrev-table 'slitex-mode-abbrev-table '())
+
+(define-abbrev-table 'snippet-mode-abbrev-table '())
+
+(define-abbrev-table 'so-long-mode-abbrev-table '())
+
+(define-abbrev-table 'special-mode-abbrev-table '())
+
+(define-abbrev-table 'speedbar-mode-abbrev-table '())
+
+(define-abbrev-table 'synosaurus-list-mode-abbrev-table '())
+
+(define-abbrev-table 'tablist-mode-abbrev-table '())
+
+(define-abbrev-table 'tabulated-list-mode-abbrev-table '())
+
+(define-abbrev-table 'term-mode-abbrev-table '())
+
+(define-abbrev-table 'tex-mode-abbrev-table '())
+
+(define-abbrev-table 'tex-shell-abbrev-table '())
+
+(define-abbrev-table 'text-mode-abbrev-table '())
+
+(define-abbrev-table 'tsv-mode-abbrev-table '())
+
+(define-abbrev-table 'twee-mode-abbrev-table '())
+
+(define-abbrev-table 'url-cookie-mode-abbrev-table '())
+
+(define-abbrev-table 'use-package-statistics-mode-abbrev-table '())
+
+(define-abbrev-table 'vc-bzr-log-view-mode-abbrev-table '())
+
+(define-abbrev-table 'vc-dir-mode-abbrev-table '())
+
+(define-abbrev-table 'vc-git-log-edit-mode-abbrev-table '())
+
+(define-abbrev-table 'vc-git-log-view-mode-abbrev-table '())
+
+(define-abbrev-table 'vc-git-region-history-mode-abbrev-table '())
+
+(define-abbrev-table 'vc-hg-log-view-mode-abbrev-table '())
+
+(define-abbrev-table 'vc-mtn-log-view-mode-abbrev-table '())
+
+(define-abbrev-table 'vc-svn-log-view-mode-abbrev-table '())
+
+(define-abbrev-table 'xref--xref-buffer-mode-abbrev-table '())
+
+(define-abbrev-table 'yaml-mode-abbrev-table '())
+

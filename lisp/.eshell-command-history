@@ -1,0 +1,8 @@
+(general-unbind eshell-mode-map "<up>")
+(general-unbind eshell-mode-map "<right>")
+ls
+sdfsdf
+(kill-whole-line)
+(crux-kill-line-backwards)
+(eshell-kill-input)
+cd
