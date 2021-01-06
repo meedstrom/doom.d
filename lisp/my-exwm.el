@@ -1,13 +1,16 @@
 ;; -*- lexical-binding: t; -*-
 
-;; https://github.com/ch11ng/exwm/issues/550
-(after! (exwm ivy-posframe)
-  (add-to-list 'ivy-posframe-parameters '(parent-frame nil)))
+;; What we are missing:
+;; - brightness/volume keys
+;; - wifi interface
+;; - mullvad auto-start
+;; - a comfortable eshell
+;; - xset r rate 200 30
 
 (general-unbind exwm-mode-map "C-c")
-(general-def exwm-mode-map "s-q" #'exwm-input-send-next-key)
+(general-def exwm-mode-map "M-s q" #'exwm-input-send-next-key)
 
-(setq exwm-replace nil)
+(setq exwm-replace t)
 (setq exwm-input-simulation-keys '(([?\s-a] . [home])
                                    ([?\s-b] . [left])
                                    ([?\s-d] . [delete])
@@ -24,18 +27,21 @@
                                    ([?\s-y] . [C-v])
                                    ([?\s-/] . [C-z])
                                    ([?\M-d] . [C-S-right delete])
-                                   ([f7]    . [menu])))
-(setq exwm-input-prefix-keys '(?\s-x ?\M-x f1 f2 f5 f12))
+                                   ([f8]    . [menu])
+                                   ))
+(setq exwm-input-prefix-keys '(?\s-x ?\M-x f1 f2 f5 f7 f12))
 (setq exwm-input-global-keys `((,(kbd "C-M-<delete>") . exwm-reset)
                                (,(kbd "s-<delete>") . exwm-reset)
-                               (,(kbd "M-1") . switch-to-prev-buffer)
-                               (,(kbd "M-2") . switch-to-next-buffer)
-                               (,(kbd "M-<tab>") . other-window)
-                               (,(kbd "M-`") . counsel-switch-buffer)
+
                                (,(kbd "<XF86MonBrightnessDown>") . my-backlight-dec)
                                (,(kbd "<XF86MonBrightnessUp>") . my-backlight-inc)))
 
 (add-hook 'exwm-update-class-hook #'my-exwm-rename-buffer)
 (add-hook 'exwm-update-title-hook #'my-exwm-rename-buffer)
-;; (when (display-graphic-p)
-;;   (add-hook 'my-spawn-process-hook #'exwm-enable))
+
+;; exwm-enable just adds exwm-init on various hooks
+;; (when (fboundp #'exwm-enable)
+;;  (exwm-enable))
+
+;; this one is prolly
+;; (autoload #'exwm-enable "exwm")

@@ -11,23 +11,11 @@
 (require 'my-lib-unprefixed)
 (require 'my-lib)
 (require 'general)
+(require 'key-chord)
 
 (run-hooks 'my-before-keybinds-hook)
 
-;; Clear some obstacles. Why not just override case-by-case when needed? Because
-;; some were prefix keys, like <f2>, the mode-specific keys override global keys
-;; I always want access to, and some are just annoying.
-(general-unbind global-map "<f2>") ;; prefix
-;; (general-unbind global-map "<f3>") ;; prefix
-;; (general-unbind global-map "<f5>")
-;; (general-unbind global-map "<f6>")
-;; (general-unbind global-map "<f7>")
-;; (general-unbind global-map "<f8>")
-;; (general-unbind global-map "<f9>")
-;; (general-unbind global-map "<f10>")
-;; (general-unbind global-map "<f11>")
-
-;; allow global keys in favour of these
+;; Favor what I have in the global map on these keys.
 (general-unbind geiser-mode-map "M-,")
 (general-unbind geiser-mode-map "M-.")
 (general-unbind geiser-mode-map "M-`")
@@ -35,159 +23,236 @@
 (general-unbind geiser-repl-mode-map "M-.")
 (general-unbind geiser-repl-mode-map "M-`")
 
-;; (general-unbind global-map "C-z")
-;; (general-unbind global-map "M-#")
-;; (general-unbind global-map "M-/")
-;; (general-unbind global-map "M-`")
-;; (general-unbind global-map "M-~")
+;; Nice commands I discovered
+;; "C-]" ;; abort-recursive-edit
 
+;; Unbind commands I never used or won't use anymore.
+(general-unbind global-map "<f2>") ;; 2C-command
+(general-unbind global-map "<f5>") ;; ???
+(general-unbind global-map "<f6>")
+(general-unbind global-map "<f7>")
+(general-unbind global-map "<f8>")
+(general-unbind global-map "<f9>")
+(general-unbind global-map "<f10>") ;; menu-bar-open
+(general-unbind global-map "<insert>") ;; overwrite-mode
+(general-unbind global-map "C-o") ;; open-line
+(general-unbind global-map "C-z") ;; suspend-frame
+(general-unbind global-map "C-\\") ;; toggle-input-method
+(general-unbind global-map "M-.") ;; xref-find-definitions
+(general-unbind global-map "M-`") ;; tmm-menubar
+(general-unbind global-map "M-i") ;; tab-to-tab-stop
+(general-unbind global-map "M-j") ;; default-indent-new-line
+(general-unbind global-map "M-m") ;; back-to-indentation
+(general-unbind global-map "M-o") ;; facemenu-keymap
+(general-unbind global-map "M-r") ;; move-to-window-line-top-bottom
+(general-unbind global-map "M-z") ;; zap-to-char
+(general-unbind global-map "M-~") ;; not-modified
+(general-unbind global-map "C-x k") ;; Discourage unproductive behavior
+
+;; Unbind keys where the commands get new keys.
+(general-unbind global-map "C-u") ;; universal-argument
+(general-unbind global-map "C-q") ;; quoted-insert
+(general-unbind global-map "M-q") ;; fill-paragraph
+(general-unbind global-map "<f3>") ;; kmacro-start-macro-or-insert-counter
+(general-unbind global-map "<f4>") ;; kmacro-end-or-call-macro
+
+;; these hurt too much until I have escape-modality
+;; (general-unbind global-map "<f1>")
+;; (general-unbind global-map "<down>")
+;; (general-unbind global-map "<left>")
+;; (general-unbind global-map "<next>")
+;; (general-unbind global-map "<prior>")
+;; (general-unbind global-map "<right>")
+;; (general-unbind global-map "<up>")
+;; (general-unbind global-map "RET")
+
+;; these are effectively illegal, why I'll use super instead one day
+;; (general-unbind global-map "C-g") ;; keyboard-quit
+;; (general-unbind global-map "C-j") ;; newline
+;; (general-unbind global-map "C-i")
+;; (general-unbind global-map "C-]")
+;; (general-unbind global-map "C-m")
+
+;; Clear a ton of good keys which were wasted on prefix arguments.
+(dolist (x (string-to-list "1234567890-"))
+  (global-unset-key (kbd (format "C-%c" x)))
+  (global-unset-key (kbd (format "M-%c" x)))
+  (global-unset-key (kbd (format "C-M-%c" x))))
+
+;; My alternate setup for prefix arguments. I must start with the universal
+;; argument, but holding down modifiers make no difference, so it is possible
+;; to type either  <f5> - M-u  or  M-<f5> M-- M-u.  Mind that M-<f5> can be
+;; blocked on some OSes.
+(dolist (x (string-to-list "1234567890"))
+  (define-key universal-argument-map (kbd (format "C-%c" x))   #'digit-argument)
+  (define-key universal-argument-map (kbd (format "M-%c" x))   #'digit-argument)
+  (define-key universal-argument-map (kbd (format "C-M-%c" x)) #'digit-argument)
+  (define-key universal-argument-map (kbd (format "s-%c" x))   #'digit-argument))
+;; (general-def global-map     "<f5>" #'universal-argument)
+(general-def global-map   "C-<f5>" #'universal-argument)
+(general-def global-map   "M-<f5>" #'universal-argument)
+(general-def global-map   "s-<f5>" #'universal-argument)
+(general-def global-map "C-M-<f5>" #'universal-argument)
+(general-def universal-argument-map     "-" #'negative-argument)
+(general-def universal-argument-map   "C--" #'negative-argument)
+(general-def universal-argument-map   "M--" #'negative-argument)
+(general-def universal-argument-map   "s--" #'negative-argument)
+(general-def universal-argument-map "C-M--" #'negative-argument)
 
 (when (boundp 'doom-version)
-  (setq doom-leader-alt-key "<f2>")
-  (setq doom-localleader-alt-key "<f12>")
-  )
+  (general-unbind "M--")
+  (general-unbind "M-=")
+  (general-unbind "C-'") ;; imenu
+  (setq doom-leader-alt-key "<f3>")
+  (setq doom-localleader-alt-key "<f4>"))
 
 (when (boundp 'spacemacs-version)
   (general-unbind elisp-slime-nav-mode-map "M-,")
   (general-unbind elisp-slime-nav-mode-map "M-.")
-  (general-unbind evil-emacs-state-map "C-z")
-  )
+  (general-unbind evil-emacs-state-map "C-z"))
 
-(defvar abbrev-minor-mode-map (make-sparse-keymap))
-(add-to-list 'minor-mode-map-alist (cons 'abbrev-mode abbrev-minor-mode-map))
-(general-def abbrev-minor-mode-map "`" #'expand-abbrev)
+(defvar my-abbrev-minor-mode-map (make-sparse-keymap))
+(add-to-list 'minor-mode-map-alist (cons 'abbrev-mode my-abbrev-minor-mode-map))
 
-(general-def Info-mode-map "C-s" #'isearch-forward)
-(general-def custom-mode-map "q" #'kill-current-buffer)
-(general-def dired-mode-map ")" #'dired-git-info-mode)
-(general-def dired-mode-map "M-<up>" #'dired-up-directory)
-(general-def dired-mode-map "M-RET" #'my-dired-open-file-with-default-tool)
-(general-def eshell-mode-map "<escape>" #'crux-switch-to-previous-buffer)
-(general-def eshell-mode-map "C-M-j" #'my-insert-other-buffer-file-name)
-(general-def eshell-mode-map "C-S-n" #'my-new-eshell)
-(general-def eshell-mode-map "C-S-n" #'my-new-eshell)
-(general-def eshell-mode-map "C-c C-l" #'my-counsel-eshell-history)
-;; (general-def ess-mode-map "<f1> <f2>" #'ess-abort)
-;; (general-def ess-mode-map "<f1> <f3>" #'ess-interrupt)
-(general-def ess-mode-map "C-<return>"  #'ess-eval-line)
-(general-def eww-mode-map "q" #'kill-current-buffer)
-(general-def global-map "<f1> <f2>" #'vc-msg-show)
- (general-def global-map "<f1> <f3>" #'git-messenger:popup-message)
- (general-def global-map "<f7> s" #'my-save-buffer-and-commit)
- (general-def global-map "<f7> a" #'my-save-buffer-and-amend)
- (general-def global-map "<escape>" #'keyboard-escape-quit) ;; ESC ESC ESC => ESC
-(general-def global-map "<f5> 1"   #'my-insert-other-buffer-file-name-and-cycle)
-(general-def global-map "<f5> 2"   #'my-toggle-selective-display)
-(general-def global-map "<f5> 3"   #'elfeed)
-(general-def global-map "<f5> 5"   #'my-lookup-word)
-(general-def global-map "<f5> a"   (if (executable-find "gtk-launch") #'counsel-linux-app #'my-linux-app))
-(general-def global-map "<f5> b"   #'backup-walker-start)
-(general-def global-map "<f5> d"   #'my-insert-today)
-(general-def global-map "<f5> e d" #'eval-defun)
-(general-def global-map "<f5> e e" #'eval-expression)
-(general-def global-map "<f5> e l" #'eval-last-sexp)
-(general-def global-map "<f5> e p" #'eval-print-last-sexp)
-(general-def global-map "<f5> e r" #'eval-region)
-(general-def global-map "<f5> e s" #'ess-eval-region-or-function-or-paragraph-and-step) ;; ess everywhere
-(general-def global-map "<f5> f d" #'crux-delete-file-and-buffer)
-(general-def global-map "<f5> f f" #'toggle-frame-fullscreen)
-(general-def global-map "<f5> f m" #'toggle-frame-maximized)
-(general-def global-map "<f5> f r" #'crux-rename-file-and-buffer)
-(general-def global-map "<f5> g"   #'git-timemachine)
-(general-def global-map "<f5> h"   #'my-file-jump-from-home)
-(general-def global-map "<f5> i"   #'my-suggest-sub)
-(general-def global-map "<f5> j"   #'counsel-file-jump)
-(general-def global-map "<f5> k"   #'helm-do-grep-ag)
-(general-def global-map "<f5> l"   #'counsel-locate)
-(general-def global-map "<f5> m"   #'my-show-my-files)
-(general-def global-map "<f5> n"   #'my-today-file)
-(general-def global-map "<f5> p"   #'my-spawn-process)
-(general-def global-map "<f5> r"   #'ivy-resume)
-(general-def global-map "<f5> s"   #'my-eshell-here)
-(general-def global-map "<f5> x"   #'execute-extended-command)
-(general-def global-map "<f5> z"   #'my-sleep)
-(general-def global-map "<f6>"     #'calc-dispatch)
-(general-def global-map "<f7> d"    #'org-download-yank)
-(general-def global-map "<f7> e"   #'eww)
-(general-def global-map "<f7> g"   #'guix-popup)
-(general-def global-map "<f7> n"   #'my-normie-toggle)
-(general-def global-map "C-."      #'repeat)
-(general-def global-map "C-<next>" #'next-buffer)
-(general-def global-map "C-<prior>" #'previous-buffer)
-(general-def global-map "M-0"      #'hippie-expand)
-(general-def global-map "M-1"      #'avy-goto-char)
-(general-def global-map "M-2"      #'avy-goto-char-2)
-(general-def global-map "M-3"      #'unexpand-abbrev)
-(general-def global-map "M-4"      #'transpose-lines)
-(general-def global-map "M-5"      #'my-prev-file-in-dir)
-(general-def global-map "M-6"      #'my-next-file-in-dir)
-(general-def global-map "M-8"      #'kill-whole-line)
-(general-def global-map "M-9"      #'crux-duplicate-current-line-or-region)
-(general-def ledger-mode-map "M-<return>"  #'crux-duplicate-current-line-or-region)
-(general-def shell-mode-map "C-S-n"        #'my-new-shell)
-;; (general-def global-map "<f5> k"   (if-let (app (seq-find #'executable-find '("rg" "ag" "pt" "ack"))) (intern (concat "counsel-" app))))
+(after! key-chord
+  (key-chord-define-global "cd" #'calc-dispatch))
 
-(when (boundp 'vanilla)
-  ;; sorta following spacemacs leader key
-  (general-def global-map "<f12> b b" #'switch-to-buffer)
-  (general-def global-map "<f12> b d" #'my-revisit-buffer)
-  (general-def global-map "<f12> b k" #'kill-this-buffer)
-  (general-def global-map "<f12> e d" #'edebug-defun) ;; https://www.spacemacs.org/doc/DOCUMENTATION
-  (general-def global-map "<f12> e l" #'edebug-eval-last-sexp)
-  (general-def global-map "<f12> f s" #'save-buffer)
-  (general-def global-map "<f12> g a" #'my-save-buffer-and-amend) ;; my addition
-  (general-def global-map "<f12> g s" #'magit-status)
-  (general-def global-map "<f12> o a" #'org-agenda)
-  (general-def global-map "<f12> o c" #'org-capture)
-  (general-def global-map "<f12> p v" #'magit-status) ;; the new hotkey...
-  (general-def global-map "<f12> l"   #'my-spawn-process)
-  )
+(general-def "<menu>" (general-key "C-g")) ;; my caps lock
+(general-def "<menu>" #'keyboard-quit)  ;; training wheels
+(general-unbind "C-g")                  ;; training wheels
 
-;; sp
-(general-def global-map "M-<backspace>" #'sp-backward-unwrap-sexp)
-(general-def global-map "M-<delete>"    #'sp-unwrap-sexp)
-(general-def global-map "M-<insert>"    #'sp-rewrap-sexp)
-(general-def global-map "<f5> w"    #'sp-rewrap-sexp)
-(general-def smartparens-mode-map "C-;"         #'sp-comment)
-(general-def smartparens-mode-map "C-<left>"    #'sp-forward-barf-sexp)
-(general-def smartparens-mode-map "C-<right>"   #'sp-forward-slurp-sexp)
-(general-def smartparens-mode-map "C-M-<left>"  #'sp-backward-slurp-sexp)
-(general-def smartparens-mode-map "C-M-<right>" #'sp-backward-barf-sexp)
-(general-def smartparens-mode-map "C-M-a"       #'sp-backward-down-sexp)
-(general-def smartparens-mode-map "C-2 a"       #'sp-join-sexp)
-(general-def smartparens-mode-map "C-2 b"       #'sp-select-next-thing)
-(general-def smartparens-mode-map "C-2 c"       #'sp-beginning-of-sexp)
-(general-def smartparens-mode-map "C-2 d"       #'sp-beginning-of-next-sexp)
-(general-def smartparens-mode-map "C-2 e"       #'sp-end-of-sexp)
-(general-def smartparens-mode-map "C-2 f"       #'sp-add-to-next-sexp)
-(general-def smartparens-mode-map "C-2 g"       #'sp-add-to-previous-sexp)
-(general-def smartparens-mode-map "C-2 h"       #'sp-split-sexp)
-(general-def smartparens-mode-map "C-2 i"       #'sp-splice-sexp)
-(general-def smartparens-mode-map "C-2 j"       #'sp-emit-sexp)
-(general-def smartparens-mode-map "C-2 k"       #'sp-absorb-sexp)
-(general-def smartparens-mode-map "C-2 l"       #'sp-convolute-sexp)
-(general-def smartparens-mode-map "C-2 m"       #'sp-forward-symbol)
-(general-def smartparens-mode-map "C-2 n"       #'sp-backward-symbol)
-(general-def smartparens-mode-map "C-2 o"       #'sp-wrap)
-(general-def smartparens-mode-map "C-2 p"       #'sp-backward-up-sexp)
-(general-def smartparens-mode-map "C-2 q"       #'sp-up-sexp)
-(general-def smartparens-mode-map "C-2 r"       #'sp-select-next-thing-exchange)
-(general-def smartparens-mode-map "C-2 s"       #'sp-select-previous-thing)
-(general-def smartparens-mode-map "C-M-w"         #'sp-copy-sexp)
-(general-def smartparens-mode-map "M-<backspace>" #'sp-backward-unwrap-sexp)
-(general-def smartparens-mode-map "M-<delete>"    #'sp-unwrap-sexp)
-(general-def smartparens-mode-map "s-<SPC>"       #'sp-mark-sexp)
-(general-def smartparens-mode-map [remap backward-kill-sexp]  #'sp-backward-kill-sexp);DEL
-(general-def smartparens-mode-map [remap backward-list]       #'sp-previous-sexp);p
-(general-def smartparens-mode-map [remap backward-sexp]       #'sp-backward-sexp);b
-(general-def smartparens-mode-map [remap backward-up-list]    #'sp-backward-up-sexp);u
-(general-def smartparens-mode-map [remap down-list]           #'sp-down-sexp);d
-(general-def smartparens-mode-map [remap forward-list]        #'sp-next-sexp);n
-(general-def smartparens-mode-map [remap forward-sexp]        #'sp-forward-sexp);f
-(general-def smartparens-mode-map [remap kill-sexp]           #'sp-kill-sexp);k
-(general-def smartparens-mode-map [remap kill-whole-line]     #'sp-kill-whole-line)
-(general-def smartparens-mode-map [remap mark-sexp]           #'sp-mark-sexp);SPC
-(general-def smartparens-mode-map [remap transpose-sexps]     #'sp-transpose-sexp);t
+(general-def custom-mode-map "q"          #'kill-current-buffer)
+(general-def dired-mode-map ")"           #'dired-git-info-mode)
+(general-def dired-mode-map "M-<up>"      #'dired-up-directory)
+(general-def dired-mode-map "M-RET"       #'my-dired-open-file-with-default-tool)
+(general-def eshell-mode-map "<escape>"   #'crux-switch-to-previous-buffer)
+(general-def eshell-mode-map "C-M-j"      #'my-insert-other-buffer-file-name)
+(general-def eshell-mode-map "C-S-n"      #'my-new-eshell)
+(general-def eshell-mode-map "C-S-n"      #'my-new-eshell)
+(general-def eshell-mode-map "C-c C-l"    #'consult-history)
+(general-def ess-mode-map "<f1> <f2>"     #'ess-abort)
+(general-def ess-mode-map "<f1> <f3>"     #'ess-interrupt)
+(general-def ess-mode-map "C-<return>"    #'ess-eval-line)
+(general-def eww-mode-map "q"             #'kill-current-buffer)
+(general-def global-map "<escape>"        #'keyboard-escape-quit) ; ESC ESC ESC => ESC
+(general-def global-map "<f10> a"         #'my-save-buffer-and-amend)
+(general-def global-map "<f10> d"         #'org-download-yank)
+(general-def global-map "<f10> e"         #'eww)
+(general-def global-map "<f10> g"         #'guix-popup)
+(general-def global-map "<f10> n"         #'my-normie-toggle)
+(general-def global-map "<f10> s"         #'my-save-buffer-and-commit)
+(general-def global-map "<f2> 1"          #'my-insert-other-buffer-file-name-and-cycle)
+(general-def global-map "<f2> 2"          #'my-toggle-selective-display)
+(general-def global-map "<f2> 3"          #'elfeed)
+(general-def global-map "<f2> 5"          #'my-lookup-word)
+(general-def global-map "<f2> <f1>"       #'my-describe-last-key)
+(general-def global-map "<f2> <f2>"       #'vc-msg-show)
+(general-def global-map "<f2> <f3>"       #'git-messenger:popup-message)
+(general-def global-map "<f2> b"          #'backup-walker-start)
+(general-def global-map "<f2> d"          #'my-insert-today)
+(general-def global-map "<f2> e d"        #'eval-defun)
+(general-def global-map "<f2> e x"        #'eval-expression)
+(general-def global-map "<f2> e e"        #'eval-last-sexp)
+(general-def global-map "<f2> e p"        #'eval-print-last-sexp)
+(general-def global-map "<f2> e r"        #'eval-region)
+(general-def global-map "<f2> e s"        #'ess-eval-region-or-function-or-paragraph-and-step) ;; ess everywhere
+(general-def global-map "<f2> f d"        #'crux-delete-file-and-buffer)
+(general-def global-map "<f2> f f"        #'toggle-frame-fullscreen)
+(general-def global-map "<f2> f m"        #'toggle-frame-maximized)
+(general-def global-map "<f2> f r"        #'crux-rename-file-and-buffer)
+(general-def global-map "<f2> g"          #'git-timemachine)
+(general-def global-map "<f2> h"          #'my-file-jump-from-home)
+(general-def global-map "<f2> i"          #'my-suggest-sub)
+(general-def global-map "<f2> j"          #'project-find-file)
+(general-def global-map "<f2> k"          #'consult-ripgrep)
+(general-def global-map "<f2> l"          #'helm-locate)
+(general-def global-map "<f2> m"          #'my-show-my-files)
+(general-def global-map "<f2> n"          #'my-today-file)
+(general-def global-map "<f2> p"          #'my-spawn-process)
+(general-def global-map "<f2> r"          #'selectrum-repeat)
+(general-def global-map "<f2> s"          #'my-eshell-here)
+(general-def global-map "<f2> w"          #'sp-rewrap-sexp)
+(general-def global-map "<f2> x"          #'execute-extended-command)
+(general-def global-map "<f2> z"          #'my-sleep)
+(general-def global-map "<insert>"        #'embark-act)
+(general-def global-map "<menu>"          #'keyboard-quit)
+(general-def global-map "C-."             #'repeat)
+(general-def global-map "C-<next>"        #'next-buffer)
+(general-def global-map "C-<prior>"       #'previous-buffer)
+(general-def global-map "M-0"             #'hippie-expand)
+(general-def global-map "M-1"             #'switch-to-buffer)
+(general-def global-map "M-2"             #'other-window)
+(general-def global-map "M-3"             #'unexpand-abbrev)
+(general-def global-map "M-4"             #'avy-goto-char-2)
+(general-def global-map "M-5"             #'my-prev-file-in-dir)
+(general-def global-map "M-6"             #'my-next-file-in-dir)
+(general-def global-map "M-8"             #'kill-whole-line)
+(general-def global-map "M-9"             #'crux-duplicate-current-line-or-region)
+(general-def global-map "M-<backspace>"   #'sp-backward-unwrap-sexp)
+(general-def global-map "M-<delete>"      #'sp-unwrap-sexp)
+(general-def global-map "M-<insert>"      #'sp-rewrap-sexp)
+(general-def global-map "C-h C-q"         #'quoted-insert) ;; frequently used to insert control chars, so good on control map
+(general-def global-map "C-h q"           #'quoted-insert)
+(general-def global-map "M-o M--"         #'doom/decrease-font-size)
+(general-def global-map "M-o -"         #'doom/decrease-font-size)
+(general-def global-map "M-o M-="         #'doom/increase-font-size)
+(general-def global-map "M-o ="         #'doom/increase-font-size)
+(general-def global-map "M-s M-r"         #'isearch-backward)
+(general-def global-map "M-s M-s"         #'isearch-forward)
+(general-def global-map "M-s f"           #'my-fill-unfill-respect-double-space)
+(general-def global-map "M-s q"           #'quoted-insert)
+(general-def global-map "M-s r"           #'isearch-backward)
+(general-def global-map "M-s s"           #'isearch-forward)
+(general-def global-map "M-s z"           #'avy-goto-char-2)
+(general-def global-map "M-|"             #'my-shell-command-replace-region)
+(general-def ledger-mode-map "M-<return>" #'crux-duplicate-current-line-or-region)
+(general-def my-abbrev-minor-mode-map "`" #'expand-abbrev)
+(general-def shell-mode-map "C-S-n"       #'my-new-shell)
+
+(general-def smartparens-mode-map "C-;"                      #'sp-comment)
+(general-def smartparens-mode-map "C-<left>"                 #'sp-forward-barf-sexp)
+(general-def smartparens-mode-map "C-<right>"                #'sp-forward-slurp-sexp)
+(general-def smartparens-mode-map "C-M-<left>"               #'sp-backward-slurp-sexp)
+(general-def smartparens-mode-map "C-M-<right>"              #'sp-backward-barf-sexp)
+(general-def smartparens-mode-map "C-M-a"                    #'sp-backward-down-sexp)
+(general-def smartparens-mode-map "C-M-w"                    #'sp-copy-sexp)
+(general-def smartparens-mode-map "M-<backspace>"            #'sp-backward-unwrap-sexp)
+(general-def smartparens-mode-map "M-<delete>"               #'sp-unwrap-sexp)
+(general-def smartparens-mode-map "s-<SPC>"                  #'sp-mark-sexp)
+(general-def smartparens-mode-map [remap backward-kill-sexp] #'sp-backward-kill-sexp);DEL
+(general-def smartparens-mode-map [remap backward-list]      #'sp-previous-sexp);p
+(general-def smartparens-mode-map [remap backward-sexp]      #'sp-backward-sexp);b
+(general-def smartparens-mode-map [remap backward-up-list]   #'sp-backward-up-sexp);u
+(general-def smartparens-mode-map [remap down-list]          #'sp-down-sexp);d
+(general-def smartparens-mode-map [remap forward-list]       #'sp-next-sexp);n
+(general-def smartparens-mode-map [remap forward-sexp]       #'sp-forward-sexp);f
+(general-def smartparens-mode-map [remap kill-sexp]          #'sp-kill-sexp);k
+(general-def smartparens-mode-map [remap kill-whole-line]    #'sp-kill-whole-line)
+(general-def smartparens-mode-map [remap mark-sexp]          #'sp-mark-sexp);SPC
+(general-def smartparens-mode-map [remap transpose-sexps]    #'sp-transpose-sexp);t
+
+;; Unassimilated Smartparens commands to try out.  Tip: author's config at
+;; https://github.com/Fuco1/.emacs.d/blob/master/files/smartparens.el (heavy on
+;; C-M- though).
+(general-def smartparens-mode-map "C-2 a" #'sp-join-sexp)
+(general-def smartparens-mode-map "C-2 b" #'sp-select-next-thing)
+(general-def smartparens-mode-map "C-2 c" #'sp-beginning-of-sexp)
+(general-def smartparens-mode-map "C-2 d" #'sp-beginning-of-next-sexp)
+(general-def smartparens-mode-map "C-2 e" #'sp-end-of-sexp)
+(general-def smartparens-mode-map "C-2 f" #'sp-add-to-next-sexp)
+(general-def smartparens-mode-map "C-2 g" #'sp-add-to-previous-sexp)
+(general-def smartparens-mode-map "C-2 h" #'sp-split-sexp)
+(general-def smartparens-mode-map "C-2 i" #'sp-splice-sexp)
+(general-def smartparens-mode-map "C-2 j" #'sp-emit-sexp)
+(general-def smartparens-mode-map "C-2 k" #'sp-absorb-sexp)
+(general-def smartparens-mode-map "C-2 l" #'sp-convolute-sexp)
+(general-def smartparens-mode-map "C-2 m" #'sp-forward-symbol)
+(general-def smartparens-mode-map "C-2 n" #'sp-backward-symbol)
+(general-def smartparens-mode-map "C-2 o" #'sp-wrap)
+(general-def smartparens-mode-map "C-2 p" #'sp-backward-up-sexp)
+(general-def smartparens-mode-map "C-2 q" #'sp-up-sexp)
+(general-def smartparens-mode-map "C-2 r" #'sp-select-next-thing-exchange)
+(general-def smartparens-mode-map "C-2 s" #'sp-select-previous-thing)
 
 ;; (general-def key-translation-map "<f3> a" (kbd "α"))
 ;; (general-def key-translation-map "<f3> b" (kbd "β"))

@@ -1,42 +1,149 @@
-;;; ../../kept/Emacs/conf-doom/lisp/junk.el -*- lexical-binding: t; -*-
+;; -*- lexical-binding: t; -*-
 
 (use-package! rainbow-blocks :defer :hook (ess-r-mode . rainbow-blocks-mode))
-
 (use-package! twee-mode)
-
 (use-package! crux)
-
+(use-package! esup)
 (use-package! beancount
   :defer t
   :mode ((rx ".bean" (? "count") eot) . beancount-mode))
+(use-package! form-feed
+  :config (global-form-feed-mode))
+(use-package! secretary
+  :init
+  (setc org-clock-x11idle-program-name "xprintidle")
+  (setc secretary-user-name "Martin")
+  (setc secretary-user-short-title "sir")
+  (setc secretary-user-birthday "1991-12-07")
+  (setc secretary-ai-name "Maya")
+  :config
+  ;; (secretary-mode)
+  (add-hook 'secretary-plot-hook #'secretary-plot-mood 50)
+  (add-hook 'secretary-plot-hook #'secretary-plot-weight)
+  ;; (remove-hook 'window-selection-change-functions #'secretary-log-buffer)
+  ;; (remove-hook 'window-buffer-change-functions #'secretary-log-buffer)
+  )
+
+(use-package! escape-modality
+  :config
+  ;; (esm-xmodmap-reload)
+  ;; (esm-xcape-reload)
+  ;; (massmap-tidy-mode)
+  ;; (escape-modality-global-mode)
+  ;; (deianira-global-mode)
+  (esm--get-relevant-bindings)
+  (general-def "C-x ;" #'comment-or-uncomment-region)
+  (general-def "C-x C-;" #'comment-or-uncomment-region))
+
+;; Lisp-friendly hippie expand
+;; Thanks https://github.com/flyingmachine/emacs-for-clojure
+(setc hippie-expand-try-functions-list
+      '(try-expand-dabbrev
+        try-expand-dabbrev-all-buffers
+        try-expand-dabbrev-from-kill
+        try-complete-lisp-symbol-partially
+        try-complete-lisp-symbol))
 
 (set-frame-parameter nil 'fullscreen 'fullheight)
 
+;; undoom
 (put 'customize-themes 'disabled nil)
 (put 'customize-group 'disabled nil)
 (put 'customize-face 'disabled nil)
+(put 'customize-variable 'disabled nil)
 
-(setq pdf-view-midnight-colors (cons (face-foreground 'default)
-                                     (face-background 'default)))
 
-(setq-default
- abbrev-file-name (expand-file-name "abbrevs" doom-private-dir)
- ;; mouse-yank-at-point t
- save-interprogram-paste-before-kill t
- select-enable-primary t
- shr-max-image-proportion 0.5
- ;; transient-mark-mode nil
- kill-read-only-ok t
- kill-ring-max 600
- byte-compile-warnings '(not free-vars)
- which-key-idle-delay 0.25
- view-read-only t
- +mu4e-backend 'offlineimap
- +mu4e-mu4e-mail-path "~/Maildir/"
- tab-always-indent t
- vc-msg-newbie-friendly-msg nil
- vc-msg-copy-id-to-kill-ring nil
- )
+(setc abbrev-file-name (expand-file-name "abbrevs" doom-private-dir))
+;;(setc mouse-yank-at-point t)
+(setc save-interprogram-paste-before-kill t)
+(setc select-enable-primary t)
+(setc custom-safe-themes t)
+(setc recentf-max-saved-items 600)
+(setc shr-max-image-proportion 0.5)
+(setc suggest-key-bindings nil)
+(setc kill-read-only-ok t)
+(setc kill-ring-max 600)
+;; (setc byte-compile-warnings '(not free-vars))
+(setc which-key-idle-delay 0.25)
+(setc view-read-only t)
+(setc load-prefer-newer t) ;; don't spend another minute confused by this
+(setc tab-always-indent t)
+(setc vc-msg-newbie-friendly-msg nil)
+(setc vc-msg-copy-id-to-kill-ring nil)
+(setc display-line-numbers-type nil) ; undoom
+(setc ws-butler-keep-whitespace-before-point t) ; undoom
+(setc garbage-collection-messages nil)
+(setc auto-save-no-message t)
+(setc fill-column 79)
+(setc nameless-prefix "✳")
+;; (setc nameless-prefix "")
+(setc nameless-private-prefix nil)
+;; (setc nameless-private-prefix "🔒-")
+;; (setc nameless-prefix "⚘")
+
+(setc +doom-dashboard-functions
+      '(
+        doom-dashboard-widget-shortmenu
+        doom-dashboard-widget-loaded
+        ))
+
+;; (set-face-attribute 'nameless-face () :inherit nil)
+
+(setc mediawiki-site-alist
+      '(("Wikipedia" "http://en.wikipedia.org/w/" "username" "password" nil "Main Page") ; put your user name and password if not using .authinfo
+        ("WikEmacs" "http://wikemacs.org/" "username" "password" nil "Main Page")))
+
+(setc mediawiki-site-default "WikEmacs")
+
+(defun my-file-size (file)
+  "Returns the size of FILE (in DIR) in bytes."
+  (unless (file-readable-p file)
+    (error "File %S is unreadable; can't acquire its filesize"
+           file))
+  (nth 7 (file-attributes file)))
+
+(setq my-all-git-repos
+      (seq-filter (lambda (x)
+                    (and (file-directory-p x)
+                         (member ".git" (directory-files x))))
+                  (append '("/home/kept/Knowledge_base"
+                            "/home/kept/Journal/Finances"
+                            "/home/kept/Journal"
+                            "/home/kept/Guix"
+                            "/home/kept/Guix channel"
+                            "/home/kept/Fiction"
+                            "/home/kept/Dotfiles")
+                          (directory-files "/home/kept/Emacs" t)
+                          (directory-files "/home/kept/Code" t)
+                          (directory-files "/home/kept/Coursework" t))))
+
+(defun my-memacs-scan-git ()
+  (make-directory "/tmp/rev-lists" t)
+  (and (file-exists-p "/home/kept/Archive/memacs/git/")
+       (executable-find "git")
+       (executable-find "memacs_git")
+       (bound-and-true-p my-all-git-repos)
+       (dolist (x my-all-git-repos t)
+         (start-process-shell-command
+          "memacs_git_stage_1"
+          nil
+          (concat "cd \"" x "\" && git rev-list --all --pretty=raw > \"/tmp/rev-lists/"
+                  (file-name-nondirectory x) "\"")))
+       (run-with-timer
+        5 nil (lambda ()
+                (dolist (x (directory-files "/tmp/rev-lists" t
+                                            (rx bol (not (any "." "..")))))
+                  (unless (= 0 (my-file-size x))
+                    (start-process-shell-command
+                     "memacs_git_stage_2" nil
+                     (concat "memacs_git -f "
+                             x
+                             " -o /home/kept/Archive/memacs/git/"
+                             (file-name-nondirectory x)
+                             ".org_archive")))))))
+  (run-with-timer (* 60 60) nil #'my-memacs-scan-git))
+;; (my-memacs-scan-git)
+
 
 ;; mu4e manually
 ;;
@@ -52,6 +159,9 @@
 ;; smtpmail-smtp-user "meedstrom@teknik.io"
 ;; mu4e-get-mail-command "offlineimap"
 
+(setq +mu4e-backend 'offlineimap
+      +mu4e-mu4e-mail-path "~/Maildir/")
+
 (set-email-account! "Teknik.io"
   '((mu4e-sent-folder       . "/Sent")
     (mu4e-drafts-folder     . "/Drafts")
@@ -63,7 +173,6 @@
     (mu4e-compose-signature . "\nMartin Edström"))
   t)
 
-
 ;; (defun my-log-process-name (&optional process _group)
 ;;   "See `interrupt-process-functions'."
 ;;   (when process
@@ -74,13 +183,7 @@
 
 ;; ;; (setq-default debug-on-signal 'quit debug-on-quit t)
 
-
-;; (defun my-set-rhistory (&rest r)
-  ;; (setq! ess-history-directory default-directory)
-  ;; (setq! ess-history-file ".Rhistory"))
-
-;; (advice-add #'ess-set-working-directory :after #'my-set-rhistory)
-
+(add-hook 'doom-load-theme-hook #'my-fix-pdf-midnight-colors)
 (add-hook 'after-save-hook #'executable-make-buffer-file-executable-if-script-p)
 (add-hook 'java-mode-hook (defun my-java-setup ()
                             (setq c-basic-offset 4
@@ -98,6 +201,8 @@
 ;; (after! ledger-report
   ;; (modify-syntax-entry (string-to-char "\"") "w" ledger-report-mode-syntax-table))
 
+;;;; Ledger
+
 (setq ledger-post-amount-alignment-at :decimal)
 (setq ledger-post-auto-align t)
 (setq ledger-default-date-format "%Y%m%d")
@@ -113,6 +218,13 @@
           ("account"            "%(binary) -f %(ledger-file) -cHX SEK register %(account)")
           ("accounts"           "%(binary) -f %(ledger-file) accounts"))))
 
+;;;; Templates
+
+;; For existing templates see `+file-templates-alist' and associated snippets in
+;; /home/kept/Dotfiles/.emacs.d/modules/editor/file-templates/templates
+
+(set-file-template! #'org-mode :ignore t)
+
 (set-file-template! "\\.el$"
   :when #'+file-templates-in-emacs-dirs-p
   :trigger "__el"
@@ -121,18 +233,13 @@
 ;;;; Locate
 
 (when (executable-find "updatedb")
-  (run-with-timer 5 3600 #'my-index-locatedb))
+  (run-with-timer 10 3600 #'my-index-locatedb))
+
 (when (executable-find "duc")
-  (run-with-timer 10 3600 #'my-index-duc))
-(setq helm-locate-command "locate %s --database=${HOME}/locate.db -e -A --regex %s")
-(setq counsel-locate-cmd #'my-counsel-locate-cmd)
-(defun my-counsel-locate-cmd (input)
-  "Return a shell command based on INPUT."
-  (counsel-require-program "locate")
-  (format "locate -i --database=\"$HOME/locate.db\" --regex '%s'"
-          (counsel--elisp-to-pcre (ivy--regex input))))
+  (run-with-timer 15 3600 #'my-index-duc))
 
-;; Make counsel-locate & helm-locate faster? idk.
+(setc helm-locate-command "locate %s --database=${HOME}/locate.db -e -A --regex %s")
+
+;; Hopefully make shell commands like `helm-locate-command' a bit faster.
 (when-let (dash (executable-find "dash"))
-  (setq shell-file-name dash))
-
+  (setc shell-file-name dash))

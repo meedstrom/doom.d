@@ -1,8 +1,18 @@
 (general-unbind eshell-mode-map "<up>")
 (general-unbind eshell-mode-map "<right>")
-ls
 sdfsdf
 (kill-whole-line)
 (crux-kill-line-backwards)
 (eshell-kill-input)
 cd
+ls
+n
+neofetch
+which ls
+q
+fgdsf   e
+pwdd
+pwd
+cd ’/home/kept/Emacs/morning-nag’ && git rev-list --all --pretty=raw > ’/tmp/morning-nag’
+cd "/home/kept/Emacs/escape-modality2" && git rev-list --all --pretty=raw > "/tmp/rev-lists/escape-modality2"
+q

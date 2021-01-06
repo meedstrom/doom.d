@@ -1,5 +1,8 @@
 ;; -*- lexical-binding: t; -*-
 
+(setq! wdired-allow-to-change-permissions t)
+(setq! global-auto-revert-non-file-buffers t)
+
 (after! dired-git-info
   (setq dgi-commit-message-format "%s") ;; undoom
   (add-hook 'dired-after-readin-hook #'dired-git-info-auto-enable))

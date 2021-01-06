@@ -1,5 +1,7 @@
 #+TITLE: Weird
 
+In retrospect, tangling here makes little sense. I like to sprinkle custom macros like =(quietly)= over my config, which are not appropriate to include in snippets online. And I may stop using some snippets, but that won't diminish their interest factor. Better to write posts separately, copy-pasting snippets (which may very well go out of date). The posts still needn't be full blog posts, they can sit at the front page of my GitHub repository as I envisioned to "contribute to the discussion" on Emacs configs and pull the readers' attention to the most interesting/weird parts of my config.
+
 ** Repeat last command N times
 
 You know about numeric arguments -- typing ~C-u 8 0 M-t~ would call ~M-t~ 80 times.
