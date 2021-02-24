@@ -2,12 +2,14 @@
 
 (if (display-graphic-p)
     (progn
+      ;; use caps instead of M-x
       (my-exec "setxkbmap" "-option" "caps:menu")
       (global-unset-key (kbd "M-x"))
       (global-unset-key (kbd "A-x"))
-      (define-key general-override-mode-map (kbd "M-x") nil) ;; dafuq!
-      (define-key general-override-mode-map (kbd "A-x") nil)
-      (define-key global-map (kbd "<menu>") #'execute-extended-command) ;; the capslock key
+      (after! general ;; dafuq is this set
+        (define-key general-override-mode-map (kbd "M-x") nil)
+        (define-key general-override-mode-map (kbd "A-x") nil))
+      ;; civilize emacs
       (define-key input-decode-map (kbd "<escape>") (kbd "C-g")))
   (kill-emacs "Terminal unsupported. Run emacs -Q."))
 
@@ -138,7 +140,19 @@ _n_: Navigate           _._: mark position _/_: jump to mark
 (general-after-init
   (setc ws-butler-keep-whitespace-before-point t))
 
-;; (defun org-version () nil "9.5") ;; org-drill breaks when this returns empty
+;; org-drill breaks when this returns empty
+(defun org-version () nil "9.5")
+(defconst org-version (org-version))
+(after! org
+  ;; Invalid version 9.5-dev
+  (defun org-release ()
+    nil
+    "9.5")
+  (defun org-version ()
+    nil
+    "9.5")
+  (defconst org-version (org-version))
+  )
 
 (setc company-idle-delay 0.25)
 (setc auth-sources '("~/.authinfo")) ;; https://magit.vc/manual/ghub/Storing-a-Token.html
@@ -354,3 +368,107 @@ _n_: Navigate           _._: mark position _/_: jump to mark
   (setc shell-file-name dash))
 
 (sachac/convert-shell-scripts-to-interactive-commands "~/bin")
+
+
+(setc elfeed-curl-max-connections 1)
+(setc elfeed-search-filter "@2-months-ago +unread")
+(setc
+ elfeed-feeds
+ '(
+   ;; Want more blogs? See lists at
+   ;; https://bookdown.org/content/1850/horoscopes-insights.html#check-out-other-social-media-too
+   ;; https://theconversation.com/uk/feeds
+   ;; https://retractionwatch.com/2018/06/17/meet-the-scientific-sleuths-ten-whove-had-an-impact-on-the-scientific-literature/
+
+   ;; New
+   ("https://sachachua.com/blog/")
+   ("https://www.dagensarena.se/feed/da" swe big)
+   ("https://www.flightfromperfection.com")
+   ("https://thehardestscience.com/feed" sci)
+   ("https://wingolog.org" tech 1p fav)
+   ("https://www.healthnewsreview.org/blog" sci big)
+   ("https://99percentinvisible.org")
+   ("https://www.cos.io/blog")
+   ;; ("https://bayesian-intelligence.com/paperfeed/" stat) ;; Simply no feed
+   ("https://www.mrmoneymustache.com/" fin 1p fav)
+   ("https://solomonkurz.netlify.app/post" 1p) ;; Broken
+   ("https://matrix.org/blog" tech)
+   ("https://www.wisdomandwonder.com" 1p tech)
+   ("https://www.sweclockers.com/feeds/nyheter" swe tech)
+   ("https://lars.ingebrigtsen.no" tech 1p fav)
+   ("https://mullvad.net/en/blog" tech)
+   ("https://blog.privacytools.io/rss" tech)
+   ("https://kvartal.se/artiklar" swe)
+   ("https://www.norvig.com" 1p fav)
+   ("https://www.onthelambda.com")
+   ("https://shape-of-code.coding-guidelines.com" 1p)
+   ("https://www.fhi.ox.ac.uk/feed" rat fav)
+   ("https://www.fhi.ox.ac.uk/comments/feed" rat fav)
+   ("https://www.rationality.org" rat)
+   ("https://thingofthings.wordpress.com")
+   ("https://www.math.columbia.edu/~woit/wordpress")
+   ("https://theconversation.com/global" big world)
+   ("https://www.empiri.ca" keto 1p)
+   ("https://www.ketotic.org" keto)
+   ;; ("https://nvd.nist.gov/feeds/xml/cve/misc/nvd-rss-analyzed.xml") ;; see https://nvd.nist.gov/vuln/data-feeds#RSS
+   ("https://ambrevar.xyz" tech 1p fav)
+   ("https://forums.sufficientvelocity.com/threads/dungeon-keeper-ami-sailor-moon-dungeon-keeper-story-only-thread.30066/threadmarks.rss?threadmark_category_id=1" fav)
+   ("https://nullprogram.com" tech 1p fav)
+   ("https://0x65.dev" 1p)
+   ("https://www.quantamagazine.org")
+   ("https://www.democracynow.org" world)
+   ("https://www.snopes.com" big)
+   ("https://tim.blog")
+   ("https://tidningencurie.se" swe sci big)
+   ("https://unenumerated.blogspot.com")
+   ("https://blog.givewell.org/feed")
+   ("https://blog.givewell.org/comments/feed")
+   ("https://80000hours.org/blog" rat fav)
+   ("https://statmodeling.stat.columbia.edu" 1p sci status)
+   ("https://efficientbadass.blogspot.com" swe 1p fin fav)
+   ("https://simplystatistics.org" stat)
+   ("https://blogs.sas.com/content/hiddeninsights" stat big)
+   ("https://reproducible-builds.org/blog" tech big)
+   ("https://signal.org/blog" tech)
+   ("https://blog.datproject.org")
+   ("https://www.jstatsoft.org")
+   ("https://hacks.mozilla.org" tech)
+   ("https://www.theonion.com" big world)
+   ("https://guix.gnu.org/blog" tech)
+   ("https://undark.org" world)
+   ("https://edwinth.github.io")
+
+   ;; Experimented briefly
+   ("https://metrics.stanford.edu" sci)
+   ("https://v-a.se" swe sci)
+   ("https://retractionwatch.com" sci big)
+   ("https://rviews.rstudio.com" sci big)
+
+   ;; Old
+   ("https://astralaresor.wordpress.com" swe)
+   ("https://two-wrongs.com")
+   ("https://aeon.co" big)
+   ("https://www.sumsar.net" stat 1p fav)
+   ("https://aleph.se/andart2" swe)
+   ("https://haggstrom.blogspot.com" swe fav)
+   ("https://evidence.blogg.lu.se" swe fav)
+   ("https://40procent20ar.blogspot.com" swe fin)
+   ("https://ekoenkelt.se" swe fin)
+   ("https://handelsevis.wordpress.com" swe fin)
+   ("https://miljonar.blogspot.com" swe fin)
+   ("https://spardiet.blogspot.com" swe fin)
+   ("https://lundaluppen.blogspot.com" swe fin)
+   ("https://bjornbengtsson.blogspot.com" swe fin)
+   ("https://lukemuehlhauser.com" 1p)
+   ("https://80000hours.org/podcast/")
+   ("https://lesswrong.com")
+   ("https://kajsotala.fi" rat fav 1p)
+   ("https://meaningness.com")
+   ;; ("https://measureofdoubt.com") ;; Dead
+   ("https://nothingismere.com")
+   ("https://slatestarcodex.com" rat fav 1p)
+   ("https://mindingourway.com" rat)
+   ("https://errorstatistics.com" sci stat)
+   ;; New & Inactive
+   ("https://understandinguncertainty.org/rss.xml" sci)
+   ))
