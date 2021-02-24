@@ -1,5 +1,16 @@
 ;; -*- lexical-binding: t; -*-
 
+(if (display-graphic-p)
+    (progn
+      (my-exec "setxkbmap" "-option" "caps:menu")
+      (global-unset-key (kbd "M-x"))
+      (global-unset-key (kbd "A-x"))
+      (define-key general-override-mode-map (kbd "M-x") nil) ;; dafuq!
+      (define-key general-override-mode-map (kbd "A-x") nil)
+      (define-key global-map (kbd "<menu>") #'execute-extended-command) ;; the capslock key
+      (define-key input-decode-map (kbd "<escape>") (kbd "C-g")))
+  (kill-emacs "Terminal unsupported. Run emacs -Q."))
+
 (scroll-bar-mode)
 
 (use-package! rainbow-blocks :defer :hook (ess-r-mode . rainbow-blocks-mode))
