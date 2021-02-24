@@ -5,12 +5,11 @@
 
        :ui
        doom
-       doom-dashboard
        hl-todo
        (ligatures +extra)
 
        :editor
-       file-templates
+       ;; file-templates
        fold
        format
        snippets
@@ -21,7 +20,8 @@
        vc
 
        :term
-       eshell
+       ;; eshell
+       vterm
 
        :checkers
        grammar
@@ -31,7 +31,7 @@
        editorconfig
        eval
        lsp
-       magit
+       (magit +forge)
        pdf
 
        :lang
@@ -44,6 +44,7 @@
        markdown
        rst
        ;; (org +dragndrop +pomodoro +journal +pretty) ;; slowwww
+       ;; org
        (sh +fish +lsp)
        yaml
 

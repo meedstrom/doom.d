@@ -27,6 +27,26 @@
    /home/kept/Journal/Finances/clean_start.ledger
 ")
 
+(defun my-eshell-timestamp-update ()
+    "When added to `eshell-pre-command-hook', the first string --:-- in the
+  prompt becomes a timestamp like 13:59 after you run a command."
+    (save-excursion
+      (forward-line -1)
+      (when-let* ((unfilled-timestamp "--:--")
+                  (end (search-forward unfilled-timestamp nil t))
+                  (beg (- end (length unfilled-timestamp)))
+                  (inhibit-read-only t))
+        (delete-region beg end)
+        (insert (format-time-string "%H:%M"))
+        (add-text-properties beg (point) '(font-lock-face eshell-prompt)))))
+
+;; Custom prompt
+(after! eshell
+  (add-hook 'eshell-pre-command-hook #'my-eshell-timestamp-update)
+  (setq eshell-prompt-regexp (rx bol (repeat 7 nonl) " Sir? ")
+        eshell-prompt-function (lambda () (concat "[--:--] Sir? "))))
+
+;; Undoom (I like to put the working directory in the modeline)
 (after! (eshell doom-modeline)
   (remove-hook 'eshell-mode-hook #'hide-mode-line-mode))
 
@@ -34,7 +54,8 @@
   (fset #'eshell/ls #'dired-jump))
 
 (after! eshell
-  ;; Natural choice for eshell, tho will affect terminals spawned by Emacs.
+  ;; The natural choice for shell/eshell. Bear in mind it will also apply to
+  ;; programs spawned from Emacs, such as terminals, RStudio, VSCode.
   (setenv "PAGER" "cat")
 
   (setq
@@ -62,18 +83,6 @@
   (setq eshell-modules-list '(eshell-alias eshell-banner eshell-basic eshell-cmpl
                               eshell-glob eshell-hist eshell-pred eshell-prompt eshell-script
                               eshell-term eshell-unix eshell-tramp eshell-xtra))
-
-  (general-unbind eshell-mode-map "<up>")
-  (general-unbind eshell-mode-map "<left>")
-  (general-unbind eshell-mode-map "<down>")
-  (general-unbind eshell-mode-map "<right>")
-  (general-def eshell-mode-map "C-c C-l" #'my-counsel-eshell-history)
-  (general-def dired-mode-map "b" #'dired-up-directory)
-  (general-def dired-mode-map "r" #'my-eshell-here)
-
-  ;; Easy swapping between dired and eshell
-  ;; Dired default unbound keys: `, b, E, J, K, r, z, <backspace>
-  ;; Dired useless keys: h, 1234567890
 
   ;; Encourage idiomatic ways to work with Emacs
   (defun eshell/cd () nil "cd: command not allowed")

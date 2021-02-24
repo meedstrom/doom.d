@@ -50,8 +50,7 @@
           (defun my-kill-fill () ;; i find doom weird about fill
             ;; (setc fill-column most-positive-fixnum)
             (setc adaptive-fill-mode nil)))
-
-
+(remove-hook 'org-mode-hook #'rainbow-delimiters-mode)
 
 (setc org-agenda-prefix-format '((agenda . " %i %-12:c%?-12t% s")
                                  (todo . " %i %-32b")
@@ -72,6 +71,10 @@
 (setc org-startup-folded 'fold) ;; FIXME: doom(?) doesn't respect this
 (setc org-catch-invisible-edits 'smart)
 (setc org-ctrl-k-protect-subtree t)
+(setc org-agenda-include-diary t)
+(setc org-journal-dir "/home/kept/Diary")
+(setc org-journal-date-format "%F %A")
+(setc org-journal-file-format "%Y%m%d.org")
 (setc org-cycle-separator-lines 3)
 (setc org-datetree-add-timestamp t)
 (setc org-edit-src-content-indentation 0)
@@ -83,7 +86,7 @@
 (setc org-latex-compiler "xelatex") ; allow unicode (åäö) in VERBATIM blocks
 (setc org-log-done 'time)
 (setc org-log-into-drawer t) ; hide spam
-(setc org-modules '(org-id org-bibtex org-info))
+(setc org-modules '(org-id org-bibtex))
 (setc org-pretty-entities t)
 (setc org-use-speed-commands t)
 (setc org-clock-x11idle-program-name "xprintidle")
@@ -92,12 +95,14 @@
                          "/home/kept/Journal/measurable.org"
                          "/home/kept/Emacs/common/emacs-todo.org"))
 
-(setc my-org-prettify-alist '(("[" . "［")
-                              ("]" . "］")
-                              ("-" . "－")
-                              ("=" . "＝")
-                              ("+" . "＋")
-                              ("\\vdots" . "︙")
+(setc my-org-prettify-alist '(
+                              ;; Nice for writing/reading equations in plaintext
+                              ;; ("[" . "［")
+                              ;; ("]" . "］")
+                              ;; ("-" . "－")
+                              ;; ("=" . "＝")
+                              ;; ("+" . "＋")
+                              ("\\vdots" . "⋮")
                               ("\\implies" . "⟹")
                               ("\\sqrt" . "√")
                               ("\\ldots" . "…")))

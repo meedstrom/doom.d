@@ -1,7 +1,9 @@
 ;; -*- lexical-binding: t; -*-
 
-(setq! wdired-allow-to-change-permissions t)
-(setq! global-auto-revert-non-file-buffers t)
+(remove-hook 'dired-mode-hook #'dired-omit-mode) ;; undoom
+
+(setc wdired-allow-to-change-permissions t)
+(setc global-auto-revert-non-file-buffers t)
 
 (after! dired-git-info
   (setq dgi-commit-message-format "%s") ;; undoom

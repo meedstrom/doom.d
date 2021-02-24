@@ -9,7 +9,12 @@
 ;; i go for virtual buffers right away on startup
 (require 'recentf)
 
-(use-package ctrlf
+(use-package! embark
+  :defer
+  :init
+  (setc embark-prompter #'embark-completing-read-prompter))
+
+(use-package! ctrlf :disabled
   :defer
   :init
   (ctrlf-mode) ;; Has smart autoloads
@@ -98,7 +103,8 @@
   ;; (setq consult-view-open-function #'bookmark-jump
   ;;       consult-view-list-function #'bookmark-view-names)
 
-  (consult-preview-mode))
+  ;; (consult-preview-mode)
+  )
 
 (after! mini-frame
   ;; for GNOME Shell users

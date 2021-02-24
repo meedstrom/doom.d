@@ -1,17 +1,19 @@
 ;; -*- lexical-binding: t; -*-
 
+(scroll-bar-mode)
+
 (use-package! rainbow-blocks :defer :hook (ess-r-mode . rainbow-blocks-mode))
 (use-package! twee-mode)
 (use-package! crux)
-(use-package! esup)
+;; (use-package! esup)
 (use-package! beancount
   :defer t
   :mode ((rx ".bean" (? "count") eot) . beancount-mode))
 (use-package! form-feed
   :config (global-form-feed-mode))
-(use-package! secretary
+(use-package! secretary-config
   :init
-  (setc org-clock-x11idle-program-name "xprintidle")
+  (setc secretary-x11idle-program-name "xprintidle")
   (setc secretary-user-name "Martin")
   (setc secretary-user-short-title "sir")
   (setc secretary-user-birthday "1991-12-07")
@@ -20,20 +22,87 @@
   ;; (secretary-mode)
   (add-hook 'secretary-plot-hook #'secretary-plot-mood 50)
   (add-hook 'secretary-plot-hook #'secretary-plot-weight)
-  ;; (remove-hook 'window-selection-change-functions #'secretary-log-buffer)
-  ;; (remove-hook 'window-buffer-change-functions #'secretary-log-buffer)
+  ;; (add-hook 'window-selection-change-functions #'secretary-log-buffer)
+  ;; (add-hook 'window-buffer-change-functions #'secretary-log-buffer)
   )
 
-(use-package! escape-modality
-  :config
-  ;; (esm-xmodmap-reload)
-  ;; (esm-xcape-reload)
-  ;; (massmap-tidy-mode)
-  ;; (escape-modality-global-mode)
-  ;; (deianira-global-mode)
-  (esm--get-relevant-bindings)
-  (general-def "C-x ;" #'comment-or-uncomment-region)
-  (general-def "C-x C-;" #'comment-or-uncomment-region))
+(el-patch-defun doom-buffer-frame-predicate (buf)
+  "To be used as the default frame buffer-predicate parameter. Returns nil if
+BUF should be skipped over by functions like `next-buffer' and `other-buffer'."
+  (or (s-starts-with-p "*R:" (buffer-name buf))
+      (doom-real-buffer-p buf)
+      (eq buf (doom-fallback-buffer))))
+
+(defhydra goto (:color blue :hint nil)
+  "
+Goto:
+^Char^              ^Word^                ^org^                    ^search^
+^^^^^^^^---------------------------------------------------------------------------
+_c_: 2 chars        _w_: word by char     _h_: headline in buffer  _o_: helm-occur
+_C_: char           _W_: some word        _a_: heading in agenda   _p_: helm-swiper
+_L_: char in line   _s_: subword by char  _q_: swoop org buffers   _f_: search forward
+^  ^                _S_: some subword     ^ ^                      _b_: search backward
+-----------------------------------------------------------------------------------
+_B_: helm-buffers       _l_: avy-goto-line
+_m_: helm-mini          _i_: ace-window
+_R_: helm-recentf
+
+_n_: Navigate           _._: mark position _/_: jump to mark
+"
+  ("c" avy-goto-char-2)
+  ("C" avy-goto-char)
+  ("L" avy-goto-char-in-line)
+  ("w" avy-goto-word-1)
+  ;; jump to beginning of some word
+  ("W" avy-goto-word-0)
+  ;; jump to subword starting with a char
+  ("s" avy-goto-subword-1)
+  ;; jump to some subword
+  ("S" avy-goto-subword-0)
+
+  ("l" avy-goto-line)
+  ("i" ace-window)
+
+  ("h" helm-org-headlines)
+  ("a" helm-org-agenda-files-headings)
+  ("q" helm-multi-swoop-org)
+
+  ("o" helm-occur)
+  ("p" swiper-helm)
+
+  ("f" isearch-forward)
+  ("b" isearch-backward)
+
+  ("." org-mark-ring-push :color red)
+  ("/" org-mark-ring-goto :color blue)
+  ("B" helm-buffers-list)
+  ("m" helm-mini)
+  ("R" helm-recentf)
+  ("n" hydra-navigate/body))
+
+(general-def (kbd "M-r") #'goto/body)
+
+(defun my-negative-argument (arg)
+  "Begin a negative numeric argument for the next command.
+\\[universal-argument] following digits or minus sign ends the argument."
+  (interactive "P")
+  ;; (message (key-description (vector last-command-event)))
+  ;; (prefix-command-preserve-state)
+  (let ((stem (esm--get-stem (key-description (vector last-command-event)))))
+    (cond ((equal stem "C-")
+           (event-apply-control-modifier t))
+          ((equal stem "M-")
+           (event-apply-meta-modifier t))
+          ((equal stem "s-")
+           (event-apply-super-modifier t))
+          ((equal stem "H-")
+           (event-apply-hyper-modifier t))
+          ((equal stem "A-")
+           (event-apply-alt-modifier t))))
+  (setq prefix-arg (cond ((integerp arg) (- arg))
+                         ((eq arg '-) nil)
+                         (t '-)))
+  (universal-argument--mode))
 
 ;; Lisp-friendly hippie expand
 ;; Thanks https://github.com/flyingmachine/emacs-for-clojure
@@ -52,7 +121,16 @@
 (put 'customize-face 'disabled nil)
 (put 'customize-variable 'disabled nil)
 
+;; Undoom. Was this a Vimism?
+(after! ws-butler
+  (setc ws-butler-keep-whitespace-before-point t))
+(general-after-init
+  (setc ws-butler-keep-whitespace-before-point t))
 
+;; (defun org-version () nil "9.5") ;; org-drill breaks when this returns empty
+
+(setc company-idle-delay 0.25)
+(setc auth-sources '("~/.authinfo")) ;; https://magit.vc/manual/ghub/Storing-a-Token.html
 (setc abbrev-file-name (expand-file-name "abbrevs" doom-private-dir))
 ;;(setc mouse-yank-at-point t)
 (setc save-interprogram-paste-before-kill t)
@@ -68,18 +146,37 @@
 (setc view-read-only t)
 (setc load-prefer-newer t) ;; don't spend another minute confused by this
 (setc tab-always-indent t)
+(setc indent-tabs-mode nil)
 (setc vc-msg-newbie-friendly-msg nil)
 (setc vc-msg-copy-id-to-kill-ring nil)
 (setc display-line-numbers-type nil) ; undoom
-(setc ws-butler-keep-whitespace-before-point t) ; undoom
 (setc garbage-collection-messages nil)
 (setc auto-save-no-message t)
 (setc fill-column 79)
-(setc nameless-prefix "✳")
+(setc nameless-prefix ".")
 ;; (setc nameless-prefix "")
-(setc nameless-private-prefix nil)
+;; (setc nameless-prefix "✳")
+(setc nameless-private-prefix t)
+;; (setc nameless-private-prefix nil)
 ;; (setc nameless-private-prefix "🔒-")
 ;; (setc nameless-prefix "⚘")
+(setc calendar-chinese-all-holidays-flag t)
+(setc holiday-bahai-holidays nil)
+(setc holiday-hebrew-holidays nil)
+(setc holiday-other-holidays '((holiday-fixed 6 27 "Diana's birthday")
+                               (holiday-fixed 1 25 "Joel's birthday")))
+
+;; remove holidays I'm not familiar with
+(after! holidays   
+  (setc calendar-holidays
+        (seq-difference calendar-holidays '((holiday-fixed 7 4 "Independence Day")
+                                            (holiday-float 10 1 2 "Columbus Day")
+                                            (holiday-fixed 11 11 "Veteran's Day")
+                                            (holiday-fixed 6 14 "Flag Day")
+                                            (holiday-float 9 1 1 "Labor Day")
+                                            (holiday-fixed 3 17 "St. Patrick's Day")
+                                            (holiday-fixed 2 2 "Groundhog Day")
+                                            (holiday-float 2 1 3 "President's Day")))))
 
 (setc +doom-dashboard-functions
       '(
@@ -183,6 +280,7 @@
 
 ;; ;; (setq-default debug-on-signal 'quit debug-on-quit t)
 
+(add-hook 'prog-mode-hook #'company-mode)
 (add-hook 'doom-load-theme-hook #'my-fix-pdf-midnight-colors)
 (add-hook 'after-save-hook #'executable-make-buffer-file-executable-if-script-p)
 (add-hook 'java-mode-hook (defun my-java-setup ()
@@ -243,3 +341,5 @@
 ;; Hopefully make shell commands like `helm-locate-command' a bit faster.
 (when-let (dash (executable-find "dash"))
   (setc shell-file-name dash))
+
+(sachac/convert-shell-scripts-to-interactive-commands "~/bin")

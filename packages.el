@@ -44,6 +44,8 @@
 (package! hacker-typer)
 (package! emms)
 (package! doom-snippets :ignore t) ;; disable doom's yasnippets
+;; (package! github-review :ignore t) ;; causes errors
+(package! winner :ignore t)
 (package! ts)
 (package! org-pomodoro)
 ;; (package! unpackaged :recipe (:host github :repo "alphapapa/unpackaged.el"))
@@ -53,6 +55,7 @@
 ;; (package! delve)
 (package! org-recent-headings)
 ;; (package! helm-org-recent-headings)
+;; (package! org-plus-contrib)
 (package! org-drill)
 (package! mediawiki)
 (package! parse-csv)
@@ -61,7 +64,6 @@
 (package! selectrum)
 (package! selectrum-prescient)
 (package! consult)
-(package! consult-selectrum)
 (package! marginalia)
 (package! embark)
 ;; (package! mini-frame)
@@ -78,4 +80,11 @@
 (package! fullframe)
 ;; (package! page-break-lines) ;; horrible performance
 (package! form-feed)
+(package! org-journal)
 (package! esup)
+(package! rainbow-mode)
+(package! hercules)
+(package! objed)
+(package! org-timeline)
+(package! embrace)
+(package! anki-editor)

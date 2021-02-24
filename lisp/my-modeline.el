@@ -1,19 +1,28 @@
 ;; -*- lexical-binding: t; -*-
 
 (setc mode-line-percent-position nil)
+(setc mini-modeline-display-gui-line nil)
+(setc mini-modeline-face-attr '(:background "#001100" :foreground "pale green"))
 
-(use-package! mini-modeline :config (mini-modeline-mode))
+(use-package! mini-modeline
+  :hook  (after-init . mini-modeline-mode))
+
 ;; (use-package! feebleline :config (feebleline-mode))
+
+;; (use-package! smarttabs
+;;               :config
+;;               (smart-tabs-add-language-support ess-r ess-r-mode-hook
+;;                 ())
+;;               (smart-tabs-insinuate 'ess))
 
 (after! mini-modeline
   (set-face-background 'mini-modeline-mode-line "#001100")
   (column-number-mode)
-  (setc mini-modeline-face-attr '(:background "#001100" :foreground "pale green"))
+  (require 'dash)
   (setc mini-modeline-r-format
-        (seq-difference mini-modeline-r-format
-                        '((:eval (string-trim (format-mode-line mode-line-modes)))
-                          mode-line-mule-info))))
-
+        (-difference mini-modeline-r-format
+                     '((:eval (string-trim (format-mode-line mode-line-modes)))
+                       mode-line-mule-info))))
 
 (after! feebleline
   (defface feebleline-norm-face '((t :foreground "pale green"))
