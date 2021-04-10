@@ -21,14 +21,18 @@
   :config
   (add-hook 'Info-mode-hook (defun my-turn-off-ctrlf () (ctrlf-local-mode 0))))
 
+(use-package! orderless
+  :custom (completion-styles '(orderless)))
+
 (use-package selectrum
   :defer
   :init
   (selectrum-mode) ;; Has smart autoloads
   :config
   (require 'consult-selectrum)
-  (selectrum-prescient-mode)
-  (prescient-persist-mode)
+
+  ;; (selectrum-prescient-mode)  ;; performance hit
+  ;; (prescient-persist-mode)
   (marginalia-mode)
   ;; (selectrum-helm-mode)
   ;; (mini-frame-mode)

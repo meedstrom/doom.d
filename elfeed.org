@@ -1,0 +1,136 @@
+#+OPTIONS: toc:nil num:nil
+
+Sources of more feeds
+- https://bookdown.org/content/1850/horoscopes-insights.html#check-out-other-social-media-too
+- https://theconversation.com/uk/feeds
+- https://retractionwatch.com/2018/06/17/meet-the-scientific-sleuths-ten-whove-had-an-impact-on-the-scientific-literature/
+
+Not tried
+https://nautil.us/
+https://www.project-syndicate.org/
+
+* Tag explanations
+- fav :: Blogs that give me warm feels
+- swe :: Swedish
+- emacs :: Emacs-sphere
+- sci :: Related to philosophy of science or the reproducibility crisis
+- trawlworthy :: Worth reading the whole blog, beginning-to-end
+- rss :: I favour Atom feeds, so I flag the sites serving RSS only. As of this writing ([2021-03-02]) I had 55 Atom and 17 RSS feeds.
+- http :: I favour https feeds, so I flag the sites serving http only. As of this writing ([2021-03-02]), I had 68 https and 4 http feeds.
+- 1p :: Single-person blog
+- big :: Particularly big feed (like a spammy news site)
+- kaput :: Not posting anymore
+- geo :: People living geographically close to me. It's relative to rarity: I don't flag every Swede, but if the person is a rare kind, I'll flag it even if they're in Finland.
+* Feeds I follow                                                     :elfeed:
+** Tech :tech:
+*** [[http://www.aaronsw.com/2002/feeds/pgessays.rss][Paul Graham]]                                                   :1p:http:
+*** [[https://sachachua.com/blog/category/emacs/atom/][Sacha Chua]]                                                         :1p:
+*** [[https://wingolog.org/feed/atom][Andy Wingo]]                                                     :1p:fav:
+*** [[https://ambrevar.xyz/atom.xml][Pierre Neidhardt]]                                     :1p:fav:emacs:geo:
+*** [[https://nullprogram.com/feed][Christopher Wellons]]                                      :1p:fav:emacs:
+*** [[https://lars.ingebrigtsen.no/atom][Lars Ingebrigtsen]]                                                  :1p:
+*** [[https://www.wisdomandwonder.com/atom][Grant Rettke]]                                                 :1p:emacs:
+*** https://0x65.dev/atom.xml
+*** https://guix.gnu.org/feeds/blog.atom
+*** https://signal.org/blog/rss.xml                                   :rss:
+*** https://matrix.org/blog/feed                                      :rss:
+*** https://mullvad.net/en/blog/feed/atom
+*** https://shape-of-code.coding-guidelines.com/atom                   :1p:
+*** [[https://hacks.mozilla.org/feed][Mozilla Hacks]]                                                     :rss:
+** Nutrition
+*** [[http://www.empiri.ca/feeds/posts/default][Amber O'Hearn]]                                                 :1p:http:
+*** http://www.ketotic.org/feeds/posts/default                       :http:
+** News :big:news:
+*** https://tidningencurie.se/sv/atom                             :swe:sci:
+*** https://v-a.se/feed                                       :swe:sci:rss:
+*** https://www.dagensarena.se/atom                                   :swe:
+*** https://theconversation.com/global/articles.atom
+*** https://api.quantamagazine.org/atom
+** Statistics :stat:
+*** [[https://statmodeling.stat.columbia.edu/atom][Andrew Gelman]]                                  :1p:sci:fav:trawlworthy:
+*** [[http://www.sumsar.net/atom.xml][Rasmus Bååth]]                                          :1p:fav:geo:http:
+*** [[https://understandinguncertainty.org/rss.xml][David Spiegelhalter]]                                  :kaput:sci:rss:1p:
+*** [[https://blogs.sas.com/content/hiddeninsights/feed/atom][SAS Blog]]                                                          :big:
+*** [[https://www.cos.io/blog/atom.xml][Center for Open Science]]                              :sci:fav:
+*** https://www.statnews.com/category/the-regulars/the-watchdogs/atom :big:
+*** https://www.healthnewsreview.org/feed/atom            :sci:trawlworthy:
+*** https://simplystatistics.org/feed                             :fav:rss:
+*** https://www.math.columbia.edu/~woit/wordpress/?feed=atom           :1p:
+*** https://edwinth.github.io/feed.xml                                :rss:
+*** https://blog.datproject.org/rss                                   :rss:
+*** https://www.jstatsoft.org/atom
+*** https://thehardestscience.com/atom                             :1p:sci:
+*** https://www.onthelambda.com/atom
+*** https://meaningness.com/rss.xml                                   :rss:
+*** https://errorstatistics.com/atom                                  :sci:
+*** https://rviews.rstudio.com/index.xml                              :rss:
+** Rationality :rat:
+*** [[https://evidence.blogg.lu.se/atom][Ullrika Sahlin]]                                                :fav:geo:
+*** [[https://meteuphoric.com/atom][Katja Grace]]                                                        :1p:
+*** [[https://juliagalef.com/atom][Julia Galef]]                                                        :1p:
+*** [[https://www.greaterwrong.com/?format=rss][Less Wrong]]                                                        :rss:
+*** https://astralcodexten.substack.com/feed/                  :fav:rss:1p:
+*** https://slatestarcodex.com/atom                    :fav:1p:trawlworthy:
+*** https://kajsotala.fi/atom                      :fav:1p:trawlworthy:geo:
+*** https://www.gwern.net/Changelog                                    :1p:
+*** https://gwern.substack.com/feed                                :rss:1p:
+*** https://lukemuehlhauser.com/atom                               :fav:1p:
+*** https://www.norvig.com/rss-feed.xml                        :1p:fav:rss:
+*** https://www.flightfromperfection.com/feeds/all.atom.xml
+*** https://aleph.se/andart2/atom
+*** https://blog.givewell.org/atom
+*** https://thingofthings.wordpress.com/atom
+*** https://www.fhi.ox.ac.uk/atom                                     :fav:
+*** https://www.rationality.org/feed.xml                              :rss:
+*** https://rationallyspeakingpodcast.libsyn.com/rss                  :rss:
+*** https://80000hours.org/blog/atom                                  :fav:
+*** https://80000hours.org/podcast/atom
+*** https://two-wrongs.com/feed.xml                       :rss:1p:tech:geo:
+*** https://nothingismere.com/atom                                     :1p:
+*** https://mindingourway.com/rss                :rss:1p:trawlworthy:kaput:
+*** https://haggstrom.blogspot.com/feeds/posts/default     :swe:1p:fav:geo:
+** Finance :fin:
+*** https://www.mrmoneymustache.com/atom                           :1p:fav:
+*** https://efficientbadass.blogspot.com/feeds/posts/default   :swe:1p:fav:
+*** https://www.iblandgormanratt.se/atom                           :swe:1p:
+*** https://www.bajsaborta.nu/atom                                 :swe:1p:
+*** https://40procent20ar.blogspot.com/feeds/posts/default         :swe:1p:
+*** https://ekoenkelt.se/atom                                      :swe:1p:
+*** https://handelsevis.wordpress.com/atom                         :swe:1p:
+*** https://miljonar.blogspot.com/feeds/posts/default              :swe:1p:
+*** https://spardiet.blogspot.com/feeds/posts/default              :swe:1p:
+*** https://lundaluppen.blogspot.com/feeds/posts/default           :swe:1p:
+*** https://bjornbengtsson.blogspot.com/feeds/posts/default        :swe:1p:
+** Unsorted
+*** [[https://forums.sufficientvelocity.com/threads/dungeon-keeper-ami-sailor-moon-dungeon-keeper-story-only-thread.30066/threadmarks.rss?threadmark_category_id=1][Dungeon Keeper Ami]]                                                :fav:
+*** https://feeds.feedburner.com/99pi
+*** https://unenumerated.blogspot.com/feeds/posts/default
+*** https://astralaresor.wordpress.com/atom                        :swe:1p:
+*** https://solomonkurz.netlify.app/post/index.xml                 :rss:1p:
+*** https://impossiblehq.com/blog/atom                                 :1p:
+*** https://feeds.feedburner.com/tedtalks_video
+*** https://gokhalemethod.com/blog/rss-feed
+*** https://nutritiousmovement.com/atom                                :1p:
+* Deprecated (no longer followed)
+*** https://tim.blog
+TODO: Filter for transcribed podcasts only https://tim.blog/category/the-tim-ferriss-show-transcripts/
+*** https://retractionwatch.com/feed                                  :sci:
+A bit too many skippable articles for me.  Not a point against them, they do work humankind needs.
+*** https://www.democracynow.org                                 :big:news:
+Too much US news.
+*** https://www.snopes.com                                       :big:news:
+Too much US news.
+*** https://www.theonion.com
+This one's not bad for testing your ability to tell made-up news from real news.  I'm just not actively following news.
+*** https://nvd.nist.gov/feeds/xml/cve/misc/nvd-rss-analyzed.xml
+CVEs.  Am on Debian stable atm, yolo.
+*** https://emacsair.me/
+*** https://aeon.co/feed.atom                                        :news:
+Truncates feed items.
+*** [[https://kvartal.se/artiklar/atom][Kvartal]]                                                      :swe:news:
+Truncates feed items.
+*** https://undark.org/atom                                          :news:
+Truncates feed items.
+*** https://www.statnews.com/category/the-regulars/the-watchdogs/
+Lacks specific feed...
+***

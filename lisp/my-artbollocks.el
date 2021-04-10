@@ -1,8 +1,11 @@
+;; Upstream
 (setq artbollocks-default-weasel-words
       '("many" "various" "very" "fairly" "several" "extremely" "exceedingly"
         "quite" "remarkably" "few" "surprisingly" "mostly" "largely" "huge" "tiny"
         "are a number" "is a number" "excellent" "interestingly" "significantly"
         "substantially" "clearly" "vast" "relatively" "completely"))
+
+;; Upstream
 (setq artbollocks-default-jargon
       '("a priori" "ad hoc" "affirmation" "affirm"
         "affirms" "alterity" "altermodern" "aporia" "aporetic" "appropriates"
@@ -40,31 +43,40 @@
         "subversion" "subverts" "text" "textual" "textuality" "thinker" "thinkers"
         "trajectory" "transgress" "transgresses" "transgression" "transgressive"
         "unfolding" "undermine" "undermining" "undermines" "work" "works" "wry" "wryly"))
+
 (setq artbollocks-weasel-words-regex
-      (concat "\\b" (regexp-opt (append artbollocks-default-weasel-words
-                                        '("think"
-                                          "one of the"
-                                          "should"
-                                          "just"
-                                          "sort of"
-                                          "a lot"
-                                          "probably"
-                                          "maybe"
-                                          "perhaps"
-                                          "I think"
-                                          "really"
-                                          "pretty"
-                                          "maybe"
-                                          "nice"
-                                          "action"
-                                          "utilize"
-                                          "leverage")))
+      (concat "\\b" (regexp-opt
+                     (append
+                      ;; add these
+                      '("think"
+                        "one of the"
+                        "should"
+                        "just"
+                        "sort of"
+                        "a lot"
+                        "probably"
+                        "maybe"
+                        "perhaps"
+                        "I think"
+                        "really"
+                        "pretty"
+                        "maybe"
+                        "nice"
+                        "action"
+                        "utilize"
+                        "leverage")
+                      (seq-difference artbollocks-default-weasel-words
+                                      ;; remove these
+                                      '())))
               "\\b"))
+
 (setq artbollocks-jargon-regex
       (concat "\\b" (regexp-opt
                      (append
+                      ;; add these
                       '()
                       (seq-difference artbollocks-default-jargon
+                                      ;; remove these
                                       '("a priori"
                                         "position"
                                         "matrix"
@@ -77,59 +89,63 @@
   (set-face-attribute 'artbollocks-lexical-illusions-face () :background 'unspecified)
   (set-face-attribute 'artbollocks-weasel-words-face () :background 'unspecified))
 
-(setq subs-for-think '("conclude" "define" "expect" "generalize" "hear"
-                       "observe" "opine" "postulate" "state" "experience"
-                       "remember" "particularize" "deduce" "infer" "induce"))
+(defconst subs-for-think '("conclude" "define" "expect" "generalize" "hear"
+                           "observe" "opine" "postulate" "state" "experience"
+                           "remember" "particularize" "deduce" "infer" "induce")
+  "Specific evidentials, because \"think\" is overloaded.
+See also:
+https://lojban.org/publications/cll/cll_v1.1_xhtml-section-chunks/section-evidentials.html")
 
-(setq subs-for-copula '("exist" "remain" "taste" "feel" "smell" "grow" "stay"
-                        "turn" "look"))
+(defconst subs-for-copula '("exist" "remain" "taste" "feel" "smell" "grow" "stay"
+                            "turn" "look")
+  "See English Prime: https://en.wikipedia.org/wiki/E-Prime")
 
-;; download from the grand List and filter out the ridiculous substitutions
-;; https://en.wikipedia.org/wiki/List_of_Germanic_and_Latinate_equivalents_in_English
-(setq latinate-layman-alist
-      '((("adolescence") . ("youth"))
-        (("annual") . ("yearly"))
-        (("labor") . ("work" "drudge"))
-        (("forest") . ("wood" "brush" "grove" "thicket"))
-        (("feminine") . ("womanly"))
-        (("desire") . ("wish" "will" "yearning" "longing"))
-        (("prudent" "intelligent") . ("wise" "clever" "insightful" "enlightened" "keen" "knowledgable" "shrewd"))
-        (("savage" "feral") . ("wild"))
-        (("latitude") . ("breadth" "span" "width"))
-        (("entire") . ("whole"))
-        (("important") . ("weighty" "key"))
-        (("lament") . ("mourn" "regret"))
-        (("mundane") . ("worldly" "earthly"))
-        (("strange") . ("weird" "odd" "queer" "eerie"))
-        (("marry") . ("wed"))
-        (("marriage") . ("wedlock"))
-        (("observe" "supervise") . ("watch" "keep" "behold"))
-        (("launder") . ("wash" "cleanse" "rinse" "scrub"))
-        (("notice" "alert") . ("warn" "warning" "tip off"))
-        (("expect") . ("await"))
-        (("salary") . ("wage"))
-        (("totally") . ("fully" "wholly" "utterly" "altogether"))
-        (("pronounce") . ("utter" "say"))
-        (("elevating") . ("uplifting" "raising"))
-        (("support") . ("bolster" "uphold"))
-        (("comprehend") . ("understand" "get" "grasp"))
-        ))
+(defconst latinate-layman-alist
+  '((("adolescence") . ("youth"))
+    (("annual") . ("yearly"))
+    (("labor") . ("work" "drudge"))
+    (("forest") . ("wood" "brush" "grove" "thicket"))
+    (("feminine") . ("womanly"))
+    (("desire") . ("wish" "will" "yearning" "longing"))
+    (("prudent" "intelligent") . ("wise" "clever" "insightful" "enlightened" "keen" "knowledgeable" "shrewd"))
+    (("savage" "feral") . ("wild"))
+    (("latitude") . ("breadth" "span" "width"))
+    (("entire") . ("whole"))
+    (("important") . ("weighty" "key"))
+    (("lament") . ("mourn" "regret"))
+    (("mundane") . ("worldly" "earthly"))
+    (("strange") . ("weird" "odd" "queer" "eerie"))
+    (("marry") . ("wed"))
+    (("marriage") . ("wedlock"))
+    (("observe" "supervise") . ("watch" "keep" "behold"))
+    (("launder") . ("wash" "cleanse" "rinse" "scrub"))
+    (("notice" "alert") . ("warn" "warning" "tip off"))
+    (("expect") . ("await"))
+    (("salary") . ("wage"))
+    (("totally") . ("fully" "wholly" "utterly" "altogether"))
+    (("pronounce") . ("utter" "say"))
+    (("elevating") . ("uplifting" "raising"))
+    (("support") . ("bolster" "uphold"))
+    (("comprehend") . ("understand" "get" "grasp")))
+  "See https://en.wikipedia.org/wiki/List_of_Germanic_and_Latinate_equivalents_in_English")
+
+(defconst janus-words
+  '("ravel" "sanction" "peruse" "fulsome" "oversight")
+  "Words that that are antonyms for themselves; broken words.")
 
 (defun my-suggest-sub ()
   (interactive)
-  (cond ((member (word-at-point) '("think" "thought"))
-         (when-let ((sub (completing-read "Substitute: " subs-for-think))
-                    (bounds (bounds-of-thing-at-point 'word)))
-           (delete-region (car bounds) (cdr bounds))
-           (insert sub)))
-        ((member (word-at-point) '("am" "are" "be" "is"))
-         (when-let ((sub (completing-read "Substitute: " subs-for-copula))
-                    (bounds (bounds-of-thing-at-point 'word)))
-           (delete-region (car bounds) (cdr bounds))
-           (insert sub)))
-        ((when-let* ((cell (cl-assoc-if (lambda (x) (member (word-at-point) x))
-                                        latinate-layman-alist))
-                     (sub (completing-read "Substitute: " (cdr cell)))
-                     (bounds (bounds-of-thing-at-point 'word)))
-           (delete-region (car bounds) (cdr bounds))
-           (insert sub)))))
+  (let ((bounds (bounds-of-thing-at-point 'word)))
+    (cond ((member (word-at-point) '("think" "thought"))
+           (when-let ((sub (completing-read "Substitute: " subs-for-think)))
+             (delete-region (car bounds) (cdr bounds))
+             (insert sub)))
+          ((member (word-at-point) '("am" "are" "be" "is"))
+           (when-let ((sub (completing-read "Substitute: " subs-for-copula)))
+             (delete-region (car bounds) (cdr bounds))
+             (insert sub)))
+          ((when-let* ((cell (cl-assoc-if (lambda (x) (member (word-at-point) x))
+                                          latinate-layman-alist))
+                       (sub (completing-read "Substitute: " (cdr cell))))
+             (delete-region (car bounds) (cdr bounds))
+             (insert sub))))))

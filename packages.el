@@ -62,6 +62,9 @@
 (package! pcsv) ;; more popular
 (package! ctrlf)
 (package! selectrum)
+(package! magit) ;; because magit-todos is B R O K E N
+(package! forge)
+(package! deferred)
 (package! selectrum-prescient)
 (package! consult)
 (package! marginalia)
@@ -85,6 +88,11 @@
 (package! rainbow-mode)
 (package! hercules)
 (package! objed)
+;; (package! magit-todos :ignore t) ;; bugs like org version 9.5-dev
 (package! org-timeline)
+(package! org-plus-contrib)
 (package! embrace)
+(package! orderless)
 (package! anki-editor)
+(package! llama)
+(package! subed :recipe (:host github :repo "rndusr/subed"))

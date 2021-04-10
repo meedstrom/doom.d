@@ -20,8 +20,7 @@
        vc
 
        :term
-       ;; eshell
-       vterm
+       ;; vterm ;; broken
 
        :checkers
        grammar
@@ -31,7 +30,7 @@
        editorconfig
        eval
        lsp
-       (magit +forge)
+       ;; (magit +forge)
        pdf
 
        :lang
@@ -50,6 +49,9 @@
 
        :email
        mu4e
+
+       :app
+       rss
 
        :config
        (default +bindings +smartparens))

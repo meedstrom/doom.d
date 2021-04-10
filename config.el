@@ -39,6 +39,8 @@
 ;(use-package org
 ;  :load-path "/home/me/.guix-profile/share/emacs/site-lisp/")
 
+(setq-default load-prefer-newer t)
+(add-to-list 'load-path "~/.doom.d/subed/")
 (add-load-path! (expand-file-name "Emacs/common" (getenv "MY_FILES")))
 (add-load-path! (expand-file-name "Emacs/conf-vanilla/lisp" (getenv "MY_FILES")))
 (add-load-path! (expand-file-name "Emacs/conf-doom/lisp" (getenv "MY_FILES")))
