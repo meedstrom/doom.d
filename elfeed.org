@@ -30,10 +30,11 @@ https://www.project-syndicate.org/
 *** [[https://nullprogram.com/feed][Christopher Wellons]]                                      :1p:fav:emacs:
 *** [[https://lars.ingebrigtsen.no/atom][Lars Ingebrigtsen]]                                                  :1p:
 *** [[https://www.wisdomandwonder.com/atom][Grant Rettke]]                                                 :1p:emacs:
+*** [[https://flak.tedunangst.com/rss][Ted Unangst]]                                                    :1p:rss:
 *** https://0x65.dev/atom.xml
 *** https://guix.gnu.org/feeds/blog.atom
 *** https://signal.org/blog/rss.xml                                   :rss:
-*** https://matrix.org/blog/feed                                      :rss:
+*** http2s://matrix.org/blog/feed                                     :rss:
 *** https://mullvad.net/en/blog/feed/atom
 *** https://shape-of-code.coding-guidelines.com/atom                   :1p:
 *** [[https://hacks.mozilla.org/feed][Mozilla Hacks]]                                                     :rss:
@@ -64,12 +65,14 @@ https://www.project-syndicate.org/
 *** https://meaningness.com/rss.xml                                   :rss:
 *** https://errorstatistics.com/atom                                  :sci:
 *** https://rviews.rstudio.com/index.xml                              :rss:
+*** https://medium.com/feed/scite  :rss:
 ** Rationality :rat:
 *** [[https://evidence.blogg.lu.se/atom][Ullrika Sahlin]]                                                :fav:geo:
 *** [[https://meteuphoric.com/atom][Katja Grace]]                                                        :1p:
 *** [[https://juliagalef.com/atom][Julia Galef]]                                                        :1p:
 *** [[https://www.greaterwrong.com/?format=rss][Less Wrong]]                                                        :rss:
-*** https://astralcodexten.substack.com/feed/                  :fav:rss:1p:
+*** [[https://zeynep.substack.com/feed][Zeynep Tufekci]]                                                 :rss:1p:
+*** https://astralcodexten.substack.com/feed                  :fav:rss:1p:
 *** https://slatestarcodex.com/atom                    :fav:1p:trawlworthy:
 *** https://kajsotala.fi/atom                      :fav:1p:trawlworthy:geo:
 *** https://www.gwern.net/Changelog                                    :1p:
@@ -106,11 +109,12 @@ https://www.project-syndicate.org/
 *** https://feeds.feedburner.com/99pi
 *** https://unenumerated.blogspot.com/feeds/posts/default
 *** https://astralaresor.wordpress.com/atom                        :swe:1p:
-*** https://solomonkurz.netlify.app/post/index.xml                 :rss:1p:
+*** https://solomonkurz.netlify.app/index.xml                      :rss:1p:
 *** https://impossiblehq.com/blog/atom                                 :1p:
 *** https://feeds.feedburner.com/tedtalks_video
 *** https://gokhalemethod.com/blog/rss-feed
 *** https://nutritiousmovement.com/atom                                :1p:
+***
 * Deprecated (no longer followed)
 *** https://tim.blog
 TODO: Filter for transcribed podcasts only https://tim.blog/category/the-tim-ferriss-show-transcripts/

@@ -10,6 +10,7 @@
  version-control t)
 
 (setq user-full-name "Martin Edström")
+(setq user-mail-address "meedstrom@teknik.io")
 
 (setq doom-font (font-spec :family "Terminus" :size 10))
 ;; (setq doom-font (font-spec :family "monospace" :size 15))
@@ -19,8 +20,8 @@
 ;; (setq doom-theme 'doom-one)
 ;; (setq doom-theme 'doom-tomorrow-night)
 ;; (setq doom-theme 'doom-dark+)
-;;(setq doom-theme 'doom-manegarm)
-(setq doom-theme 'doom-Iosvkem)
+(setq doom-theme 'doom-manegarm)
+;; (setq doom-theme 'doom-Iosvkem)
 
 ;; (add-hook 'doom-load-theme-hook
           ;; (lambda () (set-face-attribute 'fixed-pitch-serif () :inherit 'default)))
@@ -40,7 +41,7 @@
 ;  :load-path "/home/me/.guix-profile/share/emacs/site-lisp/")
 
 (setq-default load-prefer-newer t)
-(add-to-list 'load-path "~/.doom.d/subed/")
+(add-to-list 'load-path (expand-file-name "Emacs/conf-doom/subed" (getenv "MY_FILES")))
 (add-load-path! (expand-file-name "Emacs/common" (getenv "MY_FILES")))
 (add-load-path! (expand-file-name "Emacs/conf-vanilla/lisp" (getenv "MY_FILES")))
 (add-load-path! (expand-file-name "Emacs/conf-doom/lisp" (getenv "MY_FILES")))

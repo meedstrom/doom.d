@@ -16,3 +16,27 @@ pwd
 cd ’/home/kept/Emacs/morning-nag’ && git rev-list --all --pretty=raw > ’/tmp/morning-nag’
 cd "/home/kept/Emacs/escape-modality2" && git rev-list --all --pretty=raw > "/tmp/rev-lists/escape-modality2"
 q
+guix pull
+docker 
+docker run -d -p 80:80 dokcer/getting-started
+docker run -d -p 80:80 docker/getting-started
+docker run -p 80:80 docker/getting-started
+docker run -p 80:80 docker/getting-started
+docker ps
+docker kill 51
+docker ps
+docker run -p 80:80 docker/getting-started
+docker run -itp 80:80 docker/getting-started
+docker run -i docker/getting-started
+docker
+docker run -bp 80:80 docker/getting-started
+docker run -dp 80:80 docker/getting-started
+docker status
+docker ls
+docker ps
+docker attach quirky
+docker attach 2f
+dockere logs 2f
+docker logs 2f
+docker events 2f
+docker info

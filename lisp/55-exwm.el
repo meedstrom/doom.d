@@ -1,12 +1,5 @@
 ;; -*- lexical-binding: t; -*-
 
-;; What we are missing:
-;; - brightness/volume keys
-;; - wifi interface
-;; - mullvad auto-start
-;; - a comfortable eshell
-;; - xset r rate 200 30
-
 (general-unbind exwm-mode-map "C-c")
 (general-def exwm-mode-map "M-s q" #'exwm-input-send-next-key)
 
@@ -27,12 +20,12 @@
                                    ([?\s-y] . [C-v])
                                    ([?\s-/] . [C-z])
                                    ([?\M-d] . [C-S-right delete])
-                                   ([f8]    . [menu])
+                                   ;; ([f8]    . [menu])
                                    ))
-(setq exwm-input-prefix-keys '(?\s-x ?\M-x f1 f2 f5 f7 f12))
+(setq exwm-input-prefix-keys '(?\s-x ?\M-x ?\M-1 ?\M-2 menu f1 f2 f3 f4 f5 f7 f10 f11 f12))
 (setq exwm-input-global-keys `((,(kbd "C-M-<delete>") . exwm-reset)
                                (,(kbd "s-<delete>") . exwm-reset)
-
+                               (,(kbd "M-<f4>") . kill-current-buffer)
                                (,(kbd "<XF86MonBrightnessDown>") . my-backlight-dec)
                                (,(kbd "<XF86MonBrightnessUp>") . my-backlight-inc)))
 
@@ -43,5 +36,6 @@
 ;; (when (fboundp #'exwm-enable)
 ;;  (exwm-enable))
 
-;; this one is prolly
-;; (autoload #'exwm-enable "exwm")
+;; not good
+;; (setc exwm-workspace-minibuffer-position 'bottom)
+;; (add-hook 'exwm-init-hook #'exwm-workspace-attach-minibuffer)

@@ -30,7 +30,7 @@
        editorconfig
        eval
        lsp
-       ;; (magit +forge)
+       (magit +forge) ;; broken?
        pdf
 
        :lang
@@ -44,6 +44,7 @@
        rst
        ;; (org +dragndrop +pomodoro +journal +pretty) ;; slowwww
        ;; org
+       (scheme +guile)
        (sh +fish +lsp)
        yaml
 
@@ -51,7 +52,7 @@
        mu4e
 
        :app
-       rss
+       (rss +org)
 
        :config
        (default +bindings +smartparens))

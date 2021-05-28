@@ -140,6 +140,7 @@
             (general-def eshell-mode-map "C-c C-l"  #'consult-history)
             ))
 
+(general-def global-map "M-<f4>"          #'kill-current-buffer)
 (general-def custom-mode-map "q"          #'kill-current-buffer)
 (general-def dired-mode-map "b"           #'dired-up-directory)
 (general-def dired-mode-map ")"           #'dired-git-info-mode)

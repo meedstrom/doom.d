@@ -7,6 +7,7 @@
   (setc counsel-switch-buffer-preview-virtual-buffers nil)) ; L A G
 
 ;; i go for virtual buffers right away on startup
+;; FIXME still doesn't work
 (require 'recentf)
 
 (use-package! embark
@@ -22,7 +23,15 @@
   (add-hook 'Info-mode-hook (defun my-turn-off-ctrlf () (ctrlf-local-mode 0))))
 
 (use-package! orderless
-  :custom (completion-styles '(orderless)))
+  :custom (completion-styles '(orderless))
+  :config
+  (setc orderless-matching-styles '(orderless-literal
+                                    orderless-regexp
+                                    orderless-initialism))
+  ;; Optional performance optimization
+  ;; by highlighting only the visible candidates.
+  (setq orderless-skip-highlighting (lambda () selectrum-is-active))
+  (setq selectrum-highlight-candidates-function #'orderless-highlight-matches))
 
 (use-package selectrum
   :defer
@@ -95,6 +104,9 @@
   (fset 'multi-occur #'consult-multi-occur)
   :config
   (setq consult-narrow-key "<")
+
+  ;; Don't spin up LSP/repls when previewing virtual buffers.
+  (setq consult-preview-raw-size 0)
 
   ;; Make narrowing help available in the minibuffer.  Do this if I turn off
   ;; which-key one day.

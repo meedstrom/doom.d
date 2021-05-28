@@ -11,9 +11,23 @@
         (define-key general-override-mode-map (kbd "A-x") nil))
       ;; civilize emacs
       (define-key input-decode-map (kbd "<escape>") (kbd "C-g")))
-  (kill-emacs "Terminal unsupported. Run emacs -Q."))
+  ;; (kill-emacs "Terminal unsupported. Run emacs -Q.")
+  )
+
+;; fix guix.el
+(after! ws-butler
+  (add-to-list 'ws-butler-global-exempt-modes #'minibuffer-inactive-mode))
 
 (scroll-bar-mode)
+
+(general-def magit-section-mode-map "M-1" nil)
+(general-def magit-section-mode-map "M-2" nil)
+
+(setc browse-url-handlers
+      '(
+        ;;("http.*\/\/github.com" . browse-url-generic)
+        ("melpa.org" . browse-url-generic)
+        ("." . eww-browse-url)))
 
 (use-package! subed
   :config
@@ -47,6 +61,7 @@
   ;; (add-hook 'window-buffer-change-functions #'secretary-log-buffer)
   )
 
+;; Make previous-buffer not skip the R buffer
 (el-patch-defun doom-buffer-frame-predicate (buf)
   "To be used as the default frame buffer-predicate parameter. Returns nil if
 BUF should be skipped over by functions like `next-buffer' and `other-buffer'."
@@ -134,7 +149,14 @@ _n_: Navigate           _._: mark position _/_: jump to mark
         try-complete-lisp-symbol-partially
         try-complete-lisp-symbol))
 
-(set-frame-parameter nil 'fullscreen 'fullheight)
+;; Good on floating WMs.
+(add-to-list 'initial-frame-alist '(fullscreen . fullheight))
+
+(add-to-list 'default-frame-alist '(alpha . 85))
+(set-face-background 'default "#000000")
+(after! solaire-mode
+ (set-face-background 'solaire-default-face "#000000")
+ (set-face-foreground 'solaire-default-face "pale green"))
 
 ;; undoom
 (put 'customize-themes 'disabled nil)
@@ -158,22 +180,8 @@ _n_: Navigate           _._: mark position _/_: jump to mark
 ;; improve org performance
 (global-auto-composition-mode 0)
 (setc bidi-display-reordering nil)
-(general-after-init
+(general-after-init ;; doesnt take
   (setc gc-cons-threshold 1600000))
-
-;; why is org so difficult to install cleanly
-(defun org-version (&rest _args) nil "9.5")
-(defconst org-version (org-version))
-(after! org
-  ;; Invalid version 9.5-dev
-  (defun org-release ()
-    nil
-    "9.5")
-  (defun org-version (&rest _args)
-    nil
-    "9.5")
-  (defconst org-version (org-version))
-  )
 
 (setc company-idle-delay 0.35)
 (setc auth-sources '("~/.authinfo")) ;; https://magit.vc/manual/ghub/Storing-a-Token.html
@@ -209,20 +217,18 @@ _n_: Navigate           _._: mark position _/_: jump to mark
 (setc calendar-chinese-all-holidays-flag t)
 (setc holiday-bahai-holidays nil)
 (setc holiday-hebrew-holidays nil)
-(setc holiday-other-holidays '((holiday-fixed 6 27 "Diana's birthday")
-                               (holiday-fixed 1 25 "Joel's birthday")))
-
-;; remove holidays I'm not familiar with
-(after! holidays
-  (setc calendar-holidays
-        (seq-difference calendar-holidays '((holiday-fixed 7 4 "Independence Day")
-                                            (holiday-float 10 1 2 "Columbus Day")
-                                            (holiday-fixed 11 11 "Veteran's Day")
-                                            (holiday-fixed 6 14 "Flag Day")
-                                            (holiday-float 9 1 1 "Labor Day")
-                                            (holiday-fixed 3 17 "St. Patrick's Day")
-                                            (holiday-fixed 2 2 "Groundhog Day")
-                                            (holiday-float 2 1 3 "President's Day")))))
+(setc holiday-other-holidays ;; personal holidays
+      '((holiday-fixed 1 25 "Joel's birthday")
+        (holiday-fixed 4 11 "Griselda's birthday")
+        (holiday-fixed 6 18 "Rickard's birthday")
+        (holiday-fixed 6 27 "Diana's birthday")))
+(setc holiday-general-holidays ;; Sweden, not US
+      '((holiday-fixed 1 1 "New Year's Day")
+        (holiday-fixed 2 14 "Valentine's Day")
+        (holiday-fixed 4 1 "April Fools' Day")
+        (holiday-float 5 0 -1 "Mother's Day")
+        (holiday-float 11 0 2 "Father's Day")
+        (holiday-fixed 10 31 "Halloween")))
 
 (setc +doom-dashboard-functions
       '(
@@ -257,7 +263,7 @@ _n_: Navigate           _._: mark position _/_: jump to mark
                             "/home/kept/Fiction"
                             "/home/kept/Dotfiles")
                           (directory-files "/home/kept/Emacs" t)
-                          (directory-files "/home/kept/Code" t)
+                          (directory-files "/home/kept/code" t)
                           (directory-files "/home/kept/Coursework" t))))
 
 (defun my-memacs-scan-git ()

@@ -4,7 +4,7 @@
 (setc mini-modeline-display-gui-line nil)
 (setc mini-modeline-face-attr '(:background "#001100" :foreground "pale green"))
 
-(use-package! mini-modeline
+(use-package! mini-modeline :disabled
   :hook  (after-init . mini-modeline-mode))
 
 ;; (use-package! feebleline :config (feebleline-mode))

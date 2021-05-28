@@ -1,12 +1,17 @@
 ;; -*- lexical-binding: t; -*-
 
 (after! org
-  (setc org-babel-load-languages '((R . t) (emacs-lisp . t) (calc . t)
-                                   (ditaa . t) (sqlite . t)))
+  (setc org-babel-load-languages '((R . t)
+                                   (emacs-lisp . t)
+                                   (calc . t)
+                                   (ditaa . t)
+                                   (sqlite . t)
+                                   (dot . t)))
+  ;; Stuff to do if I'm not using Doom's Org
   (unless (fboundp '+org-init-org-directory-h)
-    ;; If I'm not using Doom's Org, I must upscale LaTeX myself
+    ;; Upscale the LaTeX preview.
     (my-change-latex-scale)
-    ;; Adaptive LaTeX preview scale
+    ;; Adapt LaTeX preview scale to the font zoom.
     (add-hook 'text-scale-mode-hook #'my-change-latex-scale)))
 
 ;; Prettify code-snippets in exported pdf.
@@ -65,6 +70,7 @@
 (setc org-pomodoro-play-sounds nil)
 (setc org-clock-out-remove-zero-time-clocks t)
 (setc org-clock-persist t)
+(setc org-hide-leading-stars nil)
 (setc org-clock-mode-line-total 'today)
 (setc org-clock-auto-clock-resolution 'always)
 (setc org-clock-in-resume t)
