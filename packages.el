@@ -1,4 +1,6 @@
 
+(package! disk-usage)
+(package! docker-tramp)
 ;; (package! vterm :ignore t) ;; let guix install it
 (package! org-roam)
 (package! org-roam-server)
@@ -60,6 +62,7 @@
 ;(package! magit) ;; because magit-todos is B R O K E N
 ;(package! forge)
 (package! deferred)
+(package! concurrent)
 (package! consult)
 (package! marginalia)
 (package! embark)
