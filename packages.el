@@ -91,21 +91,31 @@
 (package! matrix-client)
 (package! weechat)
 (package! dmenu)
+;; (package! mu4e-dashboard)
+(package! mw-thesaurus)
+(package! pfuture)
+(package! ess_rproj :recipe (:host github :repo "chainsawriot/ess_rproj"))
 
 ;; Copypasta from https://github.com/hlissner/doom-emacs/blob/develop/modules/lang/org/packages.el
-(package! org-mode
+(package! org
   :recipe (:host github
-           ;; Use a mirror because code.orgmode.org runs on a potato.
-           :repo "emacs-straight/org-mode"
-           :files ("*.el" "lisp/*.el" "contrib/lisp/*.el" "contrib/scripts")
-           ;; HACK You need either this or :depth full. 
-           ;; https://github.com/hlissner/doom-emacs/issues/4248#issuecomment-725194428
+           ;; Install cutting-edge version of org, and from a mirror because
+           ;; code.orgmode.org's uptime is worse than Github's, and
+           ;; emacs-straight/org is smaller and, therefore, quicker to download.
+           :repo "emacs-straight/org"
+           :files (:defaults "etc")
+           ;; HACK A necessary hack because org requires a compilation step
+           ;;      after being cloned, and during that compilation a
+           ;;      org-version.el is generated with these two functions, which
+           ;;      return the output of a 'git describe ...' call in the repo's
+           ;;      root. Of course, this command won't work in a sparse clone,
+           ;;      and initiating these compilation step is a hassle, so...
+           :build t
            :pre-build
-           (with-temp-file (doom-path (straight--repos-dir "org-mode") "org-version.el")
-             (insert "(fset 'org-release (lambda () \"9.5\"))\n"
-                     "(fset 'org-git-version #'ignore)\n"
-                     "(provide 'org-version)\n"))
-           ;; Prevent built-in Org from sneaking into the byte-compilation of
-           ;; `org-plus-contrib', and inform other packages that `org-mode'
-           ;; satisfies the `org' dependency: raxod502/straight.el#352
-           :includes (org org-plus-contrib)))
+           (with-temp-file "org-version.el"
+             (insert "(defun org-release () \"9.5\")\n"
+                     (format "(defun org-git-version (&rest _) \"9.5-%s\")\n"
+                             (cdr (doom-call-process "git" "rev-parse" "--short" "HEAD")))
+                     "(provide 'org-version)\n"))))
+(package! org-contrib
+  :recipe (:host nil :repo "https://git.sr.ht/~bzg/org-contrib"))
