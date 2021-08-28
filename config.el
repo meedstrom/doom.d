@@ -20,8 +20,9 @@
 ;; (setq doom-theme 'doom-one)
 ;; (setq doom-theme 'doom-tomorrow-night)
 ;; (setq doom-theme 'doom-dark+)
-(setq doom-theme 'doom-manegarm)
-;; (setq doom-theme 'doom-Iosvkem)
+;; (setq doom-theme 'doom-manegarm)
+(setq doom-theme 'doom-Iosvkem)
+;; (setq doom-theme 'doom-zenburn)
 
 ;; (add-hook 'doom-load-theme-hook
           ;; (lambda () (set-face-attribute 'fixed-pitch-serif () :inherit 'default)))
@@ -34,6 +35,7 @@
 
 (autoload #'exwm-edit--compose "exwm-edit")
 (autoload #'helm-fd "helm-fd")
+(autoload #'named-timer-run "named-timer")
 
 ;; ensure that guix org comes first
 ;; Tends to break unless i install everything that depends on org thru guix. Wait and see what hlissner does with Nix...
@@ -47,10 +49,9 @@
 (add-load-path! (expand-file-name "Emacs/conf-doom/lisp" (getenv "MY_FILES")))
 (add-load-path! (expand-file-name "Emacs/deianira" (getenv "MY_FILES")))
 (add-load-path! (expand-file-name "Emacs/twee-mode" (getenv "MY_FILES")))
-(add-load-path! (expand-file-name "Emacs/secretary" (getenv "MY_FILES")))
 
 (dolist (module (directory-files "/home/kept/Emacs/common/" t ".el$"))
   (load! module))
 
-(dolist (module (directory-files "/home/kept/Emacs/conf-doom/lisp/" t ".el$"))
+(dolist (module (directory-files "/home/kept/Emacs/conf-doom/lisp/" t "^[^.#].*.el$"))
   (load! module))

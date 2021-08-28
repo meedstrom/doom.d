@@ -14,12 +14,14 @@
 (setc ess-use-tracebug nil) ;; sidestep a bug that destroys performance
 (setc ess-use-auto-complete nil)
 (setc ess-indent-with-fancy-comments nil)
+(setc ess-history-file nil)
 (setc ess-ask-for-ess-directory nil)
 (setc ess-eval-visibly 'nowait)
 ;; http://chainsawriot.com/mannheim/2020/07/19/elisp.html
-(setc ess-directory-function
-      (lambda () (or (ignore-errors (car (project-roots (project-current))))
-                nil)))
+;; (setc ess-directory-function
+;;       (lambda ()
+;;         (or (ignore-errors (car (project-roots (project-current))))
+;;             nil)))
 
 ;; (add-hook 'ess-presend-filter-functions #'my-append-to-rhistory)
 

@@ -40,3 +40,13 @@ dockere logs 2f
 docker logs 2f
 docker events 2f
 docker info
+sudo mount /dev/sdb1 /mnt
+cd /mnt
+sudo umount /dev/sdb1 /mnt
+sudo umount /dev/sdb1 
+sudo dd if=/tmp/galliumos-3.1-baytrail.iso of=/dev/sdb
+sync
+guix gc
+doom sync
+mu init --my-address=meedstrom@teknik.io
+mu init --my-address=meedstrom@teknik.io

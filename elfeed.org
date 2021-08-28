@@ -34,7 +34,7 @@ https://www.project-syndicate.org/
 *** https://0x65.dev/atom.xml
 *** https://guix.gnu.org/feeds/blog.atom
 *** https://signal.org/blog/rss.xml                                   :rss:
-*** http2s://matrix.org/blog/feed                                     :rss:
+*** https://matrix.org/blog/feed                                     :rss:
 *** https://mullvad.net/en/blog/feed/atom
 *** https://shape-of-code.coding-guidelines.com/atom                   :1p:
 *** [[https://hacks.mozilla.org/feed][Mozilla Hacks]]                                                     :rss:
@@ -137,4 +137,5 @@ Truncates feed items.
 Truncates feed items.
 *** https://www.statnews.com/category/the-regulars/the-watchdogs/
 Lacks specific feed...
-***
+*** https://themonkeycage.org/feed                                    :rss:
+Dead

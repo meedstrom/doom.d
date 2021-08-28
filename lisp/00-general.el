@@ -1,5 +1,17 @@
 ;; -*- lexical-binding: t; -*-
 
+;; (debug-watch 'org-mode)
+
+;; broken in native-comp
+(use-package! snitch
+  :config
+  ;; (setq snitch-log-policy '(allowed blocked whitelisted blacklisted))
+  ;; (setq snitch-log-verbose nil)
+  (setq snitch-enable-notifications t)
+  ;; (setq snitch-log-buffer-max-lines)
+  (setq snitch-trace-timers nil)
+  (snitch-mode))
+
 (if (display-graphic-p)
     (progn
       ;; use caps instead of M-x
@@ -10,7 +22,9 @@
         (define-key general-override-mode-map (kbd "M-x") nil)
         (define-key general-override-mode-map (kbd "A-x") nil))
       ;; civilize emacs
-      (define-key input-decode-map (kbd "<escape>") (kbd "C-g")))
+      (define-key input-decode-map (kbd "<escape>") (kbd "C-g"))
+      (define-key input-decode-map (kbd "C-g") (kbd "s-g")) ;; to unlearn
+      )
   ;; (kill-emacs "Terminal unsupported. Run emacs -Q.")
   )
 
@@ -37,29 +51,17 @@
   (define-key subed-mode-map (kbd "M-6") #'subed-increase-stop-time)
   (define-key subed-mode-map (kbd "<f4>") #'subed-mpv-toggle-pause)
   )
-(use-package! rainbow-blocks :defer :hook (ess-r-mode . rainbow-blocks-mode))
+
 (use-package! twee-mode)
 (use-package! crux)
 ;; (use-package! esup)
+
 (use-package! beancount
   :defer t
   :mode ((rx ".bean" (? "count") eot) . beancount-mode))
+
 (use-package! form-feed
   :config (global-form-feed-mode))
-(use-package! secretary-config
-  :init
-  (setc secretary-x11idle-program-name "xprintidle")
-  (setc secretary-user-name "Martin")
-  (setc secretary-user-short-title "sir")
-  (setc secretary-user-birthday "1991-12-07")
-  (setc secretary-ai-name "Maya")
-  :config
-  ;; (secretary-mode)
-  (add-hook 'secretary-plot-hook #'secretary-plot-mood 50)
-  (add-hook 'secretary-plot-hook #'secretary-plot-weight)
-  ;; (add-hook 'window-selection-change-functions #'secretary-log-buffer)
-  ;; (add-hook 'window-buffer-change-functions #'secretary-log-buffer)
-  )
 
 ;; Make previous-buffer not skip the R buffer
 (el-patch-defun doom-buffer-frame-predicate (buf)
@@ -190,7 +192,7 @@ _n_: Navigate           _._: mark position _/_: jump to mark
 (setc save-interprogram-paste-before-kill t)
 (setc select-enable-primary t)
 (setc custom-safe-themes t)
-(setc recentf-max-saved-items 600)
+(setc recentf-max-saved-items 1200)
 (setc shr-max-image-proportion 0.5)
 (setc suggest-key-bindings nil)
 (setc kill-read-only-ok t)
@@ -215,14 +217,20 @@ _n_: Navigate           _._: mark position _/_: jump to mark
 ;; (setc nameless-private-prefix "🔒-")
 ;; (setc nameless-prefix "⚘")
 (setc calendar-chinese-all-holidays-flag t)
+(setc ranger-map-style 'emacs)
 (setc holiday-bahai-holidays nil)
 (setc holiday-hebrew-holidays nil)
 (setc holiday-other-holidays ;; personal holidays
       '((holiday-fixed 1 25 "Joel's birthday")
+        (holiday-fixed 3 8 "Clarence's birthday")
+        (holiday-fixed 4 1 "Karin's birthday")
         (holiday-fixed 4 11 "Griselda's birthday")
         (holiday-fixed 6 18 "Rickard's birthday")
-        (holiday-fixed 6 27 "Diana's birthday")))
-(setc holiday-general-holidays ;; Sweden, not US
+        ;; (holiday-fixed 7 18 "Nath's birthday") ;; date?
+        (holiday-fixed 6 27 "Yang Yu Ting's birthday")
+        (holiday-fixed 9 24 "Lena's birthday")
+        (holiday-fixed 12 10 "Simon's birthday")))
+(setc holiday-general-holidays ;; Sweden
       '((holiday-fixed 1 1 "New Year's Day")
         (holiday-fixed 2 14 "Valentine's Day")
         (holiday-fixed 4 1 "April Fools' Day")
@@ -236,6 +244,10 @@ _n_: Navigate           _._: mark position _/_: jump to mark
         doom-dashboard-widget-loaded
         ))
 
+(add-to-list 'safe-local-variable-values '(require-final-newline . nil))
+(add-to-list 'safe-local-variable-values '(require-final-newline . t))
+(add-to-list 'safe-local-variable-values '(nameless-current-name . "secretary"))
+
 ;; (set-face-attribute 'nameless-face () :inherit nil)
 
 (setc mediawiki-site-alist
@@ -244,55 +256,18 @@ _n_: Navigate           _._: mark position _/_: jump to mark
 
 (setc mediawiki-site-default "WikEmacs")
 
-(defun my-file-size (file)
-  "Returns the size of FILE (in DIR) in bytes."
-  (unless (file-readable-p file)
-    (error "File %S is unreadable; can't acquire its filesize"
-           file))
-  (nth 7 (file-attributes file)))
+(use-package! prism
+  :init
+  (add-hook 'prog-mode-hook #'prism-mode))
 
-(setq my-all-git-repos
-      (seq-filter (lambda (x)
-                    (and (file-directory-p x)
-                         (member ".git" (directory-files x))))
-                  (append '("/home/kept/Knowledge_base"
-                            "/home/kept/Journal/Finances"
-                            "/home/kept/Journal"
-                            "/home/kept/Guix"
-                            "/home/kept/Guix channel"
-                            "/home/kept/Fiction"
-                            "/home/kept/Dotfiles")
-                          (directory-files "/home/kept/Emacs" t)
-                          (directory-files "/home/kept/code" t)
-                          (directory-files "/home/kept/Coursework" t))))
+(general-after-init
+  (global-hl-line-mode 0) ;; doesn't play well with paren-mode
+  )
 
-(defun my-memacs-scan-git ()
-  (make-directory "/tmp/rev-lists" t)
-  (and (file-exists-p "/home/kept/Archive/memacs/git/")
-       (executable-find "git")
-       (executable-find "memacs_git")
-       (bound-and-true-p my-all-git-repos)
-       (dolist (x my-all-git-repos t)
-         (start-process-shell-command
-          "memacs_git_stage_1"
-          nil
-          (concat "cd \"" x "\" && git rev-list --all --pretty=raw > \"/tmp/rev-lists/"
-                  (file-name-nondirectory x) "\"")))
-       (run-with-timer
-        5 nil (lambda ()
-                (dolist (x (directory-files "/tmp/rev-lists" t
-                                            (rx bol (not (any "." "..")))))
-                  (unless (= 0 (my-file-size x))
-                    (start-process-shell-command
-                     "memacs_git_stage_2" nil
-                     (concat "memacs_git -f "
-                             x
-                             " -o /home/kept/Archive/memacs/git/"
-                             (file-name-nondirectory x)
-                             ".org_archive")))))))
-  (run-with-timer (* 60 60) nil #'my-memacs-scan-git))
-;; (my-memacs-scan-git)
-
+;; (setc prism-desaturations '(0))
+;; (setc prism-lightens '(0))
+;; (setc prism-comments nil)
+(setc prism-parens t)
 
 ;; mu4e manually
 ;;
@@ -311,7 +286,7 @@ _n_: Navigate           _._: mark position _/_: jump to mark
 (setq +mu4e-backend 'offlineimap
       +mu4e-mu4e-mail-path "~/Maildir/")
 
-(set-email-account! "Teknik.io"
+(set-email-account! "Teknik"
   '((mu4e-sent-folder       . "/Sent")
     (mu4e-drafts-folder     . "/Drafts")
     (mu4e-trash-folder      . "/Trash")
@@ -319,7 +294,7 @@ _n_: Navigate           _._: mark position _/_: jump to mark
     (smtpmail-smtp-user     . "meedstrom@teknik.io")
     (smtpmail-default-smtp-server . "mail.teknik.io")
     (smtpmail-smtp-server . "mail.teknik.io")
-    (mu4e-compose-signature . "\nMartin Edström"))
+    (mu4e-compose-signature . "Martin Edström"))
   t)
 
 ;; (defun my-log-process-name (&optional process _group)
@@ -332,6 +307,7 @@ _n_: Navigate           _._: mark position _/_: jump to mark
 
 ;; ;; (setq-default debug-on-signal 'quit debug-on-quit t)
 
+(add-hook 'emacs-lisp-mode-hook #'display-fill-column-indicator-mode)
 (add-hook 'prog-mode-hook #'company-mode)
 (add-hook 'doom-load-theme-hook #'my-fix-pdf-midnight-colors)
 (add-hook 'after-save-hook #'executable-make-buffer-file-executable-if-script-p)
@@ -339,7 +315,6 @@ _n_: Navigate           _._: mark position _/_: jump to mark
                             (setq c-basic-offset 4
                                   tab-width 4)))
 
-(auto-save-visited-mode)
 (save-place-mode)
 (display-battery-mode)
 
@@ -373,7 +348,7 @@ _n_: Navigate           _._: mark position _/_: jump to mark
 ;; For existing templates see `+file-templates-alist' and associated snippets in
 ;; /home/kept/Dotfiles/.emacs.d/modules/editor/file-templates/templates
 
-(set-file-template! #'org-mode :ignore t)
+;; (set-file-template! #'org-mode :ignore t)
 
 (set-file-template! "\\.el$"
   :when #'+file-templates-in-emacs-dirs-p
@@ -390,16 +365,13 @@ _n_: Navigate           _._: mark position _/_: jump to mark
 
 (setc helm-locate-command "locate %s --database=${HOME}/locate.db -e -A --regex %s")
 
-;; Hopefully make shell commands like `helm-locate-command' a bit faster.
-(when-let (dash (executable-find "dash"))
-  (setc shell-file-name dash))
-
 (sachac/convert-shell-scripts-to-interactive-commands "~/bin")
 
 (setc rmh-elfeed-org-files
       (list (expand-file-name "elfeed.org" doom-private-dir)))
 
 (use-package! elfeed
+  :defer
   :config
   (add-hook 'elfeed-new-entry-hook
             (elfeed-make-tagger :entry-title (rx (or "MCMXXX" "A&R"))

@@ -12,6 +12,8 @@
 (require 'my-lib)
 (require 'general)
 (require 'key-chord)
+(require 'defrepeater)
+;; (require 'l)
 (autoload #'objed-ipipe "objed")
 
 ;; Favor what I have in the global map on these keys.
@@ -66,23 +68,24 @@
 (general-unbind "C-x SPC")
 (general-unbind "C-x C-SPC")
 (general-unbind "C-SPC")
+;; (general-unbind "C-g")
 
 ;; these hurt too much until I have more modal editing
-;; (general-unbind global-map "<f1>")
-;; (general-unbind global-map "<down>")
-;; (general-unbind global-map "<left>")
-;; (general-unbind global-map "<next>")
-;; (general-unbind global-map "<prior>")
-;; (general-unbind global-map "<right>")
-;; (general-unbind global-map "<up>")
-;; (general-unbind global-map "RET")
+;; (general-unbind "<f1>")
+;; (general-unbind "<down>")
+;; (general-unbind "<left>")
+;; (general-unbind "<next>")
+;; (general-unbind "<prior>")
+;; (general-unbind "<right>")
+;; (general-unbind "<up>")
+;; (general-unbind "RET")
 
 ;; these are hard to remove, why I'll use super instead one day
-;; (general-unbind global-map "C-g") ;; keyboard-quit
-;; (general-unbind global-map "C-j") ;; newline
-;; (general-unbind global-map "C-i")
-;; (general-unbind global-map "C-]")
-;; (general-unbind global-map "C-m")
+;; (general-unbind "C-g") ;; keyboard-quit
+;; (general-unbind "C-j") ;; newline
+;; (general-unbind "C-i")
+;; (general-unbind "C-]")
+;; (general-unbind "C-m")
 
 (when (boundp 'doom-version)
   (general-unbind "M--")
@@ -117,6 +120,13 @@
       (define-key global-map (kbd (concat mod d)) nil) ;; clear space
       (define-key universal-argument-map (kbd (concat mod d)) #'digit-argument))))
 
+;; Fix ranger (don't take my M-1234...!)
+(after! ranger
+  (let ((digits (split-string "1234567890" "" t)))
+    (dolist (d digits)
+      (define-key ranger-normal-mode-map (kbd (concat "M-" d)) nil)
+      (define-key ranger-emacs-mode-map (kbd (concat "M-" d)) nil))))
+
 ;;; Main
 
 (run-hooks 'my-before-keybinds-hook)
@@ -140,8 +150,8 @@
             (general-def eshell-mode-map "C-c C-l"  #'consult-history)
             ))
 
-(general-def global-map "M-<f4>"          #'kill-current-buffer)
 (general-def custom-mode-map "q"          #'kill-current-buffer)
+(general-def dired-mode-map "q"           #'kill-current-buffer) ;; undoom
 (general-def dired-mode-map "b"           #'dired-up-directory)
 (general-def dired-mode-map ")"           #'dired-git-info-mode)
 (general-def dired-mode-map "M-<up>"      #'dired-up-directory)
@@ -150,156 +160,168 @@
 (general-def ess-mode-map "<f1> <f3>"     #'ess-interrupt)
 (general-def ess-mode-map "C-<return>"    #'ess-eval-line)
 (general-def eww-mode-map "q"             #'kill-current-buffer)
-(general-def global-map "<escape>"        #'quit-window)
-(general-def global-map "<f10> a"         #'my-save-buffer-and-amend)
-(general-def global-map "<f10> d"         #'org-download-yank)
-(general-def global-map "<f10> e"         #'eww)
-(general-def global-map "<f10> g"         #'guix-popup)
-(general-def global-map "<f10> n"         #'my-normie-toggle)
-(general-def global-map "<f10> s"         #'my-save-buffer-and-commit)
-(general-def global-map "<f2> 1"          #'my-insert-other-buffer-file-name-and-cycle)
-(general-def global-map "<f2> 2"          #'my-toggle-selective-display)
-(general-def global-map "<f2> 3"          #'elfeed)
-(general-def global-map "<f2> 5"          #'my-lookup-word)
-(general-def global-map "<f2> <f1>"       #'my-describe-last-key)
-(general-def global-map "<f2> <f2>"       #'vc-msg-show)
-(general-def global-map "<f2> <f3>"       #'git-messenger:popup-message)
-(general-def global-map "<f2> b"          #'backup-walker-start)
-(general-def global-map "<f2> d"          #'my-insert-today)
-(general-def global-map "<f2> e d"        #'eval-defun)
-(general-def global-map "<f2> e x"        #'eval-expression)
-(general-def global-map "<f2> e e"        #'eval-last-sexp)
-(general-def global-map "<f2> e p"        #'eval-print-last-sexp)
-(general-def global-map "<f2> e r"        #'eval-region)
-(general-def global-map "<f2> e s"        #'ess-eval-region-or-function-or-paragraph-and-step) ;; ess everywhere
-(general-def global-map "<f2> f d"        #'crux-delete-file-and-buffer)
-(general-def global-map "<f2> f f"        #'toggle-frame-fullscreen)
-(general-def global-map "<f2> f m"        #'toggle-frame-maximized)
-(general-def global-map "<f2> f r"        #'crux-rename-file-and-buffer)
-;;(general-def global-map "<f30>"        #'execute-extended-command)
-(general-def global-map "<f2> g"          #'git-timemachine)
-(general-def global-map "<f2> h"          #'my-file-jump-from-home)
-(general-def global-map "<f2> i"          #'my-suggest-sub)
-(general-def global-map "<f2> j"          #'project-find-file)
-(general-def global-map "<f2> k"          #'consult-ripgrep)
-(general-def global-map "<f2> l"          #'helm-locate)
-(general-def global-map "<f2> m"          #'my-show-my-files)
-(general-def global-map "<f2> n"          #'my-today-file)
-(general-def global-map "<f2> p"          #'my-spawn-process)
-(general-def global-map "<f2> r"          #'selectrum-repeat)
-(general-def global-map "<f2> s"          #'my-eshell-here)
-(general-def global-map "<f2> w"          #'sp-rewrap-sexp)
-(general-def global-map "<f2> x"          #'execute-extended-command)
-(general-def global-map "<f2> z"          #'my-sleep)
-(general-def global-map "<print>"        #'embark-act)
-(general-def global-map "<f5>"            #'repeat)
-(general-def global-map "C-<next>"        #'next-buffer)
-(general-def global-map "C-<prior>"       #'previous-buffer)
-(general-def global-map "M-0"             #'hippie-expand)
-(general-def global-map "M-1"             #'switch-to-buffer)
-(general-def global-map "M-2"             #'other-window)
-(general-def global-map "M-m m" #'set-mark-command) ;; was C-SPC
-(general-def global-map "M-m r" #'rectangle-mark-mode) ;; was C-x SPC
-(general-def global-map "M-m g" #'pop-global-mark) ;; was C-x C-SPC
-(general-def global-map "M-m p" #'pop-to-mark-command)
-(general-def global-map "M-m x" #'exchange-point-and-mark) ;; also on C-x C-x
-(general-def global-map "M-3"             #'unexpand-abbrev)
-(general-def global-map "M-5"             #'my-prev-file-in-dir)
-(general-def global-map "M-6"             #'my-next-file-in-dir)
-(general-def global-map "M-8"             #'kill-whole-line)
-(general-def global-map "M-9"             #'crux-duplicate-current-line-or-region)
-(general-def global-map "M-<backspace>"   #'sp-backward-unwrap-sexp)
-(general-def global-map "M-<delete>"      #'sp-unwrap-sexp)
-(general-def global-map "M-<insert>"      #'sp-rewrap-sexp)
-(general-def global-map "C-h q"           #'quoted-insert)
-(general-def global-map "M-o ="           #'doom/increase-font-size)
-(general-def global-map "M-s f"           #'my-fill-unfill-respect-double-space)
-(general-def global-map "M-s r"           #'isearch-backward)
-(general-def global-map "M-s s"           #'isearch-forward)
-(general-def global-map "M-s 5"           #'query-replace)
-(general-def global-map "M-|"             #'my-shell-command-replace-region)
-(general-def global-map "M-g z"           #'avy-goto-word-or-subword-1)
-(general-def global-map "M-g c"           #'avy-goto-char-timer)
+(general-def vertico-map "<next>"         #'scroll-up-command)
+(general-def vertico-map "<prior>"        #'scroll-down-command)
 (general-def ledger-mode-map "M-<return>" #'crux-duplicate-current-line-or-region)
 (general-def my-abbrev-minor-mode-map "`" #'expand-abbrev)
 (general-def shell-mode-map "C-S-n"       #'my-new-shell)
-(general-def isearch-mode-map "M-s n" #'isearch-repeat-forward)
-(general-def isearch-mode-map "<down>" #'isearch-repeat-forward)
-(general-def isearch-mode-map "M-s p" #'isearch-repeat-backward)
-(general-def isearch-mode-map "<up>" #'isearch-repeat-backward)
-(general-def ctrlf--keymap "<down>" #'ctrlf-forward-literal)
-(general-def ctrlf--keymap "<up>" #'ctrlf-backward-literal)
-(general-def global-map "M-g a k" #'avy-kill-region)
-(general-def global-map "M-g a s" #'avy-isearch)
-(general-def global-map "M-g a c" #'avy-goto-char-2)
-(general-def global-map "M-g a g c" #'avy-goto-char-2)
-(general-def global-map "M-g a g l" #'avy-goto-line)
-(general-def global-map "M-g a g w" #'avy-goto-word-1)
-(general-def global-map "M-g a g s" #'avy-goto-symbol-1)
-(general-def global-map "M-g a g e" #'avy-goto-end-of-line)
-(general-def global-map "M-g a g q" #'avy-goto-subword-1)
-(general-def global-map "M-g a g o" #'avy-goto-word-or-subword-1)
-(general-def global-map "M-g a r" #'avy-resume)
-(general-def global-map "M-g a n" #'avy-next)
-(general-def global-map "M-g a p" #'avy-prev)
-(general-def global-map "M-g a a" #'avy-pop-mark)
-(general-def global-map "M-g a m r" #'avy-move-region)
-(general-def global-map "M-g a m l" #'avy-move-line)
-(general-def global-map "M-g a o" #'avy-goto-symbol)
-(general-def global-map "M-g a w" #'avy-kill-ring-save-region)
+(general-def isearch-mode-map "M-s n"     #'isearch-repeat-forward)
+(general-def isearch-mode-map "<down>"    #'isearch-repeat-forward)
+(general-def isearch-mode-map "M-s p"     #'isearch-repeat-backward)
+(general-def isearch-mode-map "<up>"      #'isearch-repeat-backward)
+(general-def ctrlf--keymap "<down>"       #'ctrlf-forward-literal)
+(general-def ctrlf--keymap "<up>"         #'ctrlf-backward-literal)
+(general-def "<f10> a"                    #'my-save-buffer-and-amend)
+(general-def "<f10> d"                    #'org-download-yank)
+(general-def "<f10> e"                    #'eww)
+(general-def "<f10> g"                    #'guix-popup)
+(general-def "<f10> k"                    #'gif-screencast-start-or-stop)
+(general-def "<f10> l"                    #'mw-thesaurus-lookup)
+(general-def "<f10> n"                    #'my-normie-toggle)
+(general-def "<f10> s"                    #'my-save-buffer-and-commit)
+(general-def "<f2> 1"                     #'my-insert-other-buffer-file-name-and-cycle)
+(general-def "<f2> 2"                     #'my-toggle-selective-display)
+(general-def "<f2> 3"                     #'elfeed)
+(general-def "<f2> 5"                     #'my-lookup-word)
+(general-def "<f2> <f1>"                  #'my-describe-last-key)
+(general-def "<f2> <f2>"                  #'vc-msg-show)
+(general-def "<f2> <f3>"                  #'git-messenger:popup-message)
+(general-def "<f2> b"                     #'backup-walker-start)
+(general-def "<f2> c"                     #'org-roam-capture)
+(general-def "<f2> d"                     #'my-insert-today)
+(general-def "<f2> e d"                   #'eval-defun)
+(general-def "<f2> e e"                   #'eval-last-sexp)
+(general-def "<f2> e p"                   #'eval-print-last-sexp)
+(general-def "<f2> e r"                   #'eval-region)
+(general-def "<f2> e l"                   #'load-library)
+(general-def "<f2> e s"                   #'ess-eval-region-or-function-or-paragraph-and-step) ;; ess everywhere
+(general-def "<f2> e x"                   #'eval-expression)
+(general-def "<f2> f d"                   #'crux-delete-file-and-buffer)
+(general-def "<f2> f f"                   #'toggle-frame-fullscreen)
+(general-def "<f2> f m"                   #'toggle-frame-maximized)
+(general-def "<f2> f r"                   #'crux-rename-file-and-buffer)
+(general-def "<f2> g"                     #'git-timemachine)
+(general-def "<f2> h"                     #'my-file-jump-from-home)
+(general-def "<f2> i"                     #'my-suggest-sub)
+(general-def "<f2> j"                     #'project-find-file)
+(general-def "<f2> k"                     #'consult-ripgrep)
+(general-def "<f2> l"                     #'helm-locate)
+(general-def "<f2> m"                     #'my-show-my-files)
+(general-def "<f2> p"                     #'my-spawn-process)
+(general-def "<f2> r"                     #'selectrum-repeat)
+(general-def "<f2> s"                     #'my-eshell-here)
+(general-def "<f2> w"                     #'sp-rewrap-sexp)
+(general-def "<f2> x"                     #'execute-extended-command)
+(general-def "<f2> z"                     #'my-sleep)
+(general-def "<f5>"                       #'repeat)
+(general-def "<menu>"                     #'execute-extended-command)
+(general-def "<print>"                    #'embark-act)
+(general-def "C-<next>"                   #'next-buffer)
+(general-def "C-<prior>"                  #'previous-buffer)
+(general-def "C-h q"                      #'quoted-insert)
+(general-def "C-g"                        #'keyboard-quit)
+(general-def "C-x C-\;"      (defrepeater #'comment-line))
+(general-def "M-0"                        #'hippie-expand)
+(general-def "M-1"                        #'switch-to-buffer)
+(general-def "M-2"                        #'other-window)
+(general-def "M-3"                        #'unexpand-abbrev)
+(general-def "M-5"                        #'my-prev-file-in-dir)
+(general-def "M-6"                        #'my-next-file-in-dir)
+(general-def "M-8"                        #'kill-whole-line)
+(general-def "M-9"                        #'crux-duplicate-current-line-or-region)
+(general-def "M-<backspace>"              #'sp-backward-unwrap-sexp)
+(general-def "M-<delete>"                 #'sp-unwrap-sexp)
+(general-def "M-<f4>"                     #'kill-current-buffer)
+(general-def "M-<insert>"                 #'sp-rewrap-sexp)
+(general-def "M-g a a"       (defrepeater #'avy-pop-mark))
+(general-def "M-g a c"                    #'avy-goto-char-2)
+(general-def "M-g a g c"                  #'avy-goto-char-2)
+(general-def "M-g a g e"                  #'avy-goto-end-of-line)
+(general-def "M-g a g l"                  #'avy-goto-line)
+(general-def "M-g a g o"                  #'avy-goto-word-or-subword-1)
+(general-def "M-g a g q"                  #'avy-goto-subword-1)
+(general-def "M-g a g s"                  #'avy-goto-symbol-1)
+(general-def "M-g a g w"                  #'avy-goto-word-1)
+(general-def "M-g a k"                    #'avy-kill-region)
+(general-def "M-g a m l"                  #'avy-move-line)
+(general-def "M-g a m r"                  #'avy-move-region)
+(general-def "M-g a n"                    #'avy-next)
+(general-def "M-g a o"                    #'avy-goto-symbol)
+(general-def "M-g a p"                    #'avy-prev)
+(general-def "M-g a r"                    #'avy-resume)
+(general-def "M-g a s"                    #'avy-isearch)
+(general-def "M-g a w"                    #'avy-kill-ring-save-region)
+(general-def "M-g c"                      #'avy-goto-char-timer)
+(general-def "M-g z"                      #'avy-goto-word-or-subword-1)
+(general-def "M-m g"         (defrepeater #'pop-global-mark)) ;; was C-x C-SPC
+(general-def "M-m m"                      #'set-mark-command) ;; was C-SPC
+(general-def "M-m p"         (defrepeater #'pop-to-mark-command))
+(general-def "M-m r"                      #'rectangle-mark-mode) ;; was C-x SPC
+(general-def "M-m x"                      #'exchange-point-and-mark) ;; also on C-x C-x
+(general-def "M-o ="                      #'doom/increase-font-size)
+(general-def "M-s 5"                      #'query-replace)
+(general-def "M-s f"                      #'my-fill-unfill-respect-double-space)
+(general-def "M-s r"                      #'isearch-backward)
+(general-def "M-s s"                      #'isearch-forward)
+(general-def "M-|"                        #'my-shell-command-replace-region)
+(general-def "TAB"                        #'my-tab-command)
+(general-def "<f2> n"                  #'org-journal-new-entry)
+;; (general-def "<f2> u d"      (defrepeater (l'sk/change-number-at-point -1)))
+;; (general-def "<f2> u i"      (defrepeater (l'sk/change-number-at-point 1)))
+;;(general-def "<f30>"                    #'execute-extended-command)
 
 ;; Smartparens guide: https://gist.github.com/pvik/8eb5755cc34da0226e3fc23a320a3c95
 ;; Author's config: https://github.com/Fuco1/.emacs.d/blob/master/files/smartparens.el
 ;; Xah's simplification: https://old.reddit.com/r/emacs/comments/3sfmkz/could_this_be_a_pareditsmartparens_killer/cwxocld/
 (general-def smartparens-strict-mode-map ";" #'sp-comment)
 (after! smartparens
-  (general-def global-map "C-'"                      #'sp-mark-sexp)
-  (general-def global-map "C-;"                      #'sp-comment)
-  (general-def global-map "C-<left>"                 #'sp-forward-barf-sexp)
-  (general-def global-map "C-<right>"                #'sp-forward-slurp-sexp)
-  (general-def global-map "C-M-<left>"               #'sp-backward-slurp-sexp)
-  (general-def global-map "C-M-<right>"              #'sp-backward-barf-sexp)
-  (general-def global-map "M-<backspace>"            #'sp-backward-unwrap-sexp)
-  (general-def global-map "M-<delete>"               #'sp-unwrap-sexp)
-  ;; (general-def global-map "s-<SPC>"                  #'sp-mark-sexp)
-  (general-def global-map "s-<left>" #'sp-backward-slurp-sexp)
-  (general-def global-map "s-<right>" #'sp-backward-barf-sexp)
-  (general-def global-map "s-<delete>" #'sp-splice-sexp-killing-forward)
-  (general-def global-map "s-<backspace>" #'sp-splice-sexp-killing-backward)
-  (general-def global-map "s-a" #'sp-backward-down-sexp)
-  (general-def global-map "s-b" #'sp-backward-sexp)
-  (general-def global-map "s-d" #'sp-down-sexp)
-  (general-def global-map "s-e" #'sp-up-sexp)
-  (general-def global-map "s-f" #'sp-forward-sexp)
-  (general-def global-map "s-h" #'sp-mark-sexp)
-  (general-def global-map "s-k" #'sp-kill-sexp)
-  (general-def global-map "s-n" #'sp-next-sexp)
-  (general-def global-map "s-p" #'sp-previous-sexp)
-  (general-def global-map "s-t" #'sp-transpose-sexp)
-  (general-def global-map "s-u" #'sp-backward-up-sexp)
-  (general-def global-map "M-[" #'sp-wrap-round)
-  (general-def global-map [remap kill-whole-line] #'sp-kill-whole-line))
+  (general-def "C-'"                      #'sp-mark-sexp)
+  (general-def "C-;"                      #'sp-comment)
+  (general-def "C-<left>"                 #'sp-forward-barf-sexp)
+  (general-def "C-<right>"                #'sp-forward-slurp-sexp)
+  (general-def "C-M-<left>"               #'sp-backward-slurp-sexp)
+  (general-def "C-M-<right>"              #'sp-backward-barf-sexp)
+  (general-def "M-<backspace>"            #'sp-backward-unwrap-sexp)
+  (general-def "M-<delete>"               #'sp-unwrap-sexp)
+  ;; (general-def "s-<SPC>"                  #'sp-mark-sexp)
+  (general-def "s-<left>" #'sp-backward-slurp-sexp)
+  (general-def "s-<right>" #'sp-backward-barf-sexp)
+  (general-def "s-<delete>" #'sp-splice-sexp-killing-forward)
+  (general-def "s-<backspace>" #'sp-splice-sexp-killing-backward)
+  (general-def "s-a" #'sp-backward-down-sexp)
+  (general-def "s-b" #'sp-backward-sexp)
+  (general-def "s-d" #'sp-down-sexp)
+  (general-def "s-e" #'sp-up-sexp)
+  (general-def "s-f" #'sp-forward-sexp)
+  (general-def "s-h" #'sp-mark-sexp)
+  (general-def "s-k" #'sp-kill-sexp)
+  (general-def "s-n" #'sp-next-sexp)
+  (general-def "s-p" #'sp-previous-sexp)
+  (general-def "s-t" #'sp-transpose-sexp)
+  (general-def "s-u" #'sp-backward-up-sexp)
+  (general-def "M-[" #'sp-wrap-round)
+  (general-def [remap kill-whole-line] #'sp-kill-whole-line))
 
 ;; Unassimilated Smartparens commands to try out.
-;; (general-def global-map "C-2 a" #'sp-join-sexp)
-;; (general-def global-map "C-2 b" #'sp-select-next-thing)
-;; (general-def global-map "C-2 c" #'sp-beginning-of-sexp)
-;; (general-def global-map "C-2 d" #'sp-beginning-of-next-sexp)
-;; (general-def global-map "C-2 e" #'sp-end-of-sexp)
-;; (general-def global-map "C-2 f" #'sp-add-to-next-sexp)
-;; (general-def global-map "C-2 g" #'sp-add-to-previous-sexp)
-;; (general-def global-map "C-2 h" #'sp-split-sexp)
-;; (general-def global-map "C-2 i" #'sp-splice-sexp)
-;; (general-def global-map "C-2 j" #'sp-emit-sexp)
-;; (general-def global-map "C-2 k" #'sp-absorb-sexp)
-;; (general-def global-map "C-2 l" #'sp-convolute-sexp)
-;; (general-def global-map "C-2 m" #'sp-forward-symbol)
-;; (general-def global-map "C-2 n" #'sp-backward-symbol)
-;; (general-def global-map "C-2 o" #'sp-wrap)
-;; (general-def global-map "C-2 p" #'sp-backward-up-sexp)
-;; (general-def global-map "C-2 q" #'sp-up-sexp)
-;; (general-def global-map "C-2 r" #'sp-select-next-thing-exchange)
-;; (general-def global-map "C-2 s" #'sp-select-previous-thing)
+;; (general-def "C-2 a" #'sp-join-sexp)
+;; (general-def "C-2 b" #'sp-select-next-thing)
+;; (general-def "C-2 c" #'sp-beginning-of-sexp)
+;; (general-def "C-2 d" #'sp-beginning-of-next-sexp)
+;; (general-def "C-2 e" #'sp-end-of-sexp)
+;; (general-def "C-2 f" #'sp-add-to-next-sexp)
+;; (general-def "C-2 g" #'sp-add-to-previous-sexp)
+;; (general-def "C-2 h" #'sp-split-sexp)
+;; (general-def "C-2 i" #'sp-splice-sexp)
+;; (general-def "C-2 j" #'sp-emit-sexp)
+;; (general-def "C-2 k" #'sp-absorb-sexp)
+;; (general-def "C-2 l" #'sp-convolute-sexp)
+;; (general-def "C-2 m" #'sp-forward-symbol)
+;; (general-def "C-2 n" #'sp-backward-symbol)
+;; (general-def "C-2 o" #'sp-wrap)
+;; (general-def "C-2 p" #'sp-backward-up-sexp)
+;; (general-def "C-2 q" #'sp-up-sexp)
+;; (general-def "C-2 r" #'sp-select-next-thing-exchange)
+;; (general-def "C-2 s" #'sp-select-previous-thing)
 
 (use-package! deianira
   :config
@@ -320,11 +342,11 @@
 ;; C-x a over C-x C-a, I don't need to do anything.  But if I like C-x C-f over
 ;; C-x f, duplicate the definition here.
 ;(dolist (leaf '("-" ";" "=" "c" "f" "l" "o" "q" "s" "t" "u" "w" "x"))
-;  (dei-restem global-map leaf "C-x " "C-x C-"))
+;  (dei-restem leaf "C-x " "C-x C-"))
 
 ;; (dei-restem kmacro-keymap "k" "" "C-")
 ;; above same as?
-;; (dei-restem global-map "k" "C-x k " "C-x k C-")
+;; (dei-restem "k" "C-x k " "C-x k C-")
 
 (after! which-key
   ;; Don't show keys like C-x C-a, only show simple leafs like C-x a.
@@ -340,44 +362,7 @@
 (after! key-chord
   (key-chord-define-global "cd" #'calc-dispatch))
 
-(general-def
-  :prefix-map 'my-cool-map
-  :prefix "<f2>"
-  "1"          #'my-insert-other-buffer-file-name-and-cycle
-  "2"          #'my-toggle-selective-display
-  "3"          #'elfeed
-  "5"          #'my-lookup-word
-  "<f1>"       #'my-describe-last-key
-  "<f3>"       #'git-messenger:popup-message
-  "b"          #'backup-walker-start
-  "d"          #'my-insert-today
-  "eb"        #'eval-buffer
-  "ed"        #'eval-defun
-  "ex"        #'eval-expression
-  "ee"        #'eval-last-sexp
-  "el"        #'load-library
-  "ep"        #'eval-print-last-sexp
-  "er"        #'eval-region
-  "es"        #'ess-eval-region-or-function-or-paragraph-and-step ;; ess everywhere
-  "ep"        #'objed-ipipe
-  "fd"        #'crux-delete-file-and-buffer
-  "ff"        #'toggle-frame-fullscreen
-  "fm"        #'toggle-frame-maximized
-  "fr"        #'crux-rename-file-and-buffer
-  "g"          #'git-timemachine
-  "h"          #'my-file-jump-from-home
-  "i"          #'my-suggest-sub
-  "j"          #'project-find-file
-  "k"          #'consult-ripgrep
-  "l"          #'helm-locate
-  "m"          #'my-show-my-files
-  "n"          #'my-today-file
-  "p"          #'my-spawn-process
-  "r"          #'selectrum-repeat
-  "s"          #'my-eshell-here
-  "w"          #'sp-rewrap-sexp
-  "x"          #'execute-extended-command
-  "z"          #'my-sleep)
+
 
 (my-after-keybinds
  ;; (esm-super-from-ctl global-map)

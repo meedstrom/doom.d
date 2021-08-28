@@ -1,6 +1,32 @@
 ;; -*- lexical-binding: t; -*-
 
+(after! org-journal
+  ;; Workaround https://github.com/bastibe/org-journal/issues/298
+  ;; (defun org-journal-is-journal () nil)
+  )
+
+;; Integrate org-journal with roam dailies (I don't want to use capture
+;; functions for the dailies, it's a weird fit)
+(setc org-journal-dir "/home/kept/roam/daily")
+(setq org-journal-file-format "%F.org")
+(setc org-journal-file-header
+      (lambda (_time)
+        (concat ":PROPERTIES:\n:ID:       " (org-id-uuid) "\n:END:" )))
+;; (setc org-journal-file-header (format ":PROPERTIES:\n:ID:%s\n:END:" (org-id-uuid)))
+(setc org-journal-date-prefix "#+title: ")
+(setc org-journal-date-format "%F %A")
+(setq org-journal-time-prefix "* ")
+
+;; Roam
+(setc org-roam-directory "/home/kept/roam/")
+(setc org-roam-dailies-capture-templates
+      '(("d" "default" entry "* %<%H:%M>\n%?" :if-new
+         (file+head "%<%Y-%m-%d>.org" "#+title: %<%Y-%m-%d %A>\n")
+         :empty-lines 1 :unnarrowed t)))
+
 (after! org
+  (unless after-init-time
+    (warn "Org loaded during init, I don't want this"))
   (setc org-babel-load-languages '((R . t)
                                    (emacs-lisp . t)
                                    (calc . t)
@@ -36,19 +62,14 @@
 (setc bibtex-files                   '("/home/kept/Knowledge_base/references/library_biblatex.bib"))
 (setc bibtex-completion-pdf-field      "file")
 
-;; Roam
-(setc org-roam-directory "/home/kept/Knowledge_base/roam/")
-(after! (company company-org-roam)
-  (push 'company-org-roam company-backends))
-
 ;; Noter
 (add-hook 'org-noter-notes-mode-hook #'abbrev-mode)
-(add-hook 'org-noter-notes-mode-hook
-          (defun my-kill-rainbow-delimiters () (rainbow-delimiters-mode 0)))
+(add-hook 'org-noter-notes-mode-hook (l'rainbow-delimiters-mode 0))
 
 (add-hook 'org-mode-hook #'my-org-prettify)
 (add-hook 'org-mode-hook #'rainbow-delimiters-mode)
 (add-hook 'org-mode-hook #'org-clock-persistence-insinuate)
+(add-hook 'org-clock-in-hook #'org-clock-save)
 (add-hook 'org-mode-hook #'org-indent-mode)
 (add-hook 'text-mode-hook (defun my-kill-smartparens () (smartparens-mode 0)))
 (add-hook 'text-mode-hook
@@ -61,7 +82,7 @@
                                  (todo . " %i %-32b")
                                  (tags . " %i %-12:c")
                                  (search . " %i %-12:c")))
-(setc org-archive-location "/home/kept/Journal/diary2.org::datetree/")
+;; (setc org-archive-location "/home/kept/Journal/diary.org::datetree/")
 (setc org-agenda-custom-commands '(("b" todo "NEXT")
                                     ("w" todo "WAITING")
                                     ("p" todo "PROCRASTINATING")
@@ -78,9 +99,6 @@
 (setc org-catch-invisible-edits 'smart)
 (setc org-ctrl-k-protect-subtree t)
 (setc org-agenda-include-diary t)
-(setc org-journal-dir "/home/kept/Diary")
-(setc org-journal-date-format "%F %A")
-(setc org-journal-file-format "%Y%m%d.org")
 (setc org-cycle-separator-lines 3)
 (setc org-datetree-add-timestamp t)
 (setc org-edit-src-content-indentation 0)
@@ -92,13 +110,13 @@
 (setc org-latex-compiler "xelatex") ; allow unicode (åäö) in VERBATIM blocks
 (setc org-log-done 'time)
 (setc org-log-into-drawer t) ; hide spam
-(setc org-modules '(org-id org-bibtex))
+(setc org-modules '(org-id org-habit ol-bibtex))
 (setc org-pretty-entities t)
 (setc org-use-speed-commands t)
 (setc org-clock-x11idle-program-name "xprintidle")
 ;; (setc org-replace-disputed-keys t)
-(setc org-agenda-files '("/home/kept/Journal/diary2.org"
-                         "/home/kept/Journal/measurable.org"
+(setc org-agenda-files '("/home/kept/Journal/diary.org"
+                         "/home/kept/Journal/gtd3.org"
                          "/home/kept/Emacs/common/emacs-todo.org"))
 
 (setc my-org-prettify-alist '(
@@ -120,68 +138,69 @@
   ;; my-org-prettify-alist)
   )
 
+(after! org
+  (require 'named-timer) ;; an indispensable 70-line library
+  (named-timer-run :my-clock-reminder nil 600
+                   (defun my-clock-remind ()
+                     (when (org-clock-is-active)
+                       (message (concat "Currently working on: "
+                                        org-clock-current-task))))))
 
-(setc org-capture-templates
- `(
+(setq org-roam-db-node-include-function (l'not (member "drill" (org-get-tags))))
 
-   ("b" "Blog post" entry (file+headline "/home/kept/Blog/open.org" "Posts")
-    ,(lines "** %u"
-            "%?")
-    :empty-lines-after 1)
+;; remove some of doom's defaults
+;; (remove-hook 'org-load-hook #'+org-init-capture-defaults-h)
 
-   ("d" "Diary entry" plain (file+olp+datetree "/home/kept/Journal/diary2.org")
-    ,(lines "-----"
-            "%?") :empty-lines 1)
+;; has to be on after-load bc doom also sets capture templates at that time.
+;; incidentally this means we cannot use custom-file to config them
+(after! org 
+  (setc org-capture-templates
+        `(
+          ("b" "Blog post" entry (file+headline "/home/kept/Blog/open.org" "Posts")
+           ,(lines "** %u"
+                   "%?")
+           :empty-lines-after 1)
 
-   ("e" "Emacs idea" entry (file+headline "/home/kept/Emacs/common/emacs-todo.org" "Ideas")
-    ,(lines "** %?") :empty-lines 1)
+          ("e" "Emacs idea" entry (file+headline "/home/kept/roam/20210826233815-emacs.org" "Ideas"))
+          ("q" "Statistics question" entry (file+headline "/home/kept/Knowledge_base/stats.org" "Questions"))
+          ("t" "Statistics header" entry (file+headline "/home/kept/Knowledge_base/stats.org" "Statistics"))
+          ("f" "Diana fact" item (file+headline "/home/kept/Diary/2020-109-07-diana-facts.org" "Etc"))
+          ("s" "someday" item (file+headline "/home/kept/roam/20210827184025-someday_maybe.org"))
 
-   ("s" "Study journal" entry (file+olp+datetree "/home/kept/Journal/diary2.org")
-    ,(lines "* Study journal"
-            "%?"))
+          ("l" "Ledger")
+          ("lf" "visit file" plain (function eva-present-ledger-file)
+           :immediate-finish t)
 
-   ("q" "Statistics question" entry (file+headline "/home/kept/Knowledge_base/stats.org" "Questions")
-    ,(lines "** %?") :empty-lines 1 :prepend t)
+          ;; ("ln" "From Nordea" plain (file "/home/kept/Journal/Finances/clean_start.ledger")
+          ;;  ,(lines "%<%Y-%m-%d> * \"\""
+          ;;          "    Expenses   %?"
+          ;;          "    Assets:Nordea:Personkonto")
+          ;;  :empty-lines 1
+          ;;  :jump-to-captured t)
 
-   ("t" "Statistics header" entry (file+headline "/home/kept/Knowledge_base/stats.org" "Statistics")
-    ,(lines "** %?") :empty-lines 1)
+          ;; ("lk" "From Komplett" plain (file "/home/kept/Journal/Finances/clean_start.ledger")
+          ;;  ,(lines "%<%Y-%m-%d> * \"\""
+          ;;          "    Expenses   %?"
+          ;;          "    Liabilities:Komplett")
+          ;;  :empty-lines 1
+          ;;  :jump-to-captured t)
 
-   ("f" "Diana fact" item (file+headline "/home/kept/Diary/200907-diana-facts.org" "Etc")
-    ,(lines "- %?") :empty-lines- 1)
+          ;; ("li" "InvestNotSpend" plain (file "/home/kept/Journal/Finances/clean_start.ledger")
+          ;;  ,(lines "%<%Y-%m-%d> ! \"\""
+          ;;          "    [Assets:Lysa:InvestNotSpend]   %?"
+          ;;          "    Assets:Nordea:Personkonto")
+          ;;  :empty-lines 1
+          ;;  :jump-to-captured t)
 
-   ("l" "Ledger entry")
+          ("r" "Retroactive clock" entry (file+olp+datetree "/home/kept/Journal/diary.org")
+           ,(lines "* %^{Activity|School|Piano|Signing|Coding}"
+                   "CLOCK: %^{Time at start}U--%^{Time at finish}U => %^{Rough time spent (sorry, the program is dumb), H:MM}")
+           :immediate-finish t)
 
-   ("ln" "From Nordea" plain (file "/home/kept/Journal/Finances/clean_start.ledger")
-    ,(lines "%<%Y-%m-%d> * \"\""
-            "    Expenses   %?"
-            "    Assets:Nordea:Personkonto")
-    :empty-lines 1
-    :jump-to-captured t)
-
-   ("lk" "From Komplett" plain (file "/home/kept/Journal/Finances/clean_start.ledger")
-    ,(lines "%<%Y-%m-%d> * \"\""
-            "    Expenses   %?"
-            "    Liabilities:Komplett")
-    :empty-lines 1
-    :jump-to-captured t)
-
-   ("li" "InvestNotSpend" plain (file "/home/kept/Journal/Finances/clean_start.ledger")
-    ,(lines "%<%Y-%m-%d> ! \"\""
-            "    [Assets:Lysa:InvestNotSpend]   %?"
-            "    Assets:Nordea:Personkonto")
-    :empty-lines 1
-    :jump-to-captured t)
-
-   ("r" "Retroactive clock" entry (file+olp+datetree "/home/kept/Journal/diary2.org")
-    ,(lines "* %^{Activity|School|Piano|Signing}"
-            "CLOCK: %^{Time at start}U--%^{Time at finish}U => %^{Rough time spent (sorry, the program is dumb), H:MM}")
-    :immediate-finish t)
-
-   ("m" "Secretary.el queries and presentations")
-   ("mw" "weight" plain (function #'sc-query-weight)
-    :immediate-finish t)
-
-   ))
+          ("m" "Call the VA")
+          ("mw" "weight" plain (function eva-session-new)
+           :immediate-finish t)
+          )))
 
 
 (setq bh/keep-clock-running nil)
@@ -252,4 +271,4 @@ as the default task."
              (not org-clock-resolving-clocks-due-to-idleness))
     (bh/clock-in-parent-task)))
 
-(add-hook 'org-clock-out-hook 'bh/clock-out-maybe 'append)
+(add-hook 'org-clock-out-hook 'bh/clock-out-maybe 90)

@@ -1,6 +1,7 @@
 ;;; init.el -*- lexical-binding: t; -*-
 
 (doom! :completion
+       (vertico +icons)
        company
 
        :ui
@@ -16,13 +17,14 @@
        word-wrap
 
        :emacs
-       dired
+       (dired +icons)
        vc
 
        :term
        ;; vterm ;; broken
 
        :checkers
+       syntax
        grammar
 
        :tools
@@ -30,7 +32,7 @@
        editorconfig
        eval
        lsp
-       (magit +forge) ;; broken?
+       ;; (magit +forge)
        pdf
 
        :lang
@@ -42,8 +44,7 @@
        ledger
        markdown
        rst
-       ;; (org +dragndrop +pomodoro +journal +pretty) ;; slowwww
-       ;; org
+       (org +dragndrop +pomodoro +journal +roam2 +noter) ;; slowwww
        (scheme +guile)
        (sh +fish +lsp)
        yaml
