@@ -1,3 +1,6 @@
+:PROPERTIES:
+:ID:       86fbc09a-8985-42fa-a740-edbf2ba3fb4d
+:END:
 #+OPTIONS: toc:nil num:nil
 
 Sources of more feeds
