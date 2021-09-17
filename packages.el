@@ -15,6 +15,8 @@
 (package! nameless)
 (package! gif-screencast)
 (package! screencast)
+(package! loopy)
+(package! loopy-dash)
 
 ;; Should be mainlined imo
 (package! form-feed)

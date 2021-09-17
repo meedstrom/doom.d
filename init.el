@@ -44,7 +44,7 @@
 
        :tools
        docker
-       ;; rgb
+       rgb
        ;; biblio
        ;; (lookup +dictionary +offline)
        editorconfig
