@@ -1,3 +1,4 @@
+;; -*- no-byte-compile: t; -*-
 ;; Need for init
 (package! named-timer)
 (package! l) ;; anonymous fn literal: (l'concat %) = (lambda (%) (concat %))
