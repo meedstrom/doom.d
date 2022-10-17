@@ -1,5 +1,13 @@
 ;; -*- lexical-binding: t; -*-
 
+;; Make previous-buffer not skip the R console
+(el-patch-defun doom-buffer-frame-predicate (buf)
+  "To be used as the default frame buffer-predicate parameter. Returns nil if
+BUF should be skipped over by functions like `next-buffer' and `other-buffer'."
+  (or (s-starts-with-p "*R:" (buffer-name buf))
+      (doom-real-buffer-p buf)
+      (eq buf (doom-fallback-buffer))))
+
 (defun my-append-to-rhistory (input)
   (with-temp-buffer
     (insert (concat (format-time-string "《%FT%T%z》") input))

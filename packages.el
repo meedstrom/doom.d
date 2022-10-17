@@ -1,62 +1,67 @@
 ;; -*- no-byte-compile: t; -*-
 ;; Need for init
 (package! named-timer)
-(package! l) ;; anonymous fn literal: (l'concat %) = (lambda (%) (concat %))
+(package! l) ;; anonymous fn literal: (l'concat %) is (lambda (%) (concat %))
 (package! defrepeater)
 (package! el-patch)
 
 ;; Pkg dev stuff
 (package! pfuture)
-(package! concurrent)
-(package! deferred)
+;; (package! concurrent)
+;; (package! deferred)
 (package! ts)
 (package! package-lint)
 (package! buttercup)
 (package! nameless)
 (package! gif-screencast)
 (package! screencast)
-(package! loopy)
-(package! loopy-dash)
+;; (package! loopy)
+;; (package! loopy-dash)
+;; (package! aio)
+(package! keymap-utils) ;; prefix kmu-*
 
 ;; Should be mainlined imo
 (package! form-feed)
 (package! prism)
+(package! goggles)
 
+;; The rest
+(package! doom-snippets :ignore t) ;; disable doom's yasnippets
+(package! help-find)
+(package! shelldon)
+(package! transmission)
+(package! affe)
+(package! iedit)
+(package! osm)
+(package! visual-regexp)
+(package! helm-selector)
 (package! sly)
+(package! trashed)
 (package! popper)
 (package! eshell-prompt-extras)
 (package! golden-ratio)
 (package! academic-phrases)
+(package! vimgolf)
 (package! anki-editor)
 (package! artbollocks-mode)
 (package! backup-walker)
-(package! beancount :recipe (:host github :repo "cnsunyour/beancount.el"))
 (package! bm)
 (package! nov)
 (package! calibredb)
 (package! crux)
 (package! director)
 (package! dired-hacks)
+(package! peep-dired)
 (package! disable-mouse)
 (package! disk-usage)
 (package! dmenu)
-(package! doom-snippets :ignore t) ;; disable doom's yasnippets
-;; (package! magit-todos :ignore t) ;; loads org on init, so no thanks
-(package! magit)
-(package! forge)
-(package! emacs-piper :recipe (:host gitlab :repo "howardabrams/emacs-piper"))
+;; (package! magit)
+;; (package! forge)
 (package! embrace)
-(package! ess_rproj :recipe (:host github :repo "chainsawriot/ess_rproj"))
 (package! esup)
-(package! eva :recipe (:host github :repo "meedstrom/eva"
-                       :files (:defaults "assets" "renv" "*.R" "*.gnuplot")))
-;; (package! exwm)
-;; (package! exwm-edit)
-;; (package! exwm-firefox :recipe (:host github :repo "ieure/exwm-firefox"))
 (package! fish-mode)
 (package! gif-screencast)
 (package! git-messenger)
-(package! guix)
 (package! hacker-typer)
 (package! hyperbole)
 (package! iscroll)
@@ -65,43 +70,61 @@
 (package! keyfreq)
 (package! mediawiki)
 (package! mw-thesaurus)
-(package! aweshell :recipe (:host github :repo "manateelazycat/aweshell"))
-(package! objed) ;; objed-ipipe is a piper alternative
+(package! objed) ;; just for objed-ipipe
 (package! org-drill)
 (package! org-recent-headings)
-(package! org-ref)
-;; (package! consult-bibtex)
-(package! org-roam-bibtex)
+(package! org-roam-ui)
+(package! org-roam-bibtex) ;; yes?
+;; (package! citar-org-roam) ;; not needed
 (package! org-tanglesync)
-(package! elisp-format)
-(package! taxy :recipe (:host github :repo "alphapapa/taxy.el"
-                        :files (:defaults "deffy.el" "*.el"))) ;; get deffy!
+;; (package! org-ref)
 (package! org-timeline)
-(package! websocket) ;; needed for org-roam-ui
-(package! org-roam-ui :recipe (:host github :repo "org-roam/org-roam-ui"
-                               :files ("*.el" "out")))
+(package! elisp-format)
+(package! pulseaudio-control)
 (package! sicp)
 (package! snitch)
 (package! stan-mode)
-(package! subed :recipe (:host github :repo "rndusr/subed"))
-(package! repeaters :recipe (:host github :repo "mmarshall540/repeaters"))
 (package! suggest)
 (package! vc-msg)
 (package! wgrep)
-;; (package! winner :ignore t) ;; not a fan
 (package! feebleline)
 (package! mini-modeline)
+(package! corfu)
+(package! cape)
+(package! xr)
+;; (package! ctrlf :recipe (:host github :repo "radian-software/ctrlf"))
+;; (package! ctrlf)
+(package! sway)
+(package! cycle-buffer)
+(package! define-repeat-map :recipe (:host nil :repo "https://tildegit.org/acdw/define-repeat-map.el"))
+(package! app-launcher :recipe (:host github :repo "SebastienWae/app-launcher"))
+(package! beancount :recipe (:host github :repo "cnsunyour/beancount.el"))
+(package! emacs-piper :recipe (:host gitlab :repo "howardabrams/emacs-piper"))
+(package! ess_rproj :recipe (:host github :repo "chainsawriot/ess_rproj"))
+(package! org-fc :recipe (:repo "https://git.sr.ht/~l3kn/org-fc"))
+(package! aweshell :recipe (:host github :repo "manateelazycat/aweshell"))
+(package! delve :recipe (:host github :repo "publicimageltd/delve"))
+(package! repeaters :recipe (:host github :repo "mmarshall540/repeaters"))
+(package! eva
+  :recipe (:host github
+           :repo "meedstrom/eva"
+           :files (:defaults "assets" "renv" "*.R" "*.gnuplot")))
+(package! taxy
+  :recipe (:host github
+           :repo "alphapapa/taxy.el"
+           :files (:defaults "deffy.el" "*.el")))
+
+;; (package! xah-elisp-mode) ;; try xah-elisp-prettify-root-sexp
+(package! exwm)
+(package! exwm-edit)
+(package! exwm-firefox :recipe (:host github :repo "ieure/exwm-firefox"))
+;; (package! subed :recipe (:host github :repo "rndusr/subed"))
+;; (package! cycle-region)
+;; (package! jammer)
 ;; (package! frames-only-mode)
 ;; (package! mini-frame)
 ;; (package! maple-minibuffer :recipe (:host github :repo "honmaple/emacs-maple-minibuffer"))
-;; (package! shackle)
 ;; (package! frame-mode)
-(package! corfu)
-(package! xr)
-(package! sway)
-(package! cycle-buffer)
-;; (package! cycle-region)
-;; (package! jammer)
 
 ;; Doom provides
 ;; (package! rainbow-mode)
@@ -111,17 +134,14 @@
 ;; (package! org-noter)
 ;; (package! org-pomodoro)
 ;; (package! org-roam)
+;; (package! citar)
 ;; (package! eshell-z)
 
 ;; Not tried out
-;; (package! delve) ;; not yet roam v2
-;; (package! elcontext)
 ;; (package! navi-mode)
 ;; (package! snow)
 ;; (package! sx)
 
-;; (package! unfill)
-;; (package! ctrlf)
 ;; (package! cdlatex)
 ;; (package! docker-tramp)
 ;; (package! emms)

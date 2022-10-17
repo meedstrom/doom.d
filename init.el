@@ -2,12 +2,11 @@
 
 (doom! :completion
        (vertico +icons)
-       ;; (helm +icons +childframe)
-       ;; (ivy +icons +childframe)
-       company
 
        :ui
        doom
+       ;; doom-dashboard
+       modeline
        hl-todo
        (ligatures +extra)
        vc-gutter
@@ -23,7 +22,7 @@
        :editor
        ;; file-templates
        fold
-       ;; multiple-cursors
+       multiple-cursors
        format
        snippets
        word-wrap
@@ -42,19 +41,6 @@
        syntax
        grammar
 
-       :tools
-       docker
-       rgb
-       ;; biblio
-       ;; (lookup +dictionary +offline)
-       editorconfig
-       eval
-       lsp
-       pdf
-       debugger
-       direnv
-       ;; make
-
        :lang
        data
        emacs-lisp
@@ -64,7 +50,7 @@
        ledger
        markdown
        rst
-       (org +dragndrop +pomodoro +journal +roam2 +noter)
+       (org +dragndrop +pomodoro +roam2 +pretty)
        (scheme +guile)
        (sh +fish)
        yaml
@@ -75,7 +61,13 @@
        :app
        calendar
        (rss +org)
-       ;; everywhere ;; try this outside exwm ... but doesnt work in sway
+       ;; everywhere ;; try this if im on neither exwm nor sway
+
+       :tools
+       biblio
+       magit
+       (lsp +eglot)
 
        :config
-       (default +bindings +smartparens))
+       (default +bindings +smartparens)
+       )

@@ -1,0 +1,10 @@
+2,
+
+;; BUG: spurious "Beginning of buffer" messages in org whhen moving previous-line
+(setq debug-on-message "Beginning of buffer")
+(setq debug-on-message nil)
+
+
+1.
+
+Any program outputting to Eshell causes minibuffer (Vertico) to be cleared

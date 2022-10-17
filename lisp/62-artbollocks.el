@@ -1,11 +1,13 @@
-;; Upstream
+;; -*- lexical-binding: t; -*-
+
+;; Upstream (no convenient list is provided)
 (setq artbollocks-default-weasel-words
       '("many" "various" "very" "fairly" "several" "extremely" "exceedingly"
         "quite" "remarkably" "few" "surprisingly" "mostly" "largely" "huge" "tiny"
         "are a number" "is a number" "excellent" "interestingly" "significantly"
         "substantially" "clearly" "vast" "relatively" "completely"))
 
-;; Upstream
+;; Upstream (no convenient list is provided)
 (setq artbollocks-default-jargon
       '("a priori" "ad hoc" "affirmation" "affirm"
         "affirms" "alterity" "altermodern" "aporia" "aporetic" "appropriates"
@@ -47,7 +49,7 @@
 (setq artbollocks-weasel-words-regex
       (concat "\\b" (regexp-opt
                      (append
-                      ;; add these
+                      ;; Add these
                       '("think"
                         "one of the"
                         "should"
@@ -66,17 +68,17 @@
                         "utilize"
                         "leverage")
                       (seq-difference artbollocks-default-weasel-words
-                                      ;; remove these
+                                      ;; Remove these
                                       '())))
               "\\b"))
 
 (setq artbollocks-jargon-regex
       (concat "\\b" (regexp-opt
                      (append
-                      ;; add these
+                      ;; Add these
                       '()
                       (seq-difference artbollocks-default-jargon
-                                      ;; remove these
+                                      ;; Remove these
                                       '("a priori"
                                         "position"
                                         "matrix"
@@ -89,18 +91,20 @@
   (set-face-attribute 'artbollocks-lexical-illusions-face () :background 'unspecified)
   (set-face-attribute 'artbollocks-weasel-words-face () :background 'unspecified))
 
-(defconst subs-for-think '("conclude" "define" "expect" "generalize" "hear"
+;;; Other English aspects
+
+(defconst my-subs-for-think '("conclude" "define" "expect" "generalize" "hear"
                            "observe" "opine" "postulate" "state" "experience"
                            "remember" "particularize" "deduce" "infer" "induce")
   "Specific evidentials, because \"think\" is overloaded.
 See also:
 https://lojban.org/publications/cll/cll_v1.1_xhtml-section-chunks/section-evidentials.html")
 
-(defconst subs-for-copula '("exist" "remain" "taste" "feel" "smell" "grow" "stay"
+(defconst my-subs-for-copula '("exist" "remain" "taste" "feel" "smell" "grow" "stay"
                             "turn" "look")
   "See English Prime: https://en.wikipedia.org/wiki/E-Prime")
 
-(defconst latinate-layman-alist
+(defconst my-latinate-layman-alist
   '((("adolescence") . ("youth"))
     (("annual") . ("yearly"))
     (("labor") . ("work" "drudge"))
@@ -129,7 +133,7 @@ https://lojban.org/publications/cll/cll_v1.1_xhtml-section-chunks/section-eviden
     (("comprehend") . ("understand" "get" "grasp")))
   "See https://en.wikipedia.org/wiki/List_of_Germanic_and_Latinate_equivalents_in_English")
 
-(defconst janus-words
+(defconst my-janus-words
   '("ravel" "sanction" "peruse" "fulsome" "oversight")
   "Words that that are antonyms for themselves; broken words.")
 
@@ -137,15 +141,15 @@ https://lojban.org/publications/cll/cll_v1.1_xhtml-section-chunks/section-eviden
   (interactive)
   (let ((bounds (bounds-of-thing-at-point 'word)))
     (cond ((member (word-at-point) '("think" "thought"))
-           (when-let ((sub (completing-read "Substitute: " subs-for-think)))
+           (when-let ((sub (completing-read "Substitute: " my-subs-for-think)))
              (delete-region (car bounds) (cdr bounds))
              (insert sub)))
           ((member (word-at-point) '("am" "are" "be" "is"))
-           (when-let ((sub (completing-read "Substitute: " subs-for-copula)))
+           (when-let ((sub (completing-read "Substitute: " my-subs-for-copula)))
              (delete-region (car bounds) (cdr bounds))
              (insert sub)))
           ((when-let* ((cell (cl-assoc-if (lambda (x) (member (word-at-point) x))
-                                          latinate-layman-alist))
+                                          my-latinate-layman-alist))
                        (sub (completing-read "Substitute: " (cdr cell))))
              (delete-region (car bounds) (cdr bounds))
              (insert sub))))))

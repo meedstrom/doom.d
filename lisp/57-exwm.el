@@ -1,7 +1,9 @@
 ;; -*- lexical-binding: t; -*-
 
-(general-unbind exwm-mode-map "C-c")
-(general-def exwm-mode-map "M-s q" #'exwm-input-send-next-key)
+(require 'my-lib)
+
+;; (general-unbind exwm-mode-map "C-c")
+;; (general-def exwm-mode-map "M-s q" #'exwm-input-send-next-key)
 
 (setq exwm-replace t)
 (setq exwm-input-simulation-keys '(([?\s-a] . [home])
@@ -29,8 +31,20 @@
                                (,(kbd "<XF86MonBrightnessDown>") . my-backlight-dec)
                                (,(kbd "<XF86MonBrightnessUp>") . my-backlight-inc)))
 
+(defun my-golden-ratio-if-exwm (&optional _arg)
+  (when (major? exwm)
+    (golden-ratio)))
+
+;; FIXME: does not work beyond the first time the program appears
+(add-hook 'exwm-manage-finish-hook #'my-golden-ratio-if-exwm)
+(add-hook 'window-selection-change-functions #'my-golden-ratio-if-exwm)
+(add-hook 'window-buffer-change-functions #'my-golden-ratio-if-exwm)
+
+;; (add-hook 'focus-out-hook #'my-golden-ratio-if-exwm)
 (add-hook 'exwm-update-class-hook #'my-exwm-rename-buffer)
 (add-hook 'exwm-update-title-hook #'my-exwm-rename-buffer)
+
+(use-package! exwm)
 
 ;; https://github.com/ieure/exwm-firefox
 ;; Assume tabdetach extension is installed. Now you get:
@@ -42,8 +56,8 @@
 ;; (exwm-firefox-mode)
 
 ;; exwm-enable just adds exwm-init on various hooks
-;; (when (fboundp #'exwm-enable)
-;;  (exwm-enable))
+(when (fboundp #'exwm-enable)
+  (exwm-enable))
 
 ;; not good
 ;; (setc exwm-workspace-minibuffer-position 'bottom)

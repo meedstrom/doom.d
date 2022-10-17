@@ -7,6 +7,3 @@
 ;; Limit scrollback because gcc and R can spit out enough to slow my system.
 (setc comint-buffer-maximum-size (^ 2 12))
 (add-hook 'comint-output-filter-functions #'my-truncate-buffer-and-move-excess)
-
-;; (make-comint "lel" (start-process "fake" (current-buffer) "cat"))
-
