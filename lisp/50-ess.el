@@ -24,8 +24,9 @@ BUF should be skipped over by functions like `next-buffer' and `other-buffer'."
 (setopt ess-indent-with-fancy-comments nil)
 (setopt ess-history-file nil)
 (setopt ess-ask-for-ess-directory nil)
-(setopt ess-eval-visibly 'nowait)
 ;; http://chainsawriot.com/mannheim/2020/07/19/elisp.html
+(setopt ess-eval-visibly 'nowait)
+
 ;; (setopt ess-directory-function
 ;;       (lambda ()
 ;;         (or (ignore-errors (car (project-roots (project-current))))
@@ -33,31 +34,12 @@ BUF should be skipped over by functions like `next-buffer' and `other-buffer'."
 
 ;; (add-hook 'ess-presend-filter-functions #'my-append-to-rhistory)
 
-(use-package! ess-r-mode
-  :defer-incrementally
-  (ess-custom
-   ess-utils
-   ess
-   ess-r-syntax
-   ess-tracebug
-   ess-inf
-   ess-r-package
-   ess-mode
-   ess-trns
-   ess-help
-   ess-rd
-   ess-roxy
-   ess-s-lang
-   ess-r-xref
-   ess-r-completion
-   ess-r-flymake))
-
 ;; Because early setq does not work in Doom
 (add-hook 'ess-r-mode-hook (defun my-ess-setup ()
                              (ess-set-style 'RStudio)))
 
 ;; (defun my-set-rhistory (&rest r)
-  ;; (setq! ess-history-directory default-directory)
-  ;; (setq! ess-history-file ".Rhistory"))
+;; (setq! ess-history-directory default-directory)
+;; (setq! ess-history-file ".Rhistory"))
 
 ;; (advice-add #'ess-set-working-directory :after #'my-set-rhistory)

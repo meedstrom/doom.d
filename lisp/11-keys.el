@@ -291,13 +291,13 @@
 ;; (keymap-set "C-2 r" #'sp-select-next-thing-exchange)
 ;; (keymap-set "C-2 s" #'sp-select-previous-thing)
 
-;; Swap F1 and TAB.
-;; Org interferes with the swap when doing it in: key-translation-map
-(keymap-set function-key-map "TAB" "<f1>")
-(keymap-set function-key-map "<f1>" "TAB")
+;; Swap F1 and Tab.
+(keymap-set key-translation-map "TAB" "<f1>")
+(keymap-set key-translation-map "<tab>" "<f1>")
+(keymap-set key-translation-map "<f1>" "TAB")
 
 ;; Use the key physically labelled "Tab" as my M-x.  It should've been Caps
-;; Lock, but there is no Xkb option that to make it usable on Chromebook.
+;; Lock, but there is no Xkb option to make it usable on Chromebook.
 (keymap-set "<f1>" #'execute-extended-command)
 
 ;; Use the key physically labelled "Caps Lock" as my M-x.  Aside
@@ -432,37 +432,33 @@
 ;; (keymap-set ""                        #'consult-imenu-multi)
 ;; (keymap-set ""                        #'consult-kmacro)
 
-;; Greek letters
-(keymap-set key-translation-map "<f7> A" (kbd "Α"))
-(keymap-set key-translation-map "<f7> B" (kbd "Β"))
-(keymap-set key-translation-map "<f7> C" (kbd "Γ"))
-(keymap-set key-translation-map "<f7> D" (kbd "Δ"))
-(keymap-set key-translation-map "<f7> E" (kbd "Ε"))
-(keymap-set key-translation-map "<f7> F" (kbd "Φ"))
-(keymap-set key-translation-map "<f7> G" (kbd "Θ"))
-(keymap-set key-translation-map "<f7> L" (kbd "Λ"))
-(keymap-set key-translation-map "<f7> M" (kbd "Μ"))
-(keymap-set key-translation-map "<f7> O" (kbd "Ω"))
-(keymap-set key-translation-map "<f7> P" (kbd "Π"))
-(keymap-set key-translation-map "<f7> R" (kbd "Ρ"))
-(keymap-set key-translation-map "<f7> S" (kbd "Σ"))
-(keymap-set key-translation-map "<f7> T" (kbd "Τ"))
-(keymap-set key-translation-map "<f7> X" (kbd "Ξ"))
-(keymap-set key-translation-map "<f7> a" (kbd "α"))
-(keymap-set key-translation-map "<f7> b" (kbd "β"))
-(keymap-set key-translation-map "<f7> c" (kbd "γ"))
-(keymap-set key-translation-map "<f7> d" (kbd "δ"))
-(keymap-set key-translation-map "<f7> e" (kbd "ε"))
-(keymap-set key-translation-map "<f7> f" (kbd "φ"))
-(keymap-set key-translation-map "<f7> g" (kbd "θ"))
-(keymap-set key-translation-map "<f7> l" (kbd "λ"))
-(keymap-set key-translation-map "<f7> m" (kbd "μ"))
-(keymap-set key-translation-map "<f7> o" (kbd "ω"))
-(keymap-set key-translation-map "<f7> p" (kbd "π"))
-(keymap-set key-translation-map "<f7> r" (kbd "ρ"))
-(keymap-set key-translation-map "<f7> s" (kbd "σ"))
-(keymap-set key-translation-map "<f7> t" (kbd "τ"))
-(keymap-set key-translation-map "<f7> x" (kbd "ξ"))
+;; Some Greek letters
+(keymap-set key-translation-map "<f7> a" "α") ;;alpha
+(keymap-set key-translation-map "<f7> b" "β") ;;beta
+(keymap-set key-translation-map "<f7> c" "χ") ;;chi
+(keymap-set key-translation-map "<f7> d" "δ") ;;delta
+(keymap-set key-translation-map "<f7> e" "ε") ;;epsilon
+(keymap-set key-translation-map "<f7> f" "φ") ;;phi
+(keymap-set key-translation-map "<f7> g" "γ") ;;gamma
+(keymap-set key-translation-map "<f7> h" "θ") ;;theta
+(keymap-set key-translation-map "<f7> i" "ι") ;;iota
+;; (keymap-set key-translation-map "<f7> j" "")
+(keymap-set key-translation-map "<f7> k" "κ") ;;kappa
+(keymap-set key-translation-map "<f7> l" "λ") ;;lambda
+(keymap-set key-translation-map "<f7> m" "μ") ;;mu
+(keymap-set key-translation-map "<f7> n" "η") ;;eta
+(keymap-set key-translation-map "<f7> o" "ω") ;;omega
+(keymap-set key-translation-map "<f7> p" "π") ;;pi
+;; (keymap-set key-translation-map "<f7> q" "")
+(keymap-set key-translation-map "<f7> r" "ρ") ;;rho
+(keymap-set key-translation-map "<f7> s" "σ") ;;sigma
+(keymap-set key-translation-map "<f7> t" "τ") ;;tau
+(keymap-set key-translation-map "<f7> u" "υ") ;;upsilon
+(keymap-set key-translation-map "<f7> v" "ν") ;;nu
+;; (keymap-set key-translation-map "<f7> w" "")
+(keymap-set key-translation-map "<f7> x" "ξ") ;;xi
+;; (keymap-set key-translation-map "<f7> y" "")
+(keymap-set key-translation-map "<f7> z" "ζ") ;;zeta
 
 (my-normie:abnormalize)
 
