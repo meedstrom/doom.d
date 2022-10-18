@@ -1,9 +1,6 @@
 ;; -*- lexical-binding: t; -*-
 ;; Prevent all-the-icons from fattening text line heights on small terminus font
 
-(require 'my-keys)
-(require 'my-lib-unprefixed)
-
 (defun my-adjust-scale-1 ()
   (text-scale-decrease 1))
 
@@ -22,6 +19,9 @@
                                     orderless-regexp
                                     orderless-initialism))
 
+;; embark
+(setopt y-or-n-p-use-read-key t)
+
 ;; (setopt consult-line-start-from-top t)
 
 ;; completion-at-point, TAB -> corfu-complete
@@ -30,11 +30,12 @@
 ;; M-h -> corfu-show-documentation
 (use-package! corfu
   :init
-  (setq corfu-auto t)
-  (setq corfu-excluded-modes '(org-mode))
-  (setq tab-always-indent 'complete) ;; or use M-TAB to complete
+  (setopt corfu-auto t)
+  (setopt corfu-auto-delay 0.35)
+  (setopt corfu-excluded-modes '(org-mode))
+  (setopt tab-always-indent 'complete) ;; or use M-TAB to complete
   :config
-  (setq completion-cycle-threshold 3)
+  (setopt completion-cycle-threshold 3)
   ;; invoke corfu for dabbrev instead of the opportunistic expand
   (keymap-set "M-/" #'dabbrev-completion)
   (keymap-set "C-M-/" #'dabbrev-expand)

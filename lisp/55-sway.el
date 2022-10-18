@@ -126,17 +126,6 @@ If it's an Emacs frame, kill it."
 
 ;; (--find (eq 43 (map-elt it "id")) (sway-list-windows))
 
-(use-package! corfu)
-
-(defvar debian (executable-find "apt-get"))
-(defvar gentoo (string-match "gentoo" operating-system-release))
-(defvar guix (string-match "shepherd"
-                           (shell-command-to-string "ps -q 1 -o comm=")))
-
-;; Test that at most one OS is truthy
-(let* ((oses (list debian gentoo guix)))
-  (<= 1 (length (seq-filter (-not #'null) oses))))
-
 (defvar my-tmpfs (if guix
                      "/run/user/1000/"
                    "/tmp/"))

@@ -11,18 +11,8 @@
 
 ;;; Code:
 
-(require 'my-lib-unprefixed)
-(require 'my-lib)
 (require 'defrepeater) ;; not needed if i would just remember to call `repeat'!
 (require 'define-repeat-map)
-
-;; Backport from Emacs 29 in case I'm on 28
-(unless (version<= "29" emacs-version)
-  (require 'general)
-  (defmacro keymap-unset (a b &optional _c)
-    `(general-unbind ,a ,b))
-  (defmacro keymap-set (&rest args)
-    `(general-def ,@args)))
 
 
 ;;; Clean house a bit
@@ -291,6 +281,25 @@
 ;; (keymap-set "C-2 r" #'sp-select-next-thing-exchange)
 ;; (keymap-set "C-2 s" #'sp-select-previous-thing)
 
+(after! dired
+  (keymap-set dired-mode-map "b" #'dired-up-directory)
+  (keymap-set dired-mode-map ")" #'dired-git-info-mode)
+  (keymap-set dired-mode-map "M-<up>" #'dired-up-directory)
+  (keymap-set dired-mode-map "s-RET" #'my-dired-open-file-with-default-tool)
+  ;; undoom
+  (keymap-set dired-mode-map "q" #'kill-current-buffer))
+
+(after! general
+  ;; dafuq is this set for?
+  (general-unbind general-override-mode-map "M-x")
+  (general-unbind general-override-mode-map "A-x")
+  ;; guess I should take a page from their book
+  (general-def general-override-mode-map "<menu>" #'execute-extended-command))
+
+;; civilize emacs
+(keymap-set input-decode-map "<escape>" "C-g")
+(keymap-set input-decode-map "C-g" "s-g") ;; to unlearn
+
 ;; Swap F1 and Tab.
 (keymap-set key-translation-map "TAB" "<f1>")
 (keymap-set key-translation-map "<tab>" "<f1>")
@@ -303,11 +312,14 @@
 ;; Use the key physically labelled "Caps Lock" as my M-x.  Aside
 ;; from this lisp, we also need the Xkb option caps:menu so it emits <menu>.
 ;; TIP: it also unlocks the comfortable combo M-<menu>.
+(when (eq 'window-system 'x)
+  (my-exec "setxkbmap" "-option" "caps:menu"))
 (keymap-set "<menu>" #'execute-extended-command)
 (keymap-set "M-<menu>" #'embark-act)
 
 ;; Grand list
 
+(keymap-set view-mode-map "e"            #'my-view-exit-and-reopen-as-root)
 (keymap-set "<f10> a"                    #'my-save-buffer-and-amend)
 (keymap-set "<f10> d"                    #'org-download-yank)
 (keymap-set "<f10> e"                    #'eww)
@@ -427,7 +439,6 @@
 (keymap-set isearch-mode-map "M-s n"     #'isearch-repeat-forward)
 (keymap-set isearch-mode-map "M-s p"     #'isearch-repeat-backward)
 (keymap-set my-abbrev-minor-mode-map "`"   #'expand-abbrev)
-;; (keymap-set ""                        #'consult-file-externally)
 ;; (keymap-set ""                        #'consult-focus-lines)
 ;; (keymap-set ""                        #'consult-imenu-multi)
 ;; (keymap-set ""                        #'consult-kmacro)
@@ -463,5 +474,3 @@
 (my-normie:abnormalize)
 
 ;; (run-hooks 'my-after-keybinds-hook)
-
-(provide 'my-keys)

@@ -104,6 +104,14 @@
 (add-hook 'org-clock-in-hook #'org-clock-save)
 (add-hook 'text-mode-hook (defun my-kill-smartparens () (smartparens-mode 0)))
 
+
+;; see Org-roam UI in Chromium's kiosk mode
+(setopt browse-url-chromium-arguments '("--app=http://localhost:35901"))
+(setopt org-roam-ui-browser-function #'browse-url-chromium)
+(when guix
+  (add-to-list 'browse-url-chromium-arguments "--no-sandbox"))
+
+
 ;; TODO: Rename the exported file as a Jekyll-compatible slug, so I don't need
 ;; the original filename to be any particular way.
 (setopt org-publish-project-alist

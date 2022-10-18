@@ -1,6 +1,5 @@
 ;; -*- lexical-binding: t; -*-
 
-(require 'pfuture)
 (require 'named-timer)
 
 (setq my-all-git-repos

@@ -3,7 +3,6 @@
 
 ;;; Code:
 
-(require 'my-lib)
 (require 'my-lib-shells)
 (require 'subr-x)
 

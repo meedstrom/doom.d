@@ -20,7 +20,8 @@
 
 (require 'my-lib)
 
-;;; 
+
+;;; Stuff
 
 (defvar my-eshell-last-cmd-start nil)
 (defvar my-eshell-buffer-counter 0)
@@ -95,7 +96,7 @@ Functions here have access to the variable
 
 (defun my-eshell-time-cmd-2 ()
   (run-hooks 'my-real-eshell-post-command-hook)
-  ;; Possible bug(?) makes post-command-hook run after no-ops but pre-command
+  ;; Possible bug(?) makes post-command-hook run after no-ops, but pre-command
   ;; hook didn't beforehand.  By setting this variable at pre-command-hook, and
   ;; nulling it now, we know next time if a real command did run.
   (setq my-eshell-last-cmd-start nil))
@@ -118,42 +119,7 @@ Functions here have access to the variable
               (add-text-properties beg (point) '(font-lock-face eshell-prompt
                                                  read-only t)))))))))
 
-;;; MOTD
-
-;; My issue with a static list of "my projects" is that it's too static.  My
-;; issue with recentf is that it's too dynamic.  So merge both concepts.
-;; TODO: It's still too clumsy by far.  What if I just ranked files by frecency
-;; of access?
-
-;; Static "my projects"
-(defvar my-recentf-favored-files
-  '("/home/kept/code/R/mcelreath/ch15.R"
-    "/home/kept/uni/STAE02_Bayesian_Methods/2020/Edström_proj.org"))
-
-;; Command to add to the static list
-(defun my-recentf-favor-this ()
-  (interactive)
-  (when (buffer-file-name)
-    (customize-set-variable 'my-recentf-favored-files
-                            (add-to-list 'my-recentf-favored-files
-                                         (buffer-file-name)))))
-
-;; Command to exclude a file.  May never use, idk.
-(defun my-recentf-exclude-this ()
-  (interactive)
-  (when (buffer-file-name)
-    (customize-set-variable 'recentf-exclude
-                            (add-to-list 'recentf-exclude
-                                         (rx (literal (buffer-file-name)))))))
-
-;; TODO: warn if a file no longer exists
-(defun my-recentf-for-motd ()
-  (require 'recentf)
-  (->> (append my-recentf-favored-files recentf-list)
-       (-non-nil)
-       (-uniq)
-       (-take 5)))
-
+
 ;;; Base encoding
 
 (defun my-base36 (num)
@@ -170,7 +136,7 @@ it if you can, I couldn't."
 (defun my-alphabetic (num)
   "Encode NUM as base 26, represented by a string of letters.
 Useful where you don't want a numeric digit, e.g. the start of a
-variable or envvar name."
+variable name."
   (my--base26 num (length (number-to-string (* 10 (/ num 26))))))
 
 (defun my--base26 (num len)
@@ -184,6 +150,7 @@ NUM and LEN are as in `message-number-base36'."
             (char-to-string (aref "zyxwvutsrqponmlkjihgfedcba"
                                   (% num 26))))))
 
+
 ;;; Narrowing shenanigans
 
 (defun my-eshell-prev-line (&optional arg)
@@ -321,7 +288,8 @@ ARG is passed on."
   (interactive)
   (consult-history (my-eshell-history)))
 
-;;; Other
+
+;;; At-point magic
 
 (defun my-copy-region-to-variable (name)
   (interactive "SVariable name: ")
@@ -403,6 +371,7 @@ This may remove the directory component, use a path relative from
           (insert (car alts))))
     (message "This probably isn't a filename.")))
 
+
 ;;; History, scrollback...
 
 ;; TODO: Always timestamp commands in history so they can be truly ordered.
@@ -537,6 +506,35 @@ have been set by `my-eshell-rename' on
             (write-region beg end file
                           'append 'silently)))))))
 
+
+;;; More stuff
+
+;; thanks ambrevar
+(defun my-fish-style-path (path max-len)
+  "Return a potentially trimmed representation of the directory
+path PATH, replacing parent directories with their initial
+characters if necessary. Try to get the length of PATH, down to
+MAX-LEN, not counting slashes."
+  (let* ((components (split-string (abbreviate-file-name path) "/"))
+         (len (+ (1- (length components))
+                 (cl-reduce '+ components :key 'length)))
+         (str ""))
+    (while (and (> len max-len)
+                (cdr components))
+      (setq str (concat str
+                        (cond ((= 0 (length (car components))) "/")
+                              ((= 1 (length (car components)))
+                               (concat (car components) "/"))
+                              (t
+                               (if (string= "."
+                                            (string (elt (car components) 0)))
+                                   (concat (substring (car components) 0 2)
+                                           "/")
+                                 (string (elt (car components) 0) ?/)))))
+            len (- len (1- (length (car components))))
+            components (cdr components)))
+    (concat str (cl-reduce (lambda (a b) (concat a "/" b)) components))))
+
 (defun my-generate-eshell-name (dir)
   (concat "*eshell " (my-fish-style-path dir 30) "*"))
 
@@ -596,16 +594,15 @@ have been set by `my-eshell-rename' on
                     :weight bold)))
       (insert (emacs-uptime))
       (open-line 1))
-    ;; noone gives a shit if emacs 27 or 28
-    ;; (forward-line)
-    ;; (goto-char (line-beginning-position))
-    ;; (insert "Emacs: ")
-    ;; (add-text-properties
-    ;;    (line-beginning-position) (point)
-    ;;    `(face (list :foreground ,(seq-elt ansi-color-names-vector 3)
-    ;;                 :weight bold)))
-    ;; (insert emacs-version)
-    ;; (open-line 1)
+    (forward-line)
+    (goto-char (line-beginning-position))
+    (insert "Emacs: ")
+    (add-text-properties
+       (line-beginning-position) (point)
+       `(face (list :foreground ,(seq-elt ansi-color-names-vector 3)
+                    :weight bold)))
+    (insert emacs-version)
+    (open-line 1)
     (when (re-search-forward "Shell: " nil t)
       (delete-region (point) (line-end-position))
       (insert (concat "eshell " (my-pkg-version "eshell"))))
