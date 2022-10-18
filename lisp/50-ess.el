@@ -25,6 +25,7 @@ BUF should be skipped over by functions like `next-buffer' and `other-buffer'."
 (setopt ess-history-file nil)
 (setopt ess-ask-for-ess-directory nil)
 (setopt ess-eval-visibly 'nowait)
+
 ;; http://chainsawriot.com/mannheim/2020/07/19/elisp.html
 
 ;; (setopt ess-directory-function

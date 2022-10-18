@@ -85,9 +85,6 @@
   )
 (my-fix-pdf-midnight-colors)
 
-;; remind myself to press e, not q
-(disable-command #'View-quit)
-
 ;; undoom
 (put 'customize-themes 'disabled nil)
 (put 'customize-group 'disabled nil)
