@@ -15,7 +15,7 @@
 ;; - image-dired is fast now
 ;; - image-dired slideshow on S
 ;; - in image-dired, marking an image in the display buffer shows the next
-;; - image
+;;   image
 ;; - new hotkeys in help buffers n(next) p(prev) e(edit)
 ;; - leuven-dark
 ;; - describe-buffer-bindings no longer prints "Prefix Command"
@@ -50,23 +50,6 @@
   ;; (setq use-short-answers t)
   (setq abbrev-suggest t)
   )
-
-;; it's starting to annoy me the delay in the first eshell, dired, and org-roam
-;; buffers. Either design a :defer-incrementally list for each, or do some
-;; general "load everything" during idle so that we effectively don't have ANY
-;; autoloaded things...
-
-;; (use-package! eshell
-;;   :defer-incrementally
-;;   ())
-
-;; (use-package! dired
-;;   :defer-incrementally
-;;   ())
-
-;; (use-package! org-roam
-;;   :defer-incrementally
-;;   ())
 
 ;; neat
 (setopt browse-url-chromium-arguments '("--app=http://localhost:35901"))
@@ -109,27 +92,9 @@
   :hook (prog-mode . prism-mode)
   :config
   (add-hook 'doom-load-theme-hook #'prism-set-colors)
-  ;; Disable rainbow-delimiters.  Doom bug: the following advice doesn't run late enough to have a meaningful effect.
-  ;; (advice-add #'prism-mode :after
-  ;;             (defun my-turn-off-rainbow-delimiters (&rest _args)
-  ;;               (rainbow-delimiters-mode 0)))
-  (fset 'rainbow-delimiters-mode #'ignore)
-  ;; (remove-hook! (racket-mode
-  ;;                scheme-mode
-  ;;                sh-mode
-  ;;                clojure-mode
-  ;;                purescript-mode
-  ;;                rjsx-mode
-  ;;                typescript-mode
-  ;;                typescript-tsx-mode
-  ;;                TeX-update-style
-  ;;                zig
-  ;;                java-mode
-  ;;                c-mode-common
-  ;;                csharp-mode
-  ;;                lisp-mode)
-  ;;   #'rainbow-delimiters-mode)
-  )
+  ;; Disable rainbow-delimiters (it's on a dozen hooks in Doom).
+  (fset 'rainbow-delimiters-mode #'ignore))
+
 (setopt rmh-elfeed-org-files
         (list (expand-file-name "elfeed.org" doom-private-dir)))
 
@@ -155,11 +120,11 @@
 (use-package! deianira
   :config (deianira-mode))
 
-;; It sounds like Hyperbole is not just a sort of greybeard Embark, it has lots
+;; It sounds like Hyperbole is not only a sort of greybeard Embark, it has lots
 ;; of premade "buttons" (what are those?) that Embark lacks, for one thing.  I
 ;; think to properly learn it, I'd like all possible targets/buttons colorized
 ;; for me during a training period.  I'd also like the Hyperbole prompts to
-;; conform to completing-read.
+;; conform to Vertico instead of that ascetic oneliner.
 (use-package! hyperbole
   :defer
   :commands hkey-either
