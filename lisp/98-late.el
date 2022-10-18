@@ -57,6 +57,11 @@
 (add-to-list 'safe-local-variable-values '(require-final-newline . t))
 
 
+(after! view-mode
+  ;; remind myself to press e, not q
+  (disable-command #'View-quit))
+
+
 (use-package! form-feed
   :config
   (global-form-feed-mode)
