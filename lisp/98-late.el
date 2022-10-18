@@ -2,15 +2,6 @@
 (auto-save-visited-mode)
 (display-battery-mode)
 
-;; embark
-(setopt y-or-n-p-use-read-key t)
-
-(use-package! goggles
-  :hook ((prog-mode text-mode) . goggles-mode))
-
-(use-package! objed
-  :commands objed-ipipe)
-
 ;; From reading Emacs 29 news
 ;; - image-dired is fast now
 ;; - image-dired slideshow on S
@@ -51,25 +42,45 @@
   (setq abbrev-suggest t)
   )
 
-;; neat
-(setopt browse-url-chromium-arguments '("--app=http://localhost:35901"))
-(setopt org-roam-ui-browser-function #'browse-url-chromium)
+(setopt +doom-dashboard-functions
+        '(doom-dashboard-widget-shortmenu
+          doom-dashboard-widget-loaded))
 
-;; for Guix System
-(add-to-list 'browse-url-chromium-arguments "--no-sandbox")
+;; NOTE: put your user name and password if not using .authinfo
+(setopt mediawiki-site-alist
+        '(("Wikipedia" "http://en.wikipedia.org/w/" "username" "password" nil "Main Page")
+          ("WikEmacs" "http://wikemacs.org/" "username" "password" nil "Main Page")))
 
-(after! ws-butler
-  ;; fix guix.el
-  (add-to-list 'ws-butler-global-exempt-modes #'minibuffer-inactive-mode)
-  ;; because org-element-cache (runs in background) throws warnings now (culprit Roam?)
-  (add-to-list 'ws-butler-global-exempt-modes #'org-mode))
+(setopt mediawiki-site-default "WikEmacs")
+
+(add-to-list 'safe-local-variable-values '(require-final-newline . nil))
+(add-to-list 'safe-local-variable-values '(require-final-newline . t))
+
+
+(use-package! form-feed
+  :config
+  (global-form-feed-mode)
+  (add-hook 'emacs-lisp-compilation-mode-hook #'form-feed-mode))
+
+(use-package! goggles
+  :hook ((prog-mode text-mode) . goggles-mode))
 
 (use-package! iscroll
   :hook ((text-mode elfeed-show-mode eww-mode shr-mode) . iscroll-mode))
 
-(require 'form-feed)
-(global-form-feed-mode)
-(add-hook 'emacs-lisp-compilation-mode-hook #'form-feed-mode)
+(use-package! objed
+  :commands objed-ipipe)
+
+;; NOTE: this mode sometimes messes things up. You could just manually
+;; call M-x crux-sudo-edit when you need it (initialism: M-x cse).
+(use-package! crux
+  :config (crux-reopen-as-root-mode))
+
+(use-package! nov
+  :mode ("\\.epub\\'" . nov-mode))
+
+(use-package! deianira
+  :config (deianira-mode))
 
 (use-package! nameless
   :hook (emacs-lisp-mode . nameless-mode)
@@ -77,7 +88,6 @@
   ;; swung dash ⁓ tilde op ∼ sine ∿ almost eq ≈
   ;; four dot mark ⁛ lock 🔒 ⊝ ◯ ⁐ ○ ⚞⁖ ⋐⚟⤳〜
   (setopt nameless-prefix "⁓")
-  ;; (setopt nameless-private-prefix "〜")
   (setopt nameless-private-prefix t)
   (setopt nameless-affect-indentation-and-filling nil)
   (add-hook 'nameless-mode-hook #'my-adjust-scale-2)
@@ -85,15 +95,13 @@
   (set-face-attribute 'nameless-face nil :inherit 'unspecified))
 
 (use-package! prism
-  :custom (;; (prism-comments nil)
-           ;; (prism-lightens '(0))
-           (prism-parens t)
-           (prism-desaturations '(0 20 60)))
-  :hook (prog-mode . prism-mode)
+  :init
+  (setopt prism-parens t)
+  (setopt prism-desaturations '(0 20 60))
   :config
-  (add-hook 'doom-load-theme-hook #'prism-set-colors)
-  ;; Disable rainbow-delimiters (it's on a dozen hooks in Doom).
-  (fset 'rainbow-delimiters-mode #'ignore))
+  ;; Replace rainbow-delimiters (it's on a dozen hooks in Doom).
+  (fset 'rainbow-delimiters-mode #'prism-mode)
+  (add-hook 'doom-load-theme-hook #'prism-set-colors))
 
 (setopt rmh-elfeed-org-files
         (list (expand-file-name "elfeed.org" doom-private-dir)))
@@ -108,17 +116,6 @@
   (setopt elfeed-search-filter "@2-months-ago -junk +unread +fav")
   ;; (ignore-errors (elfeed-org)) ;; does not work
   )
-
-;; NOTE: this mode sometimes messes things up. You could just manually
-;; call M-x crux-sudo-edit when you need it (initialism: M-x cse).
-(use-package! crux
-  :config (crux-reopen-as-root-mode))
-
-(use-package! nov
-  :mode ("\\.epub\\'" . nov-mode))
-
-(use-package! deianira
-  :config (deianira-mode))
 
 ;; It sounds like Hyperbole is not only a sort of greybeard Embark, it has lots
 ;; of premade "buttons" (what are those?) that Embark lacks, for one thing.  I

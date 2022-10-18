@@ -18,12 +18,10 @@
 
 ;;; Code:
 
-
 (require 'cl-lib)
 (require 'seq)
 (require 'subr-x)
 (require 'dash)
-(require 'my-lib-unprefixed)
 
 (autoload #'server-running-p "server")
 (autoload #'tramp-time-diff  "tramp")
@@ -537,31 +535,6 @@ temporarily overridden."
   (shell-command (concat "bluetoothctl disconnect 84:D4:C8:01:CE:73 "
                          "&& bluetoothctl connect 84:D4:C8:01:CE:73")))
 
-(defun my-fish-style-path (path max-len)
-  "Return a potentially trimmed representation of the directory
-path PATH, replacing parent directories with their initial
-characters if necessary. Try to get the length of PATH, down to
-MAX-LEN, not counting slashes."
-  (let* ((components (split-string (abbreviate-file-name path) "/"))
-         (len (+ (1- (length components))
-                 (cl-reduce '+ components :key 'length)))
-         (str ""))
-    (while (and (> len max-len)
-                (cdr components))
-      (setq str (concat str
-                        (cond ((= 0 (length (car components))) "/")
-                              ((= 1 (length (car components)))
-                               (concat (car components) "/"))
-                              (t
-                               (if (string= "."
-                                            (string (elt (car components) 0)))
-                                   (concat (substring (car components) 0 2)
-                                           "/")
-                                 (string (elt (car components) 0) ?/)))))
-            len (- len (1- (length (car components))))
-            components (cdr components)))
-    (concat str (cl-reduce (lambda (a b) (concat a "/" b)) components))))
-
 (defvar my--greeting-last nil)
 (defun my-greeting ()
   (require 'ts)
@@ -636,9 +609,13 @@ being called by certain hooks, such as
   (save-buffers-kill-emacs t))
 
 (defun my-view-exit-and-reopen-as-root ()
+  "Like `crux-sudo-edit', but only if necessary.
+Serves double duty as `View-exit', so can replace the key binding
+for that."
   (interactive)
   (unless (crux-reopen-as-root)
-    (View-exit)))
+    (View-exit)
+    (read-only-mode 0)))
 
 (defun my-backlight-inc ()
   (interactive)
@@ -975,6 +952,7 @@ instead of hippie-expand and set `tab-always-indent' to
                   (concat "*eww " (plist-get eww-data :title) "*") t)))
 
 (defun my-exwm-rename-buffer ()
+  (require 'my-lib-unprefixed)
   (when (derived-mode-p 'exwm-mode)
     (let ((app-name (cond ((equal exwm-class-name "Nightly") "Firefox")
                           (t exwm-class-name))))

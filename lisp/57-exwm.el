@@ -1,7 +1,5 @@
 ;; -*- lexical-binding: t; -*-
 
-(require 'my-lib)
-
 ;; (general-unbind exwm-mode-map "C-c")
 ;; (general-def exwm-mode-map "M-s q" #'exwm-input-send-next-key)
 
@@ -18,7 +16,7 @@
                                    ([?\s-p] . [up])
                                    ([?\s-s] . [C-f])
                                    ([?\s-v] . [next])
-                                   ([?\s-w] . [C-x])
+                                   ([?\s-w] . [C-c])
                                    ([?\s-y] . [C-v])
                                    ([?\s-/] . [C-z])
                                    ([?\M-d] . [C-S-right delete])

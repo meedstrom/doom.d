@@ -22,6 +22,15 @@
 (require 'l)
 (require 'subr-x)
 
+;; Backport from Emacs 29 in case I'm on 28
+(unless (version<= "29" emacs-version)
+  (require 'general)
+  (defmacro keymap-unset (a b &optional _c)
+    `(general-unbind ,a ,b))
+  (defmacro keymap-set (&rest args)
+    `(general-def ,@args))
+  (defalias #'setopt #'general-setq))
+
 (defmacro when-car-fbound (form)
   `(when (fboundp (car #',form)) ,form))
 
@@ -30,16 +39,10 @@
 
 (defalias 'use #'use-package!)
 
-(defmacro custom (package &rest body)
-  (declare (indent defun))
-  `(use-package! ,package
-     :defer
-     :custom (,@body)))
-
 (defmacro c (fn &rest body)
   "Interactive version of `l'.
-FN and BODY as in `l'.  Typical use: in `define-key' to make a
-simple command on the fly."
+FN and BODY as in `l'.  The typical use case is with `keymap-set'
+to make a simple command on the fly."
   `(lambda ,(l--arguments body)
      (interactive)
      (,(if (car-safe fn)
@@ -52,30 +55,11 @@ simple command on the fly."
   `(run-with-timer ,secs nil (lambda () ,@body)))
 
 (defun as-string (x)
-  "Danger: handles numbers as character codes."
+  "Return X as a string, even if it was a symbol or character.
+Danger: assumes numbers are character codes."
   (cond ((stringp x) x)
         ((symbolp x) (symbol-name x))
         ((characterp x) (char-to-string x))))
-
-;;(char-to-string ?\f)
-;;(string-to-char "f")
-
-;; To be deprecated in Emacs 29
-(defmacro setc (variable value)
-  "Similar to `customize-set-variable', but decline to populate `custom-file'.
-In other words, like `setq' but calls the `defcustom' :set
-function if present.
-
-Useful if you want `custom-file' to only record what you set
-through the interactive Custom interface, and not what you set
-through Lisp initfiles."
-  `(funcall (or (get ',variable 'custom-set)
-                'set-default)
-            ',variable ,value))
-
-;; Backport
-(unless (version<= "29" emacs-version)
-  (defalias #'setopt #'setc))
 
 (defun lines (&rest args)
   "Intersperse newlines between the strings in ARGS. The purpose is to allow
@@ -88,15 +72,6 @@ typing the following, which plays well with indentation.
 ;; Preserved because it was a Lisp lesson
 (defun ^ (x power)
   (apply (function *) (make-list power x)))
-
-;; FIXME: broken compared to quiet!
-(defmacro quietly (&rest forms)
-  "Run FORMS without generating output, simplified from Doom's `quiet!'."
-  `(if init-file-debug
-       (progn ,@forms)
-     (let ((inhibit-message t)
-           (save-silently t))
-       (prog1 ,@forms (message "")))))
 
 (defun cut-at (CUTOFF STRING)
   "Variant of `substring'. Always cuts from the start. Permits
@@ -111,8 +86,29 @@ string is returned unaltered without complaint."
 with ADDITIONS and sets that as the variable's new value."
   `(setq ,string-var (concat ,string-var ,@additions)))
 
-;; Lifted from Doom 2.0.9
+;; Lifted from Doom
 (unless (boundp 'doom-version)
+  (defmacro quiet! (&rest forms)
+  "Run FORMS without generating any output.
+
+This silences calls to `message', `load', `write-region' and anything that
+writes to `standard-output'. In interactive sessions this inhibits output to the
+echo-area, but not to *Messages*."
+  `(if init-file-debug
+       (progn ,@forms)
+     ,(if noninteractive
+          `(letf! ((standard-output (lambda (&rest _)))
+                   (defun message (&rest _))
+                   (defun load (file &optional noerror nomessage nosuffix must-suffix)
+                     (funcall load file noerror t nosuffix must-suffix))
+                   (defun write-region (start end filename &optional append visit lockname mustbenew)
+                     (unless visit (setq visit 'no-message))
+                     (funcall write-region start end filename append visit lockname mustbenew)))
+             ,@forms)
+        `(let ((inhibit-message t)
+               (save-silently t))
+           (prog1 ,@forms (message ""))))))
+  
   (defmacro after! (package &rest body)
   "Evaluate BODY after PACKAGE have loaded.
 
@@ -162,6 +158,13 @@ This is a wrapper around `eval-after-load' that:
                (setq body `((after! ,next ,@body))))
              (car body)))))))
 
+(defun my-symbol-name-or-string-as-is (x)
+  "Like `symbol-name', but accept string input too."
+  (eval `(if (stringp ,x)
+             ,x
+           (if (symbolp ',x)
+               (symbol-name ,x)))))
+
 (defmacro sym (&rest args)
   "Shorthand for the expression (intern (concat ARGS)), plus magic. Examples:
 
@@ -177,13 +180,6 @@ This is a wrapper around `eval-after-load' that:
 Note that `w3m-search-default-engine' returned a string \"duckduckgo\".
 Note that `major-mode' returned a symbol `exwm-mode'."
   `(intern (mapconcat #'my-symbol-name-or-string-as-is ',args nil)))
-
-(defun my-symbol-name-or-string-as-is (x)
-  "Like `symbol-name', but accept string input too."
-  (eval `(if (stringp ,x)
-             ,x
-           (if (symbolp ',x)
-               (symbol-name ,x)))))
 
 ;; Just an old habit from typing "date" at the terminal. It's how I check the
 ;; current time, which I do so rarely I can't be bothered to set a hotkey, nor
