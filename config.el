@@ -1,18 +1,16 @@
 ;;; $DOOMDIR/config.el -*- lexical-binding: t; -*-
 
-;; ensure that guix org comes first
-;; Tends to break unless i install everything that depends on org thru guix. Wait and see what hlissner does with Nix...
-;(use-package org
-;  :load-path "/home/me/.guix-profile/share/emacs/site-lisp/")
+;; Ensure that Guix' Org comes first.
+;; NOTE: Tends to break unless I install everything that depends on org thru
+;; Guix too.  Wait and see what hlissner does with Nix...
+;; (use-package org :load-path "/home/me/.guix-profile/share/emacs/site-lisp/")
 
 (setq-default load-prefer-newer t)
 (add-load-path!
- ;; (expand-file-name "Emacs/conf-vanilla/lisp" (getenv "MY_FILES"))
- ;; (expand-file-name "Emacs/conf-doom/subed" (getenv "MY_FILES"))
- (expand-file-name "Emacs/conf-common" (getenv "MY_FILES"))
- (expand-file-name "Emacs/conf-doom/lisp" (getenv "MY_FILES"))
- (expand-file-name "Emacs/deianira" (getenv "MY_FILES"))
- (expand-file-name "Emacs/twee-mode" (getenv "MY_FILES")))
+ (file-name-concat (getenv "MY_FILES") "emacs/conf-common/")
+ (file-name-concat (getenv "MY_FILES") "emacs/conf-doom/lisp/")
+ (file-name-concat (getenv "MY_FILES") "emacs/deianira/")
+ (file-name-concat (getenv "MY_FILES") "emacs/twee-mode/"))
 
 ;; NOTE: I use load, not load!, and the directory-files FULL argument, so I can
 ;;       ffap my way to the broken file when init breaks (relative file paths
@@ -31,8 +29,8 @@
         (add-hook 'kill-buffer-query-functions #'ignore nil 'local)
         (solaire-mode +1)))))
 
-(dolist (module (directory-files "/home/kept/Emacs/conf-common/" t "^[^.#].*.el$"))
+(dolist (module (directory-files "/home/kept/emacs/conf-common/" t "^[^.#].*.el$"))
   (load module))
 
-(dolist (module (directory-files "/home/kept/Emacs/conf-doom/lisp/" t "^[^.#].*.el$"))
+(dolist (module (directory-files "/home/kept/emacs/conf-doom/lisp/" t "^[^.#].*.el$"))
   (load module))

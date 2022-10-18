@@ -44,8 +44,6 @@
 (add-hook 'exwm-update-class-hook #'my-exwm-rename-buffer)
 (add-hook 'exwm-update-title-hook #'my-exwm-rename-buffer)
 
-(use-package! exwm)
-
 ;; https://github.com/ieure/exwm-firefox
 ;; Assume tabdetach extension is installed. Now you get:
 ;; C-c C-f  history-forward
@@ -55,10 +53,12 @@
 ;; C-c C-g  merge: merge a detached tab back into its "parent" window
 ;; (exwm-firefox-mode)
 
-;; exwm-enable just adds exwm-init on various hooks
-(when (fboundp #'exwm-enable)
+(use-package! exwm
+  :config
+  ;; NOTE: exwm-enable just adds exwm-init on various hooks, so the actual exwm-init
+  ;; doesn't happen at this stage of the emacs startup.
   (exwm-enable))
 
 ;; not good
-;; (setc exwm-workspace-minibuffer-position 'bottom)
+;; (setopt exwm-workspace-minibuffer-position 'bottom)
 ;; (add-hook 'exwm-init-hook #'exwm-workspace-attach-minibuffer)

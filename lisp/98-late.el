@@ -1,9 +1,9 @@
 (save-place-mode)
 (auto-save-visited-mode)
-;; (display-battery-mode)
+(display-battery-mode)
 
 ;; embark
-(setc y-or-n-p-use-read-key t)
+(setopt y-or-n-p-use-read-key t)
 
 (use-package! goggles
   :hook ((prog-mode text-mode) . goggles-mode))
@@ -69,8 +69,8 @@
 ;;   ())
 
 ;; neat
-(setc browse-url-chromium-arguments '("--app=http://localhost:35901"))
-(setc org-roam-ui-browser-function #'browse-url-chromium)
+(setopt browse-url-chromium-arguments '("--app=http://localhost:35901"))
+(setopt org-roam-ui-browser-function #'browse-url-chromium)
 
 ;; for Guix System
 (add-to-list 'browse-url-chromium-arguments "--no-sandbox")
@@ -93,10 +93,10 @@
   :init
   ;; swung dash ⁓ tilde op ∼ sine ∿ almost eq ≈
   ;; four dot mark ⁛ lock 🔒 ⊝ ◯ ⁐ ○ ⚞⁖ ⋐⚟⤳〜
-  (setc nameless-prefix "⁓")
-  ;; (setc nameless-private-prefix "〜")
-  (setc nameless-private-prefix t)
-  (setc nameless-affect-indentation-and-filling nil)
+  (setopt nameless-prefix "⁓")
+  ;; (setopt nameless-private-prefix "〜")
+  (setopt nameless-private-prefix t)
+  (setopt nameless-affect-indentation-and-filling nil)
   (add-hook 'nameless-mode-hook #'my-adjust-scale-2)
   :config
   (set-face-attribute 'nameless-face nil :inherit 'unspecified))
@@ -130,8 +130,8 @@
   ;;                lisp-mode)
   ;;   #'rainbow-delimiters-mode)
   )
-(setc rmh-elfeed-org-files
-      (list (expand-file-name "elfeed.org" doom-private-dir)))
+(setopt rmh-elfeed-org-files
+        (list (expand-file-name "elfeed.org" doom-private-dir)))
 
 (use-package! elfeed
   :defer
@@ -139,19 +139,28 @@
   (add-hook 'elfeed-new-entry-hook
             (elfeed-make-tagger :entry-title (rx (or "MCMXXX" "A&R"))
                                 :add 'junk))
-  (setc elfeed-curl-max-connections 1)
-  (setc elfeed-search-filter "@2-months-ago -junk +unread +fav")
+  (setopt elfeed-curl-max-connections 1)
+  (setopt elfeed-search-filter "@2-months-ago -junk +unread +fav")
   ;; (ignore-errors (elfeed-org)) ;; does not work
   )
+
+;; NOTE: this mode sometimes messes things up. You could just manually
+;; call M-x crux-sudo-edit when you need it (initialism: M-x cse).
+(use-package! crux
+  :config (crux-reopen-as-root-mode))
 
 (use-package! nov
   :mode ("\\.epub\\'" . nov-mode))
 
- (use-package! deianira
+(use-package! deianira
   :config (deianira-mode))
 
-;; In retrospect, why not embark.
-;; (use-package! hyperbole
-;;   :defer 10
-;;   :config
-;;   (hyperbole-mode))
+;; It sounds like Hyperbole is not just a sort of greybeard Embark, it has lots
+;; of premade "buttons" (what are those?) that Embark lacks, for one thing.  I
+;; think to properly learn it, I'd like all possible targets/buttons colorized
+;; for me during a training period.  I'd also like the Hyperbole prompts to
+;; conform to completing-read.
+(use-package! hyperbole
+  :defer
+  :commands hkey-either
+  :config (hyperbole-mode))

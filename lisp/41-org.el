@@ -2,43 +2,10 @@
 
 (require 'my-lib-external)
 
-;; undoom
 (after! org
-  (setc org-todo-keywords '((sequence "TODO" "DONE"))))
-
-;; (after! org-journal
-;;   ;; Workaround https://github.com/bastibe/org-journal/issues/298: open in
-;;   ;; org-mode, not org-journal-mode (weird paragraph formatting)
-;;   ;; (defun org-journal-is-journal () nil)
-;;   )
-
-;; ;; Integrate org-journal with roam dailies.  I don't want to use capture
-;; ;; functions for the dailies, it's a weird fit, better to use the org-journal
-;; ;; commands.
-;; (setc org-journal-dir "/home/kept/roam/daily")
-;; (setc org-journal-file-format "%F.org")
-;; (setc org-journal-file-header
-;;       (lambda (_time)
-;;         (concat ":PROPERTIES:\n:ID:       " (org-id-uuid) "\n:END:" )))
-;; ;; (setc org-journal-file-header (format ":PROPERTIES:\n:ID:%s\n:END:" (org-id-uuid)))
-;; (setc org-journal-date-prefix "#+title: ")
-;; (setc org-journal-date-format "[%F]")
-;; (setc org-journal-time-prefix "* ")
-
-;; TODO insert a front matter in my blog posts with title from #+TITLE
-(defun my-md-filter-thingy (plist backend)
-  "For org-export-filter-options-functions."
-  (if (eq backend 'md)
-      (let ((title (plist-get plist :title)))
-        (when title
-          (message "yes, TITLE option is among the plist")
-          ;; we probably need a different hook
-          (goto-char (point-min))
-          (insert "---")
-          (insert "title: " title)
-          (insert "---")))
-    )
-  plist)
+  (setopt org-startup-folded 'fold)
+  ;; Undoom. Having exactly two states makes for comfy toggling.
+  (setopt org-todo-keywords '((sequence "TODO" "DONE"))))
 
 (defun my-md-export-hook (backend)
   (when (eq backend 'md)
@@ -73,13 +40,8 @@
               (insert "Planted " planted-date))
             (newline)))))))
 
-(remove-hook 'org-export-before-parsing-hook #'my-md-export-hook)
 (add-hook 'org-export-before-processing-hook #'my-md-export-hook)
 
-;; (after! ox
-  ;; (add-to-list 'org-export-filter-options-functions #'my-md-filter-thingy))
-
-;; Roam
 (after! org-roam-node
   ;; Override the slug to use hyphens rather than underscores
   (cl-defmethod org-roam-node-slug ((node org-roam-node))
@@ -122,166 +84,87 @@
           (downcase slug))))))
 
 (add-hook 'org-roam-buffer-postrender-functions #'magit-section-show-level-2)
-(setc org-roam-directory "/home/kept/roam/")
-(setc org-roam-dailies-capture-templates
+(setopt org-roam-directory "/home/kept/roam/")
+(setopt org-roam-dailies-capture-templates
       '(("d" "default" entry "* %<%H:%M>\n%?" :if-new
          (file+head "%<%Y-%m-%d>.org" "#+title: [%<%Y-%m-%d>]\n#+filetags: :personal:\n")
          :immediate-finish t
          :jump-to-captured t)))
 
-;; (setc org-roam-dailies-capture-templates
-;;       '(("d" "default" entry "* %<%H:%M>\n%?" :if-new
-;;          (file+head "%<%Y-%m-%d>.org" "#+title: [%<%Y-%m-%d>]\n#+filetags: :personal:\n")
-;;          :unnarrowed t)))
+;; See also C-h d m :tools biblio
+(setopt citar-bibliography '("/home/kept/roam/refs/library_biblatex.bib"))
 
-;; (setq org-roam-db-node-include-function (l'not (member "drill" (org-get-tags))))
-;; (setc org-roam-db-node-include-function
-;;       (defun my-db-node-include-function ()
-;;         (let ((tags (org-get-tags)))
-;;           (and
-;;            (not (member "drill" tags))
-;;            (not (member "fc" tags))
-;;            (not (member "anki" tags))
-;;            (not (member "noexport" tags))
-;;            (not (member "exclude" tags))
-;;            ;; (not (s-contains? "daily" (buffer-file-name (buffer-base-buffer))))
-;;            ))))
 
-;; Bibliography stuff
-;; (setc org-latex-pdf-process '("%latex -interaction nonstopmode -output-directory %o %f"
-;;                               "%bib"
-;;                               "%latex -interaction nonstopmode -output-directory %o %f"
-;;                               "%latex -interaction nonstopmode -output-directory %o %f"))
-;; (setc reftex-default-bibliography    '("/home/kept/roam/refs/library_biblatex.bib"))
-;; (setc org-ref-default-bibliography   '("/home/kept/roam/refs/library_biblatex.bib"))
-;; (setc org-ref-bibliography-notes       "/home/kept/roam/refs/notes.org")
-;; (setc org-ref-pdf-directory            "/home/kept/roam/refs/")
-;; (setc bibtex-completion-library-path '("/home/kept/roam/refs/"))
-;; (setc bibtex-completion-notes-path     "/home/kept/roam/refs/notes.org")
-;; (setc bibtex-completion-bibliography   "/home/kept/roam/refs/library_biblatex.bib")
-;; (setc bibtex-files                   '("/home/kept/roam/refs/library_biblatex.bib"))
-;; (setc bibtex-completion-pdf-field      "file")
-;; See also <f1> d m :tools biblio
-;; NOTE: Org 9.5 has a native org-cite thing. Deprecate the rest?  Do I still need ol-bibtex in org-modules?
-(setc citar-bibliography '("/home/kept/roam/refs/library_biblatex.bib"))
-;; Citation completion (for Vertico and similar)
-;; Doom provides it in :tools biblio
-;; (use-package! citar
-;;   :no-require
-;;   :custom
-;;   (org-cite-global-bibliography '("/home/kept/roam/references/library_biblatex.bib"))
-;;   (org-cite-insert-processor 'citar)
-;;   (org-cite-follow-processor 'citar)
-;;   (org-cite-activate-processor 'citar)
-;;   (citar-bibliography org-cite-global-bibliography)
-;;   ;; optional: org-cite-insert is also bound to C-c C-x C-@
-;;   :bind
-;;   (:map org-mode-map :package org ("C-c b" . #'org-cite-insert)))
-
-;; Noter
 (add-hook 'org-noter-notes-mode-hook #'abbrev-mode)
 (add-hook 'org-noter-notes-mode-hook (l'rainbow-delimiters-mode 0))
-
-;; errooooooooooooooooooooooors
-;; (remove-hook 'after-save-hook #'org-roam-db-autosync--try-update-on-save-h)
-;; (remove-hook 'org-roam-find-file-hook #'org-roam-buffer-toggle)
-
 (add-hook 'org-mode-hook #'my-org-prettify)
 ;;(add-hook 'org-mode-hook #'org-resolve-clocks 95)
 ;;(add-hook 'org-mode-hook #'rainbow-delimiters-mode)
 ;;(add-hook 'org-mode-hook #'org-clock-persistence-insinuate)
 (add-hook 'org-clock-in-hook #'org-clock-save)
-;;(add-hook 'org-mode-hook #'org-indent-mode)
 (add-hook 'text-mode-hook (defun my-kill-smartparens () (smartparens-mode 0)))
-;; (add-hook 'text-mode-hook
-;;           (defun my-kill-fill () ;; i find doom weird about fill
-;;             ;; (setc fill-column most-positive-fixnum)
-;;             (setc adaptive-fill-mode nil)))
 
+;; TODO: Rename the exported file as a Jekyll-compatible slug, so I don't need
+;; the original filename to be any particular way.
+(setopt org-publish-project-alist
+        '(("blag"
+           :base-directory "/home/kept/roam/blog/"
+           :publishing-directory "/home/kept/blog/meedstrom.github.io/_posts/"
+           :publishing-function org-md-publish-to-md
+           )))
 
-;; (org-publish-file "/home/kept/roam/blog/2022-01-08-how_i_live.org" '("blag" :base-directory "/home/kept/roam/blog/" :publishing-directory "/home/kept/Blog/meedstrom.github.io/_posts/" :publishing-function org-md-publish-to-md) t)
+;; (setopt org-agenda-prefix-format '((agenda . " %i %-12:c%?-12t% s")
+;;                                    (todo . " %i %-32b") ;; have breadcrumbs
+;;                                    (tags . " %i %-12:c")
+;;                                    (search . " %i %-12:c")))
+;; (setopt org-agenda-custom-commands '(("b" todo "NEXT")
+;;                                      ("w" todo "WAITING")
+;;                                      ("p" todo "PROCRASTINATING")
+;;                                      ("c" tags-todo "+active")))
+(setopt org-agenda-tag-filter-preset '("-exclude"))
+(setopt org-agenda-todo-list-sublevels nil)
+(setopt org-agenda-todo-ignore-scheduled t)
+(setopt org-agenda-files '("/home/kept/archive/journal/diary.org"
+                           ;; to always cache the org-id locations
+                           "/home/kept/emacs/conf-doom/elfeed.org"
+                           "/home/kept/roam/gtd.org"
+                           "/home/kept/roam/2021-08-27-someday_maybe.org"))
 
-;; TODO: Rename the exported file as a Jekyll-compatible slug, so I don't need the original filename to be any particular way
-(setc org-publish-project-alist
-      '(("blag"
-         :base-directory "/home/kept/roam/blog/"
-         :publishing-directory "/home/kept/Blog/meedstrom.github.io/_posts/"
-         :publishing-function org-md-publish-to-md
-         )))
+;; (setopt org-archive-location "/home/kept/archive/journal/diary.org::datetree/")
+(setopt org-archive-save-context-info '(time file itags olpath))
+(setopt org-pomodoro-play-sounds nil)
+(setopt org-clock-out-remove-zero-time-clocks t)
+(setopt org-clock-persist t)
+(setopt org-clock-idle-time 5)
+(setopt org-hide-leading-stars nil)
+(setopt org-clock-mode-line-total 'today)
+(setopt org-clock-auto-clock-resolution 'always)
+(setopt org-clock-in-resume t)
+(setopt org-catch-invisible-edits 'smart)
+(setopt org-ctrl-k-protect-subtree t)
+(setopt org-agenda-include-diary t)
+(setopt org-cycle-separator-lines 3)
+(setopt org-datetree-add-timestamp t)
+(setopt org-edit-src-content-indentation 0)
+(setopt org-ellipsis "⤵")
+(setopt org-export-creator-string "")
+(setopt org-hide-emphasis-markers t) ; hide the *, =, and / markers
+(setopt org-image-actual-width '(200)) ; use #ATTR if available, else 200 px
+(setopt org-insert-heading-respect-content t)
+;; (setopt org-latex-compiler "xelatex") ; allow unicode (åäö) in VERBATIM blocks
+(setopt org-log-done 'time)
+(setopt org-log-into-drawer t) ; hide spam
+(setopt org-modules '(org-id ol-info))
+(setopt org-pretty-entities t)
+(setopt org-use-speed-commands t)
+(setopt org-clock-x11idle-program-name (or (executable-find "xprintidle") "x11idle"))
+(setopt org-replace-disputed-keys t)
 
-;; (org-publish-projects (list '("blag"
-;;          :base-directory "/home/kept/roam/blog/"
-;;          :publishing-directory "/home/kept/Blog/meedstrom.github.io/_posts/"
-;;          :recursive nil
-;;          :publishing-function #'org-md-publish-to-md
-;;          )))
-
-;; FIXME: there is an issue with possibly the include regexp
-;; (org-publish-get-base-files '("blag"
-;;                              :base-directory "/home/kept/roam/"
-;;                              :publishing-directory "/home/kept/Blog/meedstrom.github.io/_posts/"
-;;                              :exclude ".*"
-;;                              ;; :base-extension (rx (or "org" "jpg" "svg"))
-;;                              :recursive nil
-;;                              ;; YYYY-MM-DD- in name (most roam notes have YYYYMMDD so will not match)
-;;                              ;; :include "[[:digit:]]{4}-[[:digit:]]{2}-[[:digit:]]{2}-"
-;;                              :include "....-..-..-"
-;;                              :publishing-function #'org-md-publish-to-md
-;;                              ))
-
-;; (setc org-agenda-prefix-format '((agenda . " %i %-12:c%?-12t% s")
-;;                                  (todo . " %i %-32b") ;; have breadcrumbs
-;;                                  (tags . " %i %-12:c")
-;;                                  (search . " %i %-12:c")))
-;; (setc org-archive-location "/home/kept/Journal/diary.org::datetree/")
-(setc org-agenda-custom-commands '(("b" todo "NEXT")
-                                   ("w" todo "WAITING")
-                                   ("p" todo "PROCRASTINATING")
-                                   ("c" tags-todo "+active")))
-(setc org-archive-save-context-info '(time file itags olpath))
-(setc org-agenda-tag-filter-preset '("-exclude"))
-(setc org-agenda-todo-list-sublevels nil)
-(setc org-agenda-todo-ignore-scheduled t)
-(setc org-agenda-files '("/home/kept/Journal/diary.org"
-                         ;; for always caching the org-id locations
-                         "/home/kept/Emacs/conf-doom/elfeed.org"
-                         "/home/kept/roam/gtd.org"
-                         "/home/kept/roam/2021-08-27-someday_maybe.org"))
-
-(setc org-pomodoro-play-sounds nil)
-(setc org-clock-out-remove-zero-time-clocks t)
-(setc org-clock-persist t)
-(setc org-clock-idle-time 5)
-(setc org-hide-leading-stars nil)
-(setc org-clock-mode-line-total 'today)
-(setc org-clock-auto-clock-resolution 'always)
-(setc org-clock-in-resume t)
-(after! org (setc org-startup-folded 'fold)) ;; FIXME: doom(?) doesn't respect this
-(setc org-catch-invisible-edits 'smart)
-(setc org-ctrl-k-protect-subtree t)
-(setc org-agenda-include-diary t)
-(setc org-cycle-separator-lines 3)
-(setc org-datetree-add-timestamp t)
-(setc org-edit-src-content-indentation 0)
-(setc org-ellipsis "⤵")
-(setc org-export-creator-string "")
-(setc org-hide-emphasis-markers t) ; hide the *, =, and / markers
-(setc org-image-actual-width '(200)) ; use #ATTR if available, else 200 px
-(setc org-insert-heading-respect-content t)
-;; (setc org-latex-compiler "xelatex") ; allow unicode (åäö) in VERBATIM blocks
-(setc org-log-done 'time)
-(setc org-log-into-drawer t) ; hide spam
-(setc org-modules '(org-id ol-info))
-(setc org-pretty-entities t)
-(setc org-use-speed-commands t)
-(setc org-clock-x11idle-program-name (or (executable-find "xprintidle") "x11idle"))
-;; (setc org-replace-disputed-keys t)
-
-;; improve org performance
+;; Improve org performance
 (global-auto-composition-mode 0)
-(setc bidi-display-reordering nil)
+(setopt bidi-display-reordering nil)
 
-(setc my-org-prettify-alist '(
+(setopt my-org-prettify-alist '(
                               ;; Nice for writing/reading equations in plaintext
                               ;; ("[" . "［")
                               ;; ("]" . "］")
@@ -308,77 +191,15 @@
                        (message (concat "Currently working on: "
                                         org-clock-current-task))))))
 
-;; remove some of doom's defaults
-;; (remove-hook 'org-load-hook #'+org-init-capture-defaults-h)
-
 (after! org-roam
   (add-hook 'doom-load-theme-hook
             (defun my-theme-mod-org ()
               (set-face-attribute 'org-roam-title nil :height 1.5)))
   (my-theme-mod-org))
 
-(defun my-org-roam-extract-subtree ()
-  "Variant of org-roam-extract-subtree.
-It skips prompting, and inserts the metadata I want."
-  (interactive)
-  (save-excursion
-    (org-back-to-heading-or-point-min t)
-    (when (bobp) (user-error "Already a top-level node"))
-    (let ((parent-node (org-roam-node-at-point)))
-      (org-id-get-create)
-      (save-buffer)
-      (org-roam-db-update-file)
-      (let* ((template-info nil)
-             (node (org-roam-node-at-point))
-             (template (org-roam-format-template
-                        (string-trim (org-capture-fill-template org-roam-extract-new-file-path))
-                        (lambda (key default-val)
-                          (let ((fn (intern key))
-                                (node-fn (intern (concat "org-roam-node-" key)))
-                                (ksym (intern (concat ":" key))))
-                            (cond
-                             ((fboundp fn)
-                              (funcall fn node))
-                             ((fboundp node-fn)
-                              (funcall node-fn node))
-                             (t (let ((r (read-from-minibuffer (format "%s: " key) default-val)))
-                                  (plist-put template-info ksym r)
-                                  r)))))))
-             (file-path
-              (expand-file-name template org-roam-directory)))
-        (when (file-exists-p file-path)
-          (user-error "%s exists. Aborting" file-path))
-        (org-cut-subtree)
-        (open-line 1)
-        (insert "- " (org-link-make-string
-                      (concat "id:" (org-roam-node-id node))
-                      (org-roam-node-formatted node)))
-        (save-buffer)
-        (find-file file-path)
-        (org-paste-subtree)
-        (while (> (org-current-level) 1) (org-promote-subtree))
-        (save-buffer)
-        (org-roam-promote-entire-buffer)
-        (goto-char (point-min))
-        (search-forward "#+title")
-        (goto-char (line-beginning-position))
-        (delete-char -1)
-        (forward-line 1)
-        (open-line 2)
-        (insert "#+date: [" (format-time-string "%F") "]")
-
-        ;; Insert a link to the parent (DEPRECATED, I changed my mind)
-        ;; (when parent-node
-        ;;   (newline 2)
-        ;;   (insert (org-link-make-string
-        ;;            (concat "id:" (org-roam-node-id parent-node))
-        ;;            (org-roam-node-formatted parent-node)) ","))
-
-        (save-buffer)))))
-
 (after! org-roam
-  (setc org-roam-extract-new-file-path "%<%Y-%m-%d>-${slug}.org")
-  (setc org-roam-capture-templates
+  (setopt org-roam-extract-new-file-path "%<%Y-%m-%d>-${slug}.org")
+  (setopt org-roam-capture-templates
         `(("d" "default" plain "%?" :if-new
            (file+head "%<%Y-%m-%d>-${slug}.org"
                       "#+title: ${title}\n#+date: \[%<%Y-%m-%d>\]\n#+filetags: :stub:\n")
@@ -395,9 +216,11 @@ It skips prompting, and inserts the metadata I want."
           )))
 
 ;; has to happen after load bc doom sets capture templates at load time.
-;; incidentally also means we cannot use custom-file to config them
+;; incidentally also means we cannot use custom-file to config them.
+;; to remove the offender, do
+;; (remove-hook 'org-load-hook #'+org-init-capture-defaults-h)
 (after! org
-  (setc org-capture-templates
+  (setopt org-capture-templates
         `(
           ("p" "Person of history" entry
            (file "/home/kept/roam/2021-08-27-historical-people.org")
@@ -427,28 +250,21 @@ It skips prompting, and inserts the metadata I want."
           ("mw" "weight" plain (function eva-session-new) :immediate-finish t)
           ("mf" "visit Ledger file" plain (function eva-present-ledger-file) :immediate-finish t)
 
-          ;; ("ln" "From Nordea" plain (file "/home/kept/Journal/Finances/clean_start.ledger")
-          ;;  ,(lines "%<%Y-%m-%d> * \"\""
-          ;;          "    Expenses   %?"
-          ;;          "    Assets:Nordea:Personkonto")
-          ;;  :empty-lines 1
-          ;;  :jump-to-captured t)
+          ("ln" "From Nordea" plain (file "/home/kept/self-data/clean_start.ledger")
+           ,(lines "%<%Y-%m-%d> * \"\""
+                   "    Expenses   %?"
+                   "    Assets:Nordea:Personkonto")
+           :empty-lines 1
+           :jump-to-captured t)
 
-          ;; ("lk" "From Komplett" plain (file "/home/kept/Journal/Finances/clean_start.ledger")
-          ;;  ,(lines "%<%Y-%m-%d> * \"\""
-          ;;          "    Expenses   %?"
-          ;;          "    Liabilities:Komplett")
-          ;;  :empty-lines 1
-          ;;  :jump-to-captured t)
+          ("li" "InvestNotSpend" plain (file "/home/kept/self-data/clean_start.ledger")
+           ,(lines "%<%Y-%m-%d> ! \"\""
+                   "    [Assets:Lysa:InvestNotSpend]   %?"
+                   "    Assets:Nordea:Personkonto")
+           :empty-lines 1
+           :jump-to-captured t)
 
-          ;; ("li" "InvestNotSpend" plain (file "/home/kept/Journal/Finances/clean_start.ledger")
-          ;;  ,(lines "%<%Y-%m-%d> ! \"\""
-          ;;          "    [Assets:Lysa:InvestNotSpend]   %?"
-          ;;          "    Assets:Nordea:Personkonto")
-          ;;  :empty-lines 1
-          ;;  :jump-to-captured t)
-
-          ("r" "Retroactive clock" entry (file+olp+datetree "/home/kept/Journal/diary.org")
+          ("r" "Retroactive clock" entry (file+olp+datetree "/home/kept/archive/journal/diary.org")
            ,(lines "* %^{Activity|School|Piano|Signing|Coding}"
                    "CLOCK: %^{Time at start}U--%^{Time at finish}U => %^{Rough time spent (sorry, the program is dumb), H:MM}")
            :immediate-finish t)
@@ -461,12 +277,12 @@ It skips prompting, and inserts the metadata I want."
 (after! org
   (unless after-init-time
     (warn "Org loaded during init, I don't want this"))
-  (setc org-babel-load-languages '((R . t)
-                                   (emacs-lisp . t)
-                                   (calc . t)
-                                   (ditaa . t)
-                                   (sqlite . t)
-                                   (dot . t)))
+  (setopt org-babel-load-languages '((R . t)
+                                     (emacs-lisp . t)
+                                     (calc . t)
+                                     (ditaa . t)
+                                     (sqlite . t)
+                                     (dot . t)))
   ;; Stuff to do if I'm not using Doom's Org
   (unless (fboundp '+org-init-org-directory-h)
     ;; Upscale the LaTeX preview.
@@ -476,8 +292,8 @@ It skips prompting, and inserts the metadata I want."
 
 ;; Prettify code-snippets in exported pdf.
 (after! ox-latex
-  (setc org-latex-listings t)
-  (setc org-latex-listings-options '(("basicstyle" "\\small"))) ; small code font
+  (setopt org-latex-listings t)
+  (setopt org-latex-listings-options '(("basicstyle" "\\small"))) ; small code font
   (add-to-list 'org-latex-packages-alist '("" "listings"))
   (add-to-list 'org-latex-packages-alist '("" "booktabs")))
 

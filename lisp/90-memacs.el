@@ -10,7 +10,7 @@
                   ;; List of my git repos
                   (apply #'append
                    ;; Specific dirs
-                   (list "~/doom-emacs/.local/straight/repos/eva"
+                   (list "~/doom-emacs/.local/straight/repos/eva/"
                          )
                    ;; Recursive (many subdirs of these are git repos)
                    (-keep (lambda (path)
@@ -18,10 +18,10 @@
                                 (directory-files path t)
                               (warn "Not found: %s" path)
                               nil))
-                          '("/home/kept"
-                            "/home/kept/emacs"
-                            "/home/kept/code"
-                            "/home/kept/archive/uni"
+                          '("/home/kept/"
+                            "/home/kept/emacs/"
+                            "/home/kept/code/"
+                            "/home/kept/archive/uni/"
                             )))))
 
 ;; duplicate repos (i make them sometimes)
@@ -74,7 +74,7 @@
   (run-with-timer (* 60 60) nil #'my-memacs-scan-git))
 
 ;; (defun my-memacs-scan-git ()
-;;   (let ((my-archive-dir (shell-quote-argument "/home/kept/Archive/memacs/git/")))
+;;   (let ((my-archive-dir (shell-quote-argument "/home/kept/archive/memacs/git/")))
 ;;     (require 'f)
 ;;     (require 'cl-lib)
 ;;     (make-directory "/tmp/rev-lists" t)

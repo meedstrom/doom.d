@@ -5,10 +5,10 @@
 
 (require 'my-lib)
 (require 'my-lib-shells)
-;; (require 'named-timer)
-;; (require 'general)
 (require 'subr-x)
-;; (require 'loopy)
+
+(set-eshell-alias! "less" "view-file $1")
+(set-eshell-alias! "r" "dired-jump")
 
 ;; TODO: Automatically do scroll-right after coming off a long line
 ;; (add-hook 'window-scroll-functions
@@ -48,7 +48,7 @@
 ;;   :custom
 ;;   ((eshell-prompt-function
 ;;    (lambda ()
-;;      (concat "[--:--] " (if (>= my-esh-backref-counter 35)
+;;      (concat "[--:--] " (if (>= my-eshell-backref-counter 35)
 ;;                             "---"
 ;;                           "--") " λ ")))
 ;;    (eshell-prompt-regexp
@@ -70,41 +70,37 @@
                      (push sym commands))))
     commands))
 
-;; (my-syms-starting-with "my-esh-")
+;; (my-syms-starting-with "my-eshell-")
 
 (after! eshell
   (setopt eshell-prompt-function
           (lambda ()
-            (concat "〈 [--:--] " (if (>= my-esh-backref-counter 35)
+            (concat "〈 [--:--] " (if (>= my-eshell-backref-counter 35)
                                       "---"
                                     "--") " 〉 ")))
-  ;; something is broken with the regexp, C-c C-n wont work
   (setopt eshell-prompt-regexp (rx "〈 " (*? anychar) " 〉 "))
-  ;; (eshell-prompt-regexp (rx "⟨‾🐂" (*? anychar) " λ_⟩ "))
-  ;; (eshell-prompt-regexp
-  ;; (rx (?? bol "Time elapsed: " (*? anychar))
-  ;; "[" (= 5 nonl) "]" (* nonl) " λ "))
   (setopt eshell-scroll-show-maximum-output nil)
   (setopt eshell-show-lisp-completions t)
 
+  ;; TODO: instead of building a string to return all at once, insert text
+  ;; iteratively in the buffer so we can give it text properties.
   (setopt eshell-banner-message
           '(cl-loop
             for cmd in
             (append
-             (my-commands-starting-with "my-esh-")
-             '(app-launcher-run-app
-               dired-jump
-               helm-selector-shell
-               my-copy-region-or-rest-of-line-to-other-window
-               my-copy-region-to-variable
+             (my-commands-starting-with "my-eshell-")
+             '(my-copy-region-or-rest-of-line-to-other-window
                my-cycle-path-at-point-repeat
+               my-insert-other-buffer-file-name-and-cycle-repeat
                my-eval-and-replace-print
-               my-insert-other-buffer-file-name-and-cycle
+               my-replace-var-at-point-with-value
+               my-pipe
                my-new-eshell
                my-next-buffer-of-same-mode-repeat
-               my-pipe
                my-previous-buffer-of-same-mode-repeat
-               my-replace-var-at-point-with-value
+               app-launcher-run-app
+               dired-jump
+               helm-selector-shell
                shelldon))
             with x
             collect
@@ -120,100 +116,61 @@
             (concat
              "Welcome to the Emacs shell ⚘  \nCheatsheet \n\n"
              (string-join x "\n")
-             "\n")))
+             "\n"))))
 
-  ;; (eshell-banner-message
-  ;;  '(concat "Favored/recent files:\n"
-  ;;           (loopy (list item (my-recentf-for-motd))
-  ;;                  (concat (concat "\n   \"" item "\"")))
-  ;;           "\n\n"))
-  )
-
-;; Set up the hook my-real-eshell-post-command-hook as a substitute for
-;; eshell-post-command-hook.
+;; Set up the hook `my-real-eshell-post-command-hook' as a reliable substitute
+;; for eshell-post-command-hook.
 (add-hook 'eshell-pre-command-hook #'my-eshell-time-cmd-1)
 (add-hook 'eshell-post-command-hook #'my-eshell-time-cmd-2)
 
-;; Always time commands that take longer than one second.
-(add-hook 'my-real-eshell-post-command-hook #'my-esh-print-elapsed-maybe)
+;; Always time slow commands. No more rerunning just to prepend "time ..."
+(add-hook 'my-real-eshell-post-command-hook #'my-eshell-print-elapsed-maybe)
 
-;; Fully automatic backrefs!  No more my-copy-region-into-variable.
-(add-hook 'eshell-mode-hook #'my-esh-assign-id)
-(add-hook 'my-real-eshell-post-command-hook #'my-esh-save-output-into-backref)
+;; Save all command outputs as variables! No more my-copy-region-into-variable.
+(add-hook 'eshell-mode-hook #'my-eshell-assign-id) ;; used in naming variables
+(add-hook 'my-real-eshell-post-command-hook #'my-eshell-save-output-into-backref)
 
-;; Sync history on every command, not just on exit, in case I powercycle the computer
-(add-hook 'eshell-post-command-hook #'eshell-write-history)
-
-;; Misc
-;; (add-hook 'my-real-eshell-post-command-hook #'my-esh-narrow-to-output 95)
-(add-hook 'eshell-pre-command-hook #'my-eshell-timestamp-update)
-(add-hook 'eshell-directory-change-hook #'my-eshell-rename)
-(add-hook 'eshell-mode-hook #'my-eshell-rename)
+;; Sync history on every command, in case I powercycle the computer
+(add-hook 'my-real-eshell-post-command-hook #'eshell-write-history)
 (add-hook 'eshell-before-prompt-hook #'my-eshell-save-scrollback)
 
-;; This shouldn't affect eshell, but does...  Maybe it's been fixed since.
-;; (add-hook 'comint-output-filter-functions #'comint-strip-ctrl-m)
+;; Timestamp the exact time they command was executed
+(add-hook 'eshell-pre-command-hook #'my-eshell-timestamp-update)
 
-;; Workaround bug in typing strings (Emacs tab-completion bug, see corfu #61)
-(add-hook 'eshell-mode-hook #'my-corfu-turn-off)
+;; Name the buffer so I can see the direetory in the minibuffer.
+(add-hook 'eshell-directory-change-hook #'my-eshell-rename)
+(add-hook 'eshell-mode-hook #'my-eshell-rename)
 
-(after! eshell
-  ;; The natural pager for shell.el/eshell, since they lack all terminal features.
-  ;; Bear in mind the setting will also apply to programs spawned from Emacs,
-  ;; such as (possibly) Alacritty, RStudio & VSCodium, which may not be a problem,
-  ;; but it would be hygienic to revert this setting when calling make-process.
-  (setenv "PAGER" "cat"))
+;; Misc
+;; (add-hook 'my-real-eshell-post-command-hook #'my-eshell-narrow-to-output 95)
 
+;; The natural pager for shell.el/eshell, since they lack all terminal features.
+;; Bear in mind the setting will also apply to programs spawned from Emacs,
+;; such as (let's say) Alacritty, RStudio & VSCodium, which may not be a problem,
+;; but it would be hygienic to revert this setting when calling make-process.
+(setenv "PAGER" "cat")
+
+;; TODO: try the "smart" thing for a while
 ;; (use-package em-smart
 ;;   :custom ((eshell-review-quick-commands nil)
 ;;            (eshell-smart-space-goes-to-end t)
 ;;            (eshell-where-to-jump 'begin)))
 
-;; See <f1> P esh-groups
+;; Try some extra modules, see C-h P esh-groups
 (after! esh-module
   ;; (add-to-list 'eshell-modules-list 'eshell-smart)
   (add-to-list 'eshell-modules-list 'eshell-xtra))
 
-
-;;; Keys
-
+(after! em-hist
+  (keymap-set eshell-hist-mode-map [remap consult-history] #'my-eshell-consult-history))
 
 (after! eshell
-  ;; civilize
-  (keymap-set eshell-mode-map "C-S-n" #'my-new-eshell)
-
-  (after! em-hist
-    ;; be docile like M-x shell (don't hijack point)
-    (keymap-unset eshell-hist-mode-map "<up>")
-    (keymap-unset eshell-hist-mode-map "<down>")
-
-    (keymap-set eshell-hist-mode-map [remap consult-history] #'my-esh-consult-history))
-
-  ;; Narrow-widen helpers
-  (keymap-set eshell-mode-map [remap next-line] #'my-esh-next-line)
-  (keymap-set eshell-mode-map [remap previous-line] #'my-esh-prev-line)
-  (keymap-set eshell-mode-map [remap eshell-next-prompt] #'my-esh-next-prompt)
-  (keymap-set eshell-mode-map [remap eshell-previous-prompt] #'my-esh-previous-prompt)
-  (keymap-set eshell-mode-map "<f4> n" (defrepeater #'my-esh-narrow-dwim))
-  
-  )
-
-(defmacro my-hook-once (hook &rest body)
-  "Add temporary actions to HOOK to run only once.
-BODY is wrapped in a function run the next time HOOK is
-triggered, and the function removes itself from HOOK before
-executing BODY."
-  (declare (indent defun))
-  (let ((funcname (cl-gensym)))
-    `(add-hook
-      ,hook
-      (defun ,funcname (&rest _)
-        (remove-hook ,hook #',funcname)
-        ;; (fmakunbound ',funcname)
-        ;; (unintern (symbol-name ',funcname))
-        ,@body))))
-
-(set-eshell-alias! "less" "view-file $1")
+  ;; Automatically narrow/widen to output on point motion.  Damn, it's weird
+  ;; and often not what I want, but that's me abusing point motion.
+  (keymap-set eshell-mode-map [remap next-line] #'my-eshell-next-line)
+  (keymap-set eshell-mode-map [remap previous-line] #'my-eshell-prev-line)
+  (keymap-set eshell-mode-map [remap eshell-next-prompt] #'my-eshell-next-prompt)
+  (keymap-set eshell-mode-map [remap eshell-previous-prompt] #'my-eshell-previous-prompt))
 
 ;; Encourage idiomatic ways to work with Emacs
 (after! eshell
@@ -222,7 +179,7 @@ executing BODY."
       (if (null args)
           (dired-jump)
         (kill-new (apply #'concat args))
-        "ls: ls is blocked, but added your input to kill ring.  Try find-file and yank?")))
+        "ls: ls is blocked, but added your input to kill ring.  Try C-x C-f C-y RET?")))
   (after! em-dirs
     (defun eshell/cd (&rest args)
       (if (null args)
@@ -231,23 +188,18 @@ executing BODY."
         (kill-new (apply #'concat args))
         ;; (my-hook-once 'my-real-eshell-post-command-hook
         ;;   (eshell-previous-prompt 1))
-        "cd: cd is blocked, but added your input to kill ring.  Try find-file and yank?"))))
+        "cd: cd is blocked, but added your input to kill ring.  Try C-x C-f C-y RET?"))))
 
-;; Easy swapping between dired and eshell
-;; Dired default unbound keys: `, b, E, J, K, r, z, <backspace>
-;; Dired useless keys: h, 1234567890
+;; TODO: Make a command that cycles between a trio of buffers: the dired, the
+;; eshell, and the buffer it was first called from.
+(keymap-set global-map "M-r" #'my-dired-jump)
+(keymap-set eshell-mode-map "M-r" #'dired-jump)
+(keymap-set dired-mode-map "M-r" #'my-eshell-here)
 
-(after! dired
-  (bind-key "r"  #'my-eshell-here dired-mode-map))
-(set-eshell-alias! "r" "dired-jump")
-;; (set-eshell-alias! "q" "eshell/quit-and-close") ;; in doom already
-;; (general-def dired-mode-map "M-r" #'my-eshell-here)
-;; (general-def eshell-mode-map "M-r" #'dired-jump)
-;; (general-def my-on-shell-output-map "z" #'dired-jump)
-;; (defun eshell/b (&optional _args)
-;;   (let ((default-directory (expand-file-name "..")))
-;;     (my-eshell-here)))
-
+;; Emulate my Dired "b" key for going up one directory.
+(defun eshell/b (&optional _args)
+  (let ((default-directory (expand-file-name "..")))
+    (my-eshell-here)))
 
 ;; undoom
 (after! eshell

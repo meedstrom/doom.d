@@ -16,17 +16,17 @@ BUF should be skipped over by functions like `next-buffer' and `other-buffer'."
                             (expand-file-name ".Rhistory" default-directory))))
   input)
 
-(setc inferior-R-args "--no-save --no-restore")
-(setc ess-use-ido nil)
-(setc ess-use-flymake nil)
-(setc ess-use-tracebug nil) ;; sidestep a bug that destroys performance
-(setc ess-use-auto-complete nil)
-(setc ess-indent-with-fancy-comments nil)
-(setc ess-history-file nil)
-(setc ess-ask-for-ess-directory nil)
-(setc ess-eval-visibly 'nowait)
+(setopt inferior-R-args "--no-save --no-restore")
+(setopt ess-use-ido nil)
+(setopt ess-use-flymake nil)
+(setopt ess-use-tracebug nil) ;; sidestep a bug that destroys performance
+(setopt ess-use-auto-complete nil)
+(setopt ess-indent-with-fancy-comments nil)
+(setopt ess-history-file nil)
+(setopt ess-ask-for-ess-directory nil)
+(setopt ess-eval-visibly 'nowait)
 ;; http://chainsawriot.com/mannheim/2020/07/19/elisp.html
-;; (setc ess-directory-function
+;; (setopt ess-directory-function
 ;;       (lambda ()
 ;;         (or (ignore-errors (car (project-roots (project-current))))
 ;;             nil)))

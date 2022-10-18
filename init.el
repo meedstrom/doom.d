@@ -6,7 +6,7 @@
        :ui
        doom
        ;; doom-dashboard
-       modeline
+       ;; modeline
        hl-todo
        (ligatures +extra)
        vc-gutter

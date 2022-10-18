@@ -12,9 +12,9 @@
 (add-hook 'dired-mode-hook #'dired-hide-details-mode) ;; press ( to toggle
 
 (setq wdired-allow-to-change-permissions 'advanced)
-(setc global-auto-revert-non-file-buffers t)
-;; (setc dired-du-size-format t) ;; human-readable
-(setc dired-recursive-copies 'always)
+(setopt global-auto-revert-non-file-buffers t)
+;; (setopt dired-du-size-format t) ;; human-readable
+(setopt dired-recursive-copies 'always)
 
 (after! dired-hacks
   (add-hook 'dired-mode-hook #'dired-collapse-mode))
@@ -52,7 +52,7 @@
 ;(after 'dired-du-autoloads
 ;  (when (and (executable-find "duc")
 ;             (not (string-match-p "Error" (my-process-output-to-string "duc" "info"))))
-;    (setc dired-du-used-space-program '("duc" "ls -bD"))
+;    (setopt dired-du-used-space-program '("duc" "ls -bD"))
 ;    (add-hook 'dired-mode-hook #'dired-du-mode)))
 
 ;; undoom

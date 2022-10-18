@@ -1,8 +1,8 @@
 ;; -*- lexical-binding: t; -*-
 
-(setc mode-line-percent-position nil)
-(setc mini-modeline-display-gui-line nil)
-(setc mini-modeline-face-attr '(:background "#001100" :foreground "pale green"))
+(setopt mode-line-percent-position nil)
+(setopt mini-modeline-display-gui-line nil)
+(setopt mini-modeline-face-attr '(:background "#001100" :foreground "pale green"))
 
 ;; (setq-default mode-line-format nil)
 ;; (global-hide-mode-line-mode)
@@ -22,7 +22,7 @@
   (set-face-background 'mini-modeline-mode-line "#001100")
   (column-number-mode)
   (require 'dash)
-  (setc mini-modeline-r-format
+  (setopt mini-modeline-r-format
         (-difference mini-modeline-r-format
                      '((:eval (string-trim (format-mode-line mode-line-modes)))
                        mode-line-mule-info))))
@@ -31,8 +31,8 @@
   (defface feebleline-norm-face '((t :foreground "pale green"))
     nil :group 'feebleline)
   (set-face-attribute 'feebleline-dir-face nil :foreground "forest green")
-  (setc window-divider-default-bottom-width 2)
-  (setc feebleline-msg-functions
+  (setopt window-divider-default-bottom-width 2)
+  (setopt feebleline-msg-functions
         '((feebleline-line-number :face feebleline-norm-face :post "" :fmt "%5s")
           (feebleline-column-number :face feebleline-norm-face :pre ":" :fmt "%-2s")
           (feebleline-file-directory :face feebleline-dir-face :post "")
@@ -45,6 +45,6 @@
           )))
 
 (after! doom-modeline
-  (setc doom-modeline-buffer-encoding nil)
+  (setopt doom-modeline-buffer-encoding nil)
   (remove-hook 'doom-modeline-mode-hook #'size-indication-mode)
   (size-indication-mode 0))

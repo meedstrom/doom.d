@@ -1,6 +1,9 @@
 ;; -*- lexical-binding: t; -*-
 ;; Prevent all-the-icons from fattening text line heights on small terminus font
 
+(require 'my-keys)
+(require 'my-lib-unprefixed)
+
 (defun my-adjust-scale-1 ()
   (text-scale-decrease 1))
 
@@ -15,35 +18,11 @@
 (add-hook 'minibuffer-setup-hook #'my-adjust-scale-2)
 (add-hook 'dired-mode-hook #'my-adjust-scale-2)
 
-(setc orderless-matching-styles '(orderless-literal
-                                  orderless-regexp
-                                  orderless-initialism))
+(setopt orderless-matching-styles '(orderless-literal
+                                    orderless-regexp
+                                    orderless-initialism))
 
-;; (setc consult-line-start-from-top t)
-
-(after! vertico
-  ;; (setc vertico-count 12)
-
-  )
-
-(bind-key "M-g o" #'consult-outline)
-(bind-key "M-g l" #'consult-line)
-(bind-key "M-g m" #'consult-mark)
-(bind-key "M-g k" #'consult-global-mark)
-(bind-key "M-g i" #'consult-imenu)
-(bind-key "M-g e" #'consult-error)
-(bind-key "M-s m" #'consult-multi-occur)
-;; (bind-key "" #'consult-kmacro)
-;; (bind-key "" #'consult-focus-lines)
-;; (bind-key "" #'consult-imenu-multi)
-;; (bind-key "" #'consult-file-externally)
-(bind-key "<f1> m" #'consult-minor-mode-menu)
-(bind-key "<f1> M" #'describe-mode)
-(bind-key "<f2> h" #'consult-find)
-
-(bind-key "C-\;" #'embark-act)
-
-;; per doom: embark-act on C-;
+;; (setopt consult-line-start-from-top t)
 
 ;; completion-at-point, TAB -> corfu-complete
 ;; RET -> corfu-insert
@@ -53,12 +32,12 @@
   :init
   (setq corfu-auto t)
   (setq corfu-excluded-modes '(org-mode))
-  (setq tab-always-indent 'complete) ;; or use M-TAB
+  (setq tab-always-indent 'complete) ;; or use M-TAB to complete
   :config
   (setq completion-cycle-threshold 3)
   ;; invoke corfu for dabbrev instead of the opportunistic expand
-  (bind-key "M-/" #'dabbrev-completion)
-  (bind-key "C-M-/" #'dabbrev-expand)
+  (keymap-set "M-/" #'dabbrev-completion)
+  (keymap-set "C-M-/" #'dabbrev-expand)
   (global-corfu-mode)
 
   (defun corfu-send-shell (&rest _)
@@ -84,6 +63,7 @@ https://github.com/minad/corfu."
   (add-hook 'minibuffer-setup-hook #'corfu-enable-always-in-minibuffer 1)
   )
 
+;; NOTE: probably fixed in Emacs 29
 (use-package! cape
   :after corfu
   :config
@@ -91,4 +71,3 @@ https://github.com/minad/corfu."
   ;; (the pcomplete capf does not behave as a proper capf by default)
   (advice-add 'pcomplete-completions-at-point :around #'cape-wrap-silent)
   (advice-add 'pcomplete-completions-at-point :around #'cape-wrap-purify))
-

@@ -49,8 +49,8 @@
 (setq artbollocks-weasel-words-regex
       (concat "\\b" (regexp-opt
                      (append
-                      ;; Add these
-                      '("think"
+                      '(;; Add these:
+                        "think"
                         "one of the"
                         "should"
                         "just"
@@ -68,18 +68,18 @@
                         "utilize"
                         "leverage")
                       (seq-difference artbollocks-default-weasel-words
-                                      ;; Remove these
-                                      '())))
+                                      '(;; Remove these:
+                                        ))))
               "\\b"))
 
 (setq artbollocks-jargon-regex
       (concat "\\b" (regexp-opt
                      (append
-                      ;; Add these
-                      '()
+                      '(;; Add these:
+                        )
                       (seq-difference artbollocks-default-jargon
-                                      ;; Remove these
-                                      '("a priori"
+                                      '(;; Remove these:
+                                        "a priori"
                                         "position"
                                         "matrix"
                                         ))))
