@@ -32,7 +32,7 @@
                                (,(kbd "<XF86MonBrightnessUp>") . my-backlight-inc)))
 
 (defun my-golden-ratio-if-exwm (&optional _arg)
-  (when (major? exwm)
+  (when (eq major-mode 'exwm-mode)
     (golden-ratio)))
 
 ;; FIXME: does not work beyond the first time the program appears
