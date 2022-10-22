@@ -1,3 +1,5 @@
 * My Emacs config dir
 
 In development since 2015, forever in development.
+
+The juicy stuff can be found in the =lisp= subfolder.
