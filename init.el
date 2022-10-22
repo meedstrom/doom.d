@@ -10,17 +10,11 @@
        hl-todo
        (ligatures +extra)
        vc-gutter
-
        ;; window-select ;; good on big monitors, otherwise no
        ;; (popup +defaults) ;; retarded org capture window size
        ;; (emoji +github +unicode)
-       ;; unicode
-       ;; deft
-       ;; treemacs
-       ;; hydra
 
        :editor
-       ;; file-templates
        fold
        multiple-cursors
        format
@@ -49,7 +43,6 @@
        json
        ledger
        markdown
-       rst
        (org +dragndrop +pomodoro +roam2 +pretty)
        (scheme +guile)
        (sh +fish)
@@ -65,8 +58,9 @@
 
        :tools
        biblio
-       magit
+       (magit +forge)
        (lsp +eglot)
+       tree-sitter
 
        :config
        (default +bindings +smartparens)

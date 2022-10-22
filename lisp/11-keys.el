@@ -296,7 +296,7 @@
   ;; guess I should take a page from their book
   (general-def general-override-mode-map "<menu>" #'execute-extended-command))
 
-;; civilize emacs
+;; Civilize Emacs
 (keymap-set input-decode-map "<escape>" "C-g")
 (keymap-set input-decode-map "C-g" "s-g") ;; to unlearn
 
@@ -306,7 +306,8 @@
 (keymap-set key-translation-map "<f1>" "TAB")
 
 ;; Use the key physically labelled "Tab" as my M-x.  It should've been Caps
-;; Lock, but there is no Xkb option to make it usable on Chromebook.
+;; Lock, but there is no Xkb option to make it usable on Chromebook, and Wayland
+;; lacks an equivalent to xmodmap.
 (keymap-set "<f1>" #'execute-extended-command)
 
 ;; Use the key physically labelled "Caps Lock" as my M-x.  Aside
@@ -442,6 +443,7 @@
 ;; (keymap-set ""                        #'consult-focus-lines)
 ;; (keymap-set ""                        #'consult-imenu-multi)
 ;; (keymap-set ""                        #'consult-kmacro)
+;; (keymap-set ""                        #'browse-url)
 
 ;; Some Greek letters
 (keymap-set key-translation-map "<f7> a" "α") ;;alpha

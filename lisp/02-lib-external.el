@@ -201,4 +201,20 @@ as the default task."
              (not org-clock-resolving-clocks-due-to-idleness))
     (bh/clock-in-parent-task)))
 
+(defun ndk/get-keyword-key-value (kwd)
+  (let ((data (cadr kwd)))
+    (list (plist-get data :key)
+          (plist-get data :value))))
+
+(defun ndk/org-current-buffer-get-title ()
+  (nth 1
+       (assoc "TITLE"
+              (org-element-map (org-element-parse-buffer 'greater-element)
+                  '(keyword)
+                #'ndk/get-keyword-key-value))))
+
+(defun ndk/org-file-get-title (file)
+  (with-current-buffer (find-file-noselect file)
+    (ndk/org-current-buffer-get-title)))
+
 (provide 'my-lib-external)

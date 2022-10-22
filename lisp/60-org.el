@@ -199,13 +199,27 @@
                        (message (concat "Currently working on: "
                                         org-clock-current-task))))))
 
+;; WIP
+;; I don't think this will work. I think the code that looks up values entered by user, has to run after, not in the template function.
+(defun my-person-template ()
+  "Do a capture to two places: an usual new note and a link
+to the new note in the \"timeline\" note."
+  ;; untested
+  (with-current-buffer (org-id-open "3r342-id-for-the-timeline-note")
+    (insert "- 1991-2022 Person Name"))
+  ;; untested
+  (org-set-property "ROAM_ALIASES"
+                    (concat (ndk/org-current-buffer-get-title)
+                            " ("
+                            (read-string "Years of birth and death (YYYY--YYYY)")
+                            ")"))
+  "#+title: ${title}\n#+date: \[%<%Y-%m-%d>\]\n#+filetags: :person:stub:\n")
+
 (after! org-roam
   (add-hook 'doom-load-theme-hook
             (defun my-theme-mod-org ()
               (set-face-attribute 'org-roam-title nil :height 1.5)))
-  (my-theme-mod-org))
-
-(after! org-roam
+  (my-theme-mod-org)
   (setopt org-roam-extract-new-file-path "%<%Y-%m-%d>-${slug}.org")
   (setopt org-roam-capture-templates
         `(("d" "default" plain "%?" :if-new
@@ -220,6 +234,14 @@
                       "#+title: ${title}\n#+date: \[%<%Y-%m-%d>\]\n#+filetags: :stub:\n")
            :unnarrowed t
            :immediate-finish t)
+
+          ;; WIP
+          ("p" "Person" plain "%?" :if-new
+           (file+head "%<%Y-%m-%d>-${slug}.org")
+           (function my-person-template)
+           :unnarrowed t
+           :immediate-finish t
+           :jump-to-captured t)
           
           )))
 
