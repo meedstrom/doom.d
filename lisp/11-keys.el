@@ -2,12 +2,12 @@
 ;;; Commentary:
 
 ;; One day, I might relocate these settings to be more context-relevant, then
-;; consult the total list with (general-describe-keybindings), although that
-;; one is cluttered by Doom's settings, or bind-key's
+;; consult the total list with (general-describe-keybindings), although that one
+;; is cluttered by Doom's settings, or bind-key's
 ;; (describe-personal-keybindings). These outputs could even be exported to a
 ;; table for the curious in case I publish my config. But I enjoy handling them
-;; this way, and the upshot is that I still have all my bindings when half my
-;; init has broken.
+;; this way, and the upshot with setting the bindings this early is that I still
+;; have them all when half my init has broken.
 
 ;;; Code:
 
