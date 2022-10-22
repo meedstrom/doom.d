@@ -92,25 +92,20 @@
 (put 'customize-face 'disabled nil)
 (put 'customize-variable 'disabled nil)
 
-(after! ws-butler
-  ;; Undoom. Was this a Vimism?
-  (setopt ws-butler-keep-whitespace-before-point t)
-  ;; fix guix.el
-  (add-to-list 'ws-butler-global-exempt-modes #'minibuffer-inactive-mode)
-  ;; because org-element-cache (runs in background) throws warnings now (culprit Roam?)
-  (add-to-list 'ws-butler-global-exempt-modes #'org-mode))
-
 (setopt auth-sources '("~/.authinfo")) ;; https://magit.vc/manual/ghub/Storing-a-Token.html
 (setopt abbrev-file-name (expand-file-name "abbrevs" doom-user-dir))
-;;(setopt mouse-yank-at-point t)
+(setopt mouse-yank-at-point t)
 (setopt save-interprogram-paste-before-kill t)
 (setopt select-enable-primary t)
-(setopt rainbow-x-colors nil) ;; only colorize hex strings
-;; (setopt browse-url-handlers
-;; '(
-;; ("http.*\/\/github.com" . browse-url-generic)
-;; ("melpa.org" . browse-url-generic-program)
-;; ("." . eww-browse-url)))
+(setopt browse-url-generic-program "firefox")
+(setopt browse-url-handlers
+        '(
+          ("github.com" . browse-url-generic)
+          ("melpa.org" . browse-url-generic)
+          ("fanfiction.net" . browse-url-generic)
+
+          ;; Default
+          ("." . eww-browse-url)))
 (setopt custom-safe-themes t)
 (setopt recentf-max-saved-items 1200)
 (setopt shr-max-image-proportion 0.5)
@@ -121,7 +116,6 @@
 (setopt kill-read-only-ok t)
 (setopt kill-ring-max 600)
 ;; (setopt byte-compile-warnings '(not free-vars))
-(setopt which-key-idle-delay 0.25)
 (setopt view-read-only t)
 (setopt load-prefer-newer t) ;; don't spend another minute confused by this
 (setopt indent-tabs-mode nil)
@@ -131,7 +125,6 @@
 (setopt garbage-collection-messages nil)
 (setopt auto-save-no-message t)
 (setopt fill-column 79)
-(setopt ranger-map-style 'emacs)
 
 
 ;;; Calendar...

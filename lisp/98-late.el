@@ -42,6 +42,9 @@
   (setq abbrev-suggest t)
   )
 
+(setopt ranger-map-style 'emacs)
+(setopt which-key-idle-delay 0.25)
+(setopt rainbow-x-colors nil) ;; only colorize hex strings
 (setopt +doom-dashboard-functions
         '(doom-dashboard-widget-shortmenu
           doom-dashboard-widget-loaded))
@@ -56,6 +59,13 @@
 (add-to-list 'safe-local-variable-values '(require-final-newline . nil))
 (add-to-list 'safe-local-variable-values '(require-final-newline . t))
 
+(after! ws-butler
+  ;; Undoom. Was this a Vimism?
+  (setopt ws-butler-keep-whitespace-before-point t)
+  ;; fix guix.el
+  (add-to-list 'ws-butler-global-exempt-modes #'minibuffer-inactive-mode)
+  ;; because org-element-cache (runs in background) throws warnings now (culprit Roam?)
+  (add-to-list 'ws-butler-global-exempt-modes #'org-mode))
 
 (after! view-mode
   ;; remind myself to press e, not q
