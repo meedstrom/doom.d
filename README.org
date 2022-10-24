@@ -1,5 +1,5 @@
 * My Emacs config dir
 
-In development since 2015, forever in development.
+Ever in development since 2015.  Requires Emacs 28.
 
-The juicy stuff can be found in the =lisp= subfolder.
+You can find the juicy stuff in the =lisp= subfolder.

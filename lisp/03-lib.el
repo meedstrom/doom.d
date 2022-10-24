@@ -663,7 +663,7 @@ split into three balanced windows."
       (split-window-below))))
 
 ;; To further refine, see https://www.emacswiki.org/emacs/HippieExpand
-(defun my-hippie-mod ()
+(defun my-hippie-config ()
   (setq-local
    hippie-expand-try-functions-list
    (cond ((memq major-mode '(ess-mode

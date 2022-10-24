@@ -15,6 +15,8 @@
 (add-hook 'minibuffer-setup-hook #'my-adjust-scale-2)
 (add-hook 'dired-mode-hook #'my-adjust-scale-2)
 
+
+
 (setopt orderless-matching-styles '(orderless-literal
                                     orderless-regexp
                                     orderless-initialism))
@@ -23,6 +25,19 @@
 (setopt y-or-n-p-use-read-key t)
 
 ;; (setopt consult-line-start-from-top t)
+
+
+;;   (fset 'multi-occur #'consult-multi-occur)
+;;   :config
+;;   (setq consult-narrow-key "<")
+
+;;   ;; Don't spin up LSP/repls when previewing virtual buffers.
+;;   (setq consult-preview-raw-size 0)
+
+;;   ;; Make narrowing help available in the minibuffer.  Do this if I turn off
+;;   ;; which-key one day.
+;;   ;; (define-key consult-narrow-map (vconcat consult-narrow-key "?") #'consult-narrow-help)
+
 
 ;; completion-at-point, TAB -> corfu-complete
 ;; RET -> corfu-insert

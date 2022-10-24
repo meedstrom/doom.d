@@ -182,6 +182,10 @@
   (keymap-unset geiser-repl-mode-map "M-." t)
   (keymap-unset geiser-repl-mode-map "M-`" t))
 
+(after! dired-hist
+  (keymap-set dired-mode-map "l" #'dired-hist-go-back)
+  (keymap-set dired-mode-map "L" #'dired-hist-go-forward))
+
 (after! cus-edit
   (keymap-set custom-mode-map "q" #'kill-current-buffer))
 
@@ -300,15 +304,15 @@
 (keymap-set input-decode-map "<escape>" "C-g")
 (keymap-set input-decode-map "C-g" "s-g") ;; to unlearn
 
-;; Swap F1 and Tab.
-(keymap-set key-translation-map "TAB" "<f1>")
-(keymap-set key-translation-map "<tab>" "<f1>")
-(keymap-set key-translation-map "<f1>" "TAB")
+;; ;; Swap F1 and Tab.
+;; (keymap-set key-translation-map "TAB" "<f1>")
+;; (keymap-set key-translation-map "<tab>" "<f1>")
+;; (keymap-set key-translation-map "<f1>" "TAB")
 
-;; Use the key physically labelled "Tab" as my M-x.  It should've been Caps
-;; Lock, but there is no Xkb option to make it usable on Chromebook, and Wayland
-;; lacks an equivalent to xmodmap.
-(keymap-set "<f1>" #'execute-extended-command)
+;; ;; Use the key physically labelled "Tab" as my M-x.  It should've been Caps
+;; ;; Lock, but there is no Xkb option to make it usable on Chromebook, and Wayland
+;; ;; lacks an equivalent to xmodmap.
+;; (keymap-set "<f1>" #'execute-extended-command)
 
 ;; Use the key physically labelled "Caps Lock" as my M-x.  Aside
 ;; from this lisp, we also need the Xkb option caps:menu so it emits <menu>.

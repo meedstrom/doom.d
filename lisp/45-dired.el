@@ -1,6 +1,7 @@
 ;; -*- lexical-binding: t; -*-
 
 (require 'dired-git-info)
+(require 'dired-hist)
 
 (remove-hook 'dired-mode-hook #'dired-omit-mode) ;; undoom
 (add-hook 'dired-mode-hook #'dired-hide-details-mode) ;; press ( to toggle
@@ -9,6 +10,9 @@
 (setopt global-auto-revert-non-file-buffers t)
 ;; (setopt dired-du-size-format t) ;; human-readable
 (setopt dired-recursive-copies 'always)
+
+(after! dired
+  (dired-hist-mode))
 
 (after! dired-hacks
   (add-hook 'dired-mode-hook #'dired-collapse-mode))
@@ -28,9 +32,9 @@
 
 (after! dired-git-info
   (setopt dgi-commit-message-format "%s") ;; undoom
-  (add-hook 'dired-before-readin-hook #'my-dired-git-info-prevent-maybe) ;; doesnt prevent
-  ;; Disabling for now -- long load time on large dirs
+  ;; Disabling for now -- slow as hell on large dirs
   ;; (add-hook 'dired-after-readin-hook #'dired-git-info-auto-enable)
+  ;; (add-hook 'dired-before-readin-hook #'my-dired-git-info-prevent-maybe) ;; doesnt prevent
   )
 
 (after! dired-x
@@ -40,9 +44,9 @@
 (after! async
   (dired-async-mode))
 
-;; Show true folder sizes, but only if we have duc, which is fast. Orthodox
-;; file managers get away with laziness and async, which I could fall back on
-;; (and should be a dired default), but instant.
+;; Show true folder sizes, but only if we have duc, which is fast.  Orthodox
+;; file managers solve this with laziness and async, also valid but this
+;; approach seems it'll invite less bugs.
 (after! dired-du
   (when (and (executable-find "duc")
              (not (string-match-p "Error" (my-process-output-to-string "duc" "info"))))

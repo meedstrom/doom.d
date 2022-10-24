@@ -1,13 +1,5 @@
 ;; -*- lexical-binding: t; -*-
 
-;; Undoom
-;;
-;; Doom has this thing called doom-buffer-frame-predicate, which gets in my way
-;; 80% of the time as I call next-buffer endlessly without ever finding the
-;; buffer I want.
-(assoc-delete-all 'buffer-predicate default-frame-alist)
-(set-frame-parameter nil 'buffer-predicate nil)
-
 ;; NOTE: `sway-list-windows' returns a list of tables, not a table of tables.
 ;;        Also it doesn't catch floating windows.  To see what keys are in one
 ;;        of those tables, do (map-keys (car (sway-list-windows))).

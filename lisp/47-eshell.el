@@ -1,9 +1,5 @@
 ;; -*- lexical-binding: t; -*-
-;;; Commentary:
 
-;;; Code:
-
-(require 'my-lib-shells)
 (require 'subr-x)
 
 (set-eshell-alias! "less" "view-file $1")

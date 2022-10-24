@@ -82,6 +82,7 @@
 (package! wgrep)
 (package! xr)
 (package! ctrlf :recipe (:host github :repo "radian-software/ctrlf"))
+(package! dired-hist :recipe (:host github :repo "karthink/dired-hist"))
 ;; (package! popper)
 ;; (package! beancount :recipe (:host github :repo "cnsunyour/beancount.el"))
 ;; (package! feebleline)
