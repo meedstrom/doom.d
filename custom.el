@@ -28,4 +28,4 @@
 (put 'customize-set-variable 'disabled nil)
 (put 'upcase-region 'disabled t)
 (put 'set-goal-column 'disabled nil)
-(put 'View-quit 'disabled t)
+(put 'View-quit 'disabled nil)

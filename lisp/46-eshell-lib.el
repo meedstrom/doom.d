@@ -1,26 +1,5 @@
-;;; my-lib-shells.el -*- nameless-current-name: "my"; lexical-binding: t; -*-
-;; Copyright (C) 2020 Martin Edström
+;;; -*- lexical-binding: t; -*-
 
-;; This program is free software: you can redistribute it and/or modify
-;; it under the terms of the GNU General Public License as published by
-;; the Free Software Foundation, either version 3 of the License, or
-;; (at your option) any later version.
-
-;; This program is distributed in the hope that it will be useful,
-;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-;; GNU General Public License for more details.
-
-;; You should have received a copy of the GNU General Public License
-;; along with this program. If not, see <http://www.gnu.org/licenses/>.
-
-;;; Commentary:
-
-;;; Code:
-
-(require 'my-lib)
-
-
 ;;; Stuff
 
 (defvar my-eshell-last-cmd-start nil)
@@ -509,7 +488,7 @@ have been set by `my-eshell-rename' on
 
 ;;; More stuff
 
-;; thanks ambrevar
+;; i think it was ambrevar who made this. maybe mickeyp?
 (defun my-fish-style-path (path max-len)
   "Return a potentially trimmed representation of the directory
 path PATH, replacing parent directories with their initial
@@ -544,6 +523,7 @@ MAX-LEN, not counting slashes."
         (message "alrdy exist")
       (rename-buffer newname))))
 
+;; I still haven't used this -- keep forgetting ...
 (defun eshell/deb (&rest args)
   (eshell-eval-using-options
    "deb" args
@@ -619,5 +599,3 @@ MAX-LEN, not counting slashes."
 
 (defun eshell/gp ()
   (eshell-command "guix pull && guix pull --news"))
-
-(provide 'my-lib-shells)

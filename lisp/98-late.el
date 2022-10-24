@@ -42,6 +42,14 @@
   (setq abbrev-suggest t)
   )
 
+
+;; Undoom.  Doom has this thing called doom-buffer-frame-predicate, which gets
+;; in my way 80% of the time as I call next-buffer endlessly without ever
+;; finding the buffer I want.
+(assoc-delete-all 'buffer-predicate default-frame-alist)
+(set-frame-parameter nil 'buffer-predicate nil)
+
+
 (setopt ranger-map-style 'emacs)
 (setopt which-key-idle-delay 0.25)
 (setopt rainbow-x-colors nil) ;; only colorize hex strings
@@ -56,8 +64,11 @@
 
 (setopt mediawiki-site-default "WikEmacs")
 
+;; List ocmmon values so they don't bother me.
+;; I've not decided yet what's the best approach here.
 (add-to-list 'safe-local-variable-values '(require-final-newline . nil))
 (add-to-list 'safe-local-variable-values '(require-final-newline . t))
+(add-to-list 'safe-local-variable-values '(org-drill-scope . directory))
 
 (after! ws-butler
   ;; Undoom. Was this a Vimism?
@@ -70,7 +81,6 @@
 (after! view-mode
   ;; remind myself to press e, not q
   (disable-command #'View-quit))
-
 
 (use-package! form-feed
   :config

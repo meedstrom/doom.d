@@ -1,15 +1,21 @@
 ;; -*- lexical-binding: t; -*-
 
 ;; Backups still save my skin, as of 2020.
+;; I put them in the unusual place /home/backups to prevent cluttering rg.
 (setq
  backup-directory-alist `((,tramp-file-name-regexp . nil) ;; exclude TRAMP, bad experience
                           ("." . "/home/backups"))
- delete-old-versions t ;; nil led to Emacs appearing broken for newbie me
+ delete-old-versions t ;; nil led to Emacs appearing broken for newbie-me
  vc-make-backup-files t ;; I don't commit regularly in every project
  make-backup-files t ;; WHY did Doom disable it
  version-control t)
 
-;; For magit, maybe also email when I set that up
+(unless (file-writable-p "/home/backups/")
+  (error "Disabling backups because can't write to: /home/backups/")
+  (setq backup-directory-alist nil)
+  (setq make-backup-files nil))
+
+;; For Magit, also for email when I get around to that.
 (setq user-full-name "Martin Edström")
 (setq user-mail-address "meedstrom@teknik.io")
 
@@ -65,19 +71,20 @@
 
 ;;; Stuff
 
+;; Set up booleans I use here and there throughout init.
 (defvar debian (executable-find "apt-get"))
 (defvar arch (string-match "arch" operating-system-release))
 (defvar gentoo (string-match "gentoo" operating-system-release))
 (defvar guix (string-match "shepherd" (shell-command-to-string "ps -q 1 -o comm=")))
 
-;; Test that at most one OS is truthy
 (let* ((oses (list debian arch gentoo guix)))
-  (<= 1 (length (seq-filter (-not #'null) oses))))
+  (unless (<= 1 (length (seq-filter (-not #'null) oses)))
+    (warn "My init: Two or more OS checks succeeded")))
 
-;; Good on floating WMs like Thunar.
+;; In case I'm not on a tiling WM.
 (add-to-list 'initial-frame-alist '(fullscreen . fullheight))
 
-;; Blacken background, good on transparent windows
+;; Blacken background, to make transparent windows more back-transparent
 ;; (set-face-background 'default "#000000")
 (after! solaire-mode
   ;; (set-face-background 'solaire-default-face "#000700")
@@ -97,15 +104,6 @@
 (setopt mouse-yank-at-point t)
 (setopt save-interprogram-paste-before-kill t)
 (setopt select-enable-primary t)
-(setopt browse-url-generic-program "firefox")
-(setopt browse-url-handlers
-        '(
-          ("github.com" . browse-url-generic)
-          ("melpa.org" . browse-url-generic)
-          ("fanfiction.net" . browse-url-generic)
-
-          ;; Default
-          ("." . eww-browse-url)))
 (setopt custom-safe-themes t)
 (setopt recentf-max-saved-items 1200)
 (setopt shr-max-image-proportion 0.5)
@@ -126,12 +124,22 @@
 (setopt auto-save-no-message t)
 (setopt fill-column 79)
 
+(setopt browse-url-generic-program "firefox")
+(setopt browse-url-handlers
+        '(
+          ("github.com" . browse-url-generic)
+          ("melpa.org" . browse-url-generic)
+          ("fanfiction.net" . browse-url-generic)
+
+          ;; Default
+          ("." . eww-browse-url)))
+
 
 ;;; Calendar...
 ;; Phones track holidays too, but it's less aggravating to add many events at
 ;; once here.  Interestingly, Org can probably take these into the agenda, and
-;; Beorg in turn can sync your agenda stuff onto the actual phone
-;; calendar.  I've not tried that yet.
+;; Beorg in turn can sync agenda stuff onto the actual phone calendar.  I've not
+;; tried that yet.
 
 (setopt calendar-chinese-all-holidays-flag t)
 (setopt holiday-bahai-holidays nil)
@@ -163,7 +171,7 @@
 
 ;;; Hooks
 
-(add-hook! (special-mode prog-mode text-mode) #'my-hippie-mod)
+(add-hook! (special-mode prog-mode text-mode) #'my-hippie-config)
 (add-hook 'after-save-hook #'my-compile-and-drop)
 (add-hook 'after-save-hook #'executable-make-buffer-file-executable-if-script-p)
 (add-hook 'doom-load-theme-hook #'my-fix-pdf-midnight-colors)
