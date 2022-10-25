@@ -75,9 +75,6 @@ Return value is a list of (FRAME-OBJECT . SWAY-ID)"
   (sway-x-focus-through-sway-mode)
   )
 
-;; wats the point of killing buffers, egads
-(setq helpful-max-buffers nil)
-
 (defun my-sway-bury-oldest-window ()
   "Among currently visible windows, bury the oldest unfocused one.
 If it's an Emacs frame, kill it."

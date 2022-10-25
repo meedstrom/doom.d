@@ -1,5 +1,8 @@
 ;; -*- lexical-binding: t; -*-
 
+(add-load-path! "/home/kept/emacs/key-seqs-finder/"
+                "/home/kept/emacs/twee-mode/")
+
 ;; Backups still save my skin, as of 2020.
 ;; I put them in the unusual place /home/backups to prevent cluttering rg.
 (setq
@@ -10,6 +13,7 @@
  make-backup-files t ;; WHY did Doom disable it
  version-control t)
 
+;; check
 (unless (file-writable-p "/home/backups/")
   (error "Disabling backups because can't write to: /home/backups/")
   (setq backup-directory-alist nil)
@@ -133,6 +137,12 @@
 
           ;; Default
           ("." . eww-browse-url)))
+
+;; List common values so they don't bother me.
+;; I've not decided yet what's the best approach here.
+(add-to-list 'safe-local-variable-values '(require-final-newline . nil))
+(add-to-list 'safe-local-variable-values '(require-final-newline . t))
+(add-to-list 'safe-local-variable-values '(org-drill-scope . directory))
 
 
 ;;; Calendar...
