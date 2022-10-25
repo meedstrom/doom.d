@@ -43,6 +43,7 @@
 (package! emacs-piper :recipe (:host gitlab :repo "howardabrams/emacs-piper"))
 (package! ess_rproj :recipe (:host github :repo "chainsawriot/ess_rproj"))
 (package! esup)
+(package! deianira :recipe (:host github :repo "meedstrom/deianira"))
 (package! exwm)
 (package! exwm-edit)
 (package! exwm-firefox :recipe (:host github :repo "ieure/exwm-firefox"))

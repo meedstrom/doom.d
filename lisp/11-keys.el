@@ -110,6 +110,20 @@
       (keymap-unset global-map (concat mod d) t)
       (keymap-set universal-argument-map (concat mod d) #'digit-argument))))
 
+;; Don't take my M-1234567890
+
+(after! ranger
+  (let ((digits (split-string "1234567890" "" t)))
+    (dolist (d digits)
+      (keymap-unset ranger-normal-mode-map (concat "M-" d) t)
+      (keymap-unset ranger-emacs-mode-map (concat "M-" d) t))))
+
+(after! magit
+  (keymap-unset magit-section-mode-map "M-1" t)
+  (keymap-unset magit-section-mode-map "M-2" t)
+  (keymap-unset magit-section-mode-map "M-3" t)
+  (keymap-unset magit-section-mode-map "M-4" t))
+
 
 ;;; More repeaters! Repeaters are love and life.
 
@@ -150,27 +164,11 @@
 
 ;;; Main
 
-;; (run-hooks 'my-before-keybinds-hook)
-
 (setopt doom-leader-alt-key "<f3>")
 (setopt doom-localleader-alt-key "<f4>")
 
 (after! key-chord
   (key-chord-define-global "cd" #'calc-dispatch))
-
-(after! ranger
-  ;; Don't take my M-1234567890
-  (let ((digits (split-string "1234567890" "" t)))
-    (dolist (d digits)
-      (keymap-unset ranger-normal-mode-map (concat "M-" d) t)
-      (keymap-unset ranger-emacs-mode-map (concat "M-" d) t))))
-
-(after! magit
-  ;; Don't take my M-1234567890
-  (keymap-unset magit-section-mode-map "M-1" t)
-  (keymap-unset magit-section-mode-map "M-2" t)
-  (keymap-unset magit-section-mode-map "M-3" t)
-  (keymap-unset magit-section-mode-map "M-4" t))
 
 (after! geiser-mode
   (keymap-unset geiser-mode-map "M-," t)
@@ -304,18 +302,7 @@
 (keymap-set input-decode-map "<escape>" "C-g")
 (keymap-set input-decode-map "C-g" "s-g") ;; to unlearn
 
-;; ;; Swap F1 and Tab.
-;; (keymap-set key-translation-map "TAB" "<f1>")
-;; (keymap-set key-translation-map "<tab>" "<f1>")
-;; (keymap-set key-translation-map "<f1>" "TAB")
-
-;; ;; Use the key physically labelled "Tab" as my M-x.  It should've been Caps
-;; ;; Lock, but there is no Xkb option to make it usable on Chromebook, and Wayland
-;; ;; lacks an equivalent to xmodmap.
-;; (keymap-set "<f1>" #'execute-extended-command)
-
-;; Use the key physically labelled "Caps Lock" as my M-x.  Aside
-;; from this lisp, we also need the Xkb option caps:menu so it emits <menu>.
+;; Use the key physically labelled "Caps Lock" as my M-x.
 ;; TIP: it also unlocks the comfortable combo M-<menu>.
 (when (eq 'window-system 'x)
   (my-exec "setxkbmap" "-option" "caps:menu"))
@@ -478,5 +465,3 @@
 (keymap-set key-translation-map "<f7> z" "ζ") ;;zeta
 
 (my-normie:abnormalize)
-
-;; (run-hooks 'my-after-keybinds-hook)

@@ -42,7 +42,6 @@
   (setq abbrev-suggest t)
   )
 
-
 ;; Undoom.  Doom has this thing called doom-buffer-frame-predicate, which gets
 ;; in my way 80% of the time as I call next-buffer endlessly without ever
 ;; finding the buffer I want.
@@ -50,6 +49,7 @@
 (set-frame-parameter nil 'buffer-predicate nil)
 
 
+(setopt helpful-max-buffers nil) ;; wats the point of killing buffers
 (setopt ranger-map-style 'emacs)
 (setopt which-key-idle-delay 0.25)
 (setopt rainbow-x-colors nil) ;; only colorize hex strings
@@ -64,12 +64,6 @@
 
 (setopt mediawiki-site-default "WikEmacs")
 
-;; List ocmmon values so they don't bother me.
-;; I've not decided yet what's the best approach here.
-(add-to-list 'safe-local-variable-values '(require-final-newline . nil))
-(add-to-list 'safe-local-variable-values '(require-final-newline . t))
-(add-to-list 'safe-local-variable-values '(org-drill-scope . directory))
-
 (after! ws-butler
   ;; Undoom. Was this a Vimism?
   (setopt ws-butler-keep-whitespace-before-point t)
@@ -77,10 +71,6 @@
   (add-to-list 'ws-butler-global-exempt-modes #'minibuffer-inactive-mode)
   ;; because org-element-cache (runs in background) throws warnings now (culprit Roam?)
   (add-to-list 'ws-butler-global-exempt-modes #'org-mode))
-
-(after! view-mode
-  ;; remind myself to press e, not q
-  (disable-command #'View-quit))
 
 (use-package! form-feed
   :config
@@ -135,7 +125,8 @@
   :defer
   :config
   (add-hook 'elfeed-new-entry-hook
-            (elfeed-make-tagger :entry-title (rx (or "MCMXXX" "A&R"))
+            (elfeed-make-tagger :entry-title (rx (or "MCMXXX"
+                                                     "A&R"))
                                 :add 'junk))
   (setopt elfeed-curl-max-connections 1)
   (setopt elfeed-search-filter "@2-months-ago -junk +unread +fav")
@@ -144,9 +135,9 @@
 
 ;; It sounds like Hyperbole is not only a sort of greybeard Embark, it has lots
 ;; of premade "buttons" (what are those?) that Embark lacks, for one thing.  I
-;; think to properly learn it, I'd like all possible targets/buttons colorized
-;; for me during a training period.  I'd also like the Hyperbole prompts to
-;; conform to Vertico instead of that ascetic oneliner.
+;; think to learn it, I'd like all possible targets/buttons colorized for me
+;; during a training period.  I'd also like the Hyperbole prompts to conform to
+;; Vertico style instead of that ascetic oneliner.
 (use-package! hyperbole
   :defer
   :commands hkey-either
