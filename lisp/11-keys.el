@@ -56,6 +56,8 @@
 (keymap-unset global-map "M-r" t) ;; move-to-window-line-top-bottom
 (keymap-unset global-map "M-z" t) ;; zap-to-char
 (keymap-unset global-map "M-~" t) ;; not-modified
+(keymap-unset global-map "<XF86Back>" t) ;; previous-buffer
+(keymap-unset global-map "<XF86Forward>" t) ;; next-buffer
 
 ;; Unbinding these has all kinds of consequences, why I'll migrate to Super one
 ;; day and deprecate Control, using Control only outside Emacs and use Super
@@ -91,38 +93,39 @@
 
 
 ;;; Fix prefix arguments
+;; Don't waste good keys (C-123456890) on digit-argument.  But make it more
+;; convenient to access them in other ways.
+;;
+;; - instead of C-u, let C-=, M-=, s-= be universal argument
+;; - Let C--, M--, s-- be negative argument
+;; - Let - and = be neg. and univ. argument when any hydra is open
+;; - Let - and = be neg. and univ. argument when any prefix argument has been called and awaiting next input
+;; - Allow typing M-= M-9 M-d, much better than M-= 9 M-t
 
 (keymap-unset global-map "C-u" t)
 (keymap-unset universal-argument-map "C-u" t)
-(keymap-set universal-argument-map "-" #'negative-argument)
 
-;; Don't waste good keys (C-123456890) on digit-argument.  But make it more
-;; convenient to access them in other ways.
+(after! hydra
+  (define-key hydra-base-map (kbd "C-u") nil)
+  (define-key hydra-base-map (kbd "=") #'hydra--universal-argument)
+  (define-key hydra-base-map (kbd "-") #'hydra--negative-argument))
+
 (let ((modifiers '("C-" "M-" "s-" "H-" "A-"))
       (digits (split-string "1234567890" "" t)))
-  (dolist (d digits)
-    (keymap-set universal-argument-map d #'digit-argument))
   (dolist (mod modifiers)
-    (keymap-set global-map (concat mod "-") #'negative-argument)
-    (keymap-set global-map (concat mod "=") #'universal-argument)
-    (keymap-set universal-argument-map (concat mod "=") #'universal-argument-more)
+    (define-key global-map (kbd (concat mod "=")) #'universal-argument)
+    (define-key global-map (kbd (concat mod "-")) #'negative-argument)
+    (define-key universal-argument-map (kbd (concat mod "=")) #'universal-argument-more)
+    ;; necessary?
+    (after! hydra
+      (define-key hydra-base-map (kbd (concat mod "=")) #'hydra--universal-argument)
+      (define-key hydra-base-map (kbd (concat mod "-")) #'hydra--negative-argument))
     (dolist (d digits)
-      (keymap-unset global-map (concat mod d) t)
-      (keymap-set universal-argument-map (concat mod d) #'digit-argument))))
-
-;; Don't take my M-1234567890
-
-(after! ranger
-  (let ((digits (split-string "1234567890" "" t)))
-    (dolist (d digits)
-      (keymap-unset ranger-normal-mode-map (concat "M-" d) t)
-      (keymap-unset ranger-emacs-mode-map (concat "M-" d) t))))
-
-(after! magit
-  (keymap-unset magit-section-mode-map "M-1" t)
-  (keymap-unset magit-section-mode-map "M-2" t)
-  (keymap-unset magit-section-mode-map "M-3" t)
-  (keymap-unset magit-section-mode-map "M-4" t))
+      (define-key global-map (kbd (concat mod d)) nil)
+      (define-key universal-argument-map (kbd (concat mod d)) #'digit-argument)
+      ;; REVIEW: does it mess with nonum hydras?
+      (after! hydra
+        (define-key hydra-base-map (kbd (concat mod d)) #'hydra--digit-argument)))))
 
 
 ;;; More repeaters! Repeaters are love and life.
@@ -130,12 +133,19 @@
 ;; https://tildegit.org/acdw/define-repeat-map.el
 (after! define-repeat-map
 
-  (define-repeat-map my-buffer-thumbing
-    ("<right>"   next-buffer
-     "C-<right>" next-buffer
-     "<left>"   previous-buffer
-     "C-<left>" previous-buffer))
+  (define-repeat-map my-iflipb
+    ("<next>"   iflipb-next-buffer
+     "C-<next>" iflipb-next-buffer
+     "<prior>"    iflipb-previous-buffer
+     "C-<prior>"  iflipb-previous-buffer))
 
+  (define-repeat-map my-nav
+    ("f" forward-char
+     "b" backward-char
+     "n" next-line
+     "p" previous-line))
+
+  ;; from author of define-repeat-map
   (define-repeat-map my-case
     ("c" capitalize-word
      "u" upcase-word
@@ -145,6 +155,19 @@
     (:enter downcase-dwim
             upcase-dwim
             capitalize-dwim)))
+
+;; mc/ commands have some magic to avoid asking about re-running themselves once
+;; for all cursors ... We need to apply the magic to the repeating version of
+;; the command as well.  I considered using define-repeat-map, but it does not
+;; make sense to me to bind every mc/ variant inside the same repeat-map.  I
+;; want just the single one to become repeatable, although the correct response
+;; in this sort of situation is to just remember the `repeat' command.  But
+;; correct for who? If I want to type <f3> m n n n n n n n n instead of using
+;; repeat, there should bloody well be some convenient elisp to allow it.  And
+;; this is the convenient elisp, it just does not work for self-aware commands.
+
+;; (define-key global-map [remap mc/mark-next-like-this] (defrepeater #'mc/mark-next-like-this))
+;; (define-key global-map [remap mc/mark-previous-like-this] (defrepeater #'mc/mark-previous-like-this))
 
 ;; While we're at it, enhance the classic `repeat'.  Note that it's totally
 ;; separate from the Emacs 28 repeat-map system.
@@ -242,22 +265,22 @@
   (keymap-set "C-M-<right>" #'sp-backward-barf-sexp)
   (keymap-set "M-<backspace>" #'sp-backward-unwrap-sexp)
   (keymap-set "M-<delete>" #'sp-unwrap-sexp)
-  (keymap-set "s-<SPC>" #'sp-mark-sexp)
-  (keymap-set "s-<left>" #'sp-backward-slurp-sexp)
-  (keymap-set "s-<right>" #'sp-backward-barf-sexp)
-  (keymap-set "s-<delete>" #'sp-splice-sexp-killing-forward)
-  (keymap-set "s-<backspace>" #'sp-splice-sexp-killing-backward)
-  (keymap-set "s-a" #'sp-backward-down-sexp)
-  (keymap-set "s-b" #'sp-backward-sexp)
-  (keymap-set "s-f" #'sp-forward-sexp)
-  (keymap-set "s-d" #'sp-down-sexp)
-  (keymap-set "s-e" #'sp-up-sexp)
-  (keymap-set "s-h" #'sp-mark-sexp)
-  (keymap-set "s-k" #'sp-kill-sexp)
-  (keymap-set "s-n" #'sp-next-sexp)
-  (keymap-set "s-p" #'sp-previous-sexp)
-  (keymap-set "s-t" #'sp-transpose-sexp)
-  (keymap-set "s-u" #'sp-backward-up-sexp)
+  (keymap-set "C-M-<SPC>" #'sp-mark-sexp)
+  (keymap-set "C-M-<left>" #'sp-backward-slurp-sexp)
+  (keymap-set "C-M-<right>" #'sp-backward-barf-sexp)
+  (keymap-set "C-M-<delete>" #'sp-splice-sexp-killing-forward)
+  (keymap-set "C-M-<backspace>" #'sp-splice-sexp-killing-backward)
+  (keymap-set "C-M-a" #'sp-backward-down-sexp)
+  (keymap-set "C-M-b" #'sp-backward-sexp)
+  (keymap-set "C-M-f" #'sp-forward-sexp)
+  (keymap-set "C-M-d" #'sp-down-sexp)
+  (keymap-set "C-M-e" #'sp-up-sexp)
+  (keymap-set "C-M-h" #'sp-mark-sexp)
+  (keymap-set "C-M-k" #'sp-kill-sexp)
+  (keymap-set "C-M-n" #'sp-next-sexp)
+  (keymap-set "C-M-p" #'sp-previous-sexp)
+  (keymap-set "C-M-t" #'sp-transpose-sexp)
+  (keymap-set "C-M-u" #'sp-backward-up-sexp)
   (keymap-set "M-[" #'sp-wrap-round)
   ;; TODO: use keymap-substitute?
   (define-key global-map [remap kill-whole-line] #'sp-kill-whole-line))
@@ -298,14 +321,26 @@
   ;; guess I should take a page from their book
   (general-def general-override-mode-map "<menu>" #'execute-extended-command))
 
-;; Civilize Emacs
+;; Civilize Emacs.  It doesn't always work, see https://debbugs.gnu.org/cgi/bugreport.cgi?bug=58808
 (keymap-set input-decode-map "<escape>" "C-g")
-(keymap-set input-decode-map "C-g" "s-g") ;; to unlearn
+(keymap-set key-translation-map "<escape>" "C-g")
+(keymap-set function-key-map "<escape>" "C-g")
+(keymap-set input-decode-map "C-g" "<f35>") ;; to unlearn
+
+;; Make Lenovo Thinkpad just like the Dell Latitude I used to have
+(keymap-set key-translation-map "<XF86Back>" "<prior>")
+(keymap-set key-translation-map "C-<XF86Back>" "C-<prior>")
+(keymap-set key-translation-map "M-<XF86Back>" "M-<prior>")
+(keymap-set key-translation-map "s-<XF86Back>" "s-<prior>")
+(keymap-set key-translation-map "<XF86Forward>" "<next>")
+(keymap-set key-translation-map "C-<XF86Forward>" "C-<next>")
+(keymap-set key-translation-map "M-<XF86Forward>" "M-<next>")
+(keymap-set key-translation-map "s-<XF86Forward>" "s-<next>")
 
 ;; Use the key physically labelled "Caps Lock" as my M-x.
 ;; TIP: it also unlocks the comfortable combo M-<menu>.
 (when (eq 'window-system 'x)
-  (my-exec "setxkbmap" "-option" "caps:menu"))
+  (my-exec "setxkbmap" "-option" "caps:menu" "altwin:menu_super"))
 (keymap-set "<menu>" #'execute-extended-command)
 (keymap-set "M-<menu>" #'embark-act)
 
@@ -363,22 +398,21 @@
 (keymap-set "<f2> x"                     #'execute-extended-command)
 (keymap-set "<f2> z"                     #'my-sleep)
 (keymap-set "<f5>"                       #'repeat)
-(keymap-set "C-<next>"                   #'next-buffer)
-(keymap-set "C-<prior>"                  #'previous-buffer)
+(keymap-set "C-x <next>"                 #'iflipb-next-buffer)
+(keymap-set "C-x <prior>"                #'iflipb-previous-buffer)
 (keymap-set "C-;"                        #'embark-act) ;; per doom, but globally
-(keymap-set "C-\\"                       #'embark-act)
 (keymap-set "C-g"                        #'keyboard-quit)
 (keymap-set "C-h C-h"                    #'my-describe-last-key)
 (keymap-set "C-h q"                      #'quoted-insert)
 (keymap-set "C-x C-\;"      (defrepeater #'comment-line))
-(keymap-set "M-0"                        #'hippie-expand)
-(keymap-set "M-1"                        #'switch-to-buffer)
-(keymap-set "M-2"                        #'other-window)
-(keymap-set "M-3"                        #'unexpand-abbrev)
-(keymap-set "M-5"                        #'my-prev-file-in-dir)
-(keymap-set "M-6"                        #'my-next-file-in-dir)
-(keymap-set "M-8"                        #'kill-whole-line)
-(keymap-set "M-9"                        #'crux-duplicate-current-line-or-region)
+(keymap-set "C-0"                        #'hippie-expand)
+(keymap-set "C-1"                        #'switch-to-buffer)
+(keymap-set "C-2"                        #'other-window)
+(keymap-set "C-3"                        #'unexpand-abbrev)
+(keymap-set "C-5"                        #'my-prev-file-in-dir)
+(keymap-set "C-6"                        #'my-next-file-in-dir)
+(keymap-set "C-8"                        #'kill-whole-line)
+(keymap-set "C-9"                        #'crux-duplicate-current-line-or-region)
 (keymap-set "M-<backspace>"              #'sp-backward-unwrap-sexp)
 (keymap-set "M-<delete>"                 #'sp-unwrap-sexp)
 (keymap-set "M-<f4>"                     #'kill-current-buffer)
@@ -422,7 +456,7 @@
 (keymap-set "M-s s"                      #'isearch-forward)
 (keymap-set "M-|"                        #'my-shell-command-replace-region)
 (keymap-set "TAB"                        #'my-tab-command)
-(keymap-set embark-general-map "C-\\"    #'hkey-either)
+(keymap-set embark-general-map "M-<menu>" #'hkey-either)
 (keymap-set embark-general-map "C-;"     #'hkey-either)
 (keymap-set help-map "M"                 #'describe-mode)
 (keymap-set help-map "m"                 #'consult-minor-mode-menu)

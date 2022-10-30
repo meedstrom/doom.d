@@ -97,20 +97,15 @@
                dired-jump
                helm-selector-shell
                shelldon))
-            with x
-            collect
-            (concat
-             (string-pad (string-join (seq-take (my-locate-keys cmd)
-                                                2)
-                                      ", ")
-                         14)
-             "  "
-             (symbol-name cmd))
-            into x
+            with hints
+            collect (concat (string-pad (car (my-locate-keys cmd)) 14)
+                            "  "
+                            (symbol-name cmd))
+            into hints
             finally return
             (concat
              "Welcome to the Emacs shell ⚘  \nCheatsheet \n\n"
-             (string-join x "\n")
+             (string-join hints "\n")
              "\n"))))
 
 ;; Set up the hook `my-real-eshell-post-command-hook' as a reliable substitute

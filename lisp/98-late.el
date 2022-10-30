@@ -49,10 +49,12 @@
 (set-frame-parameter nil 'buffer-predicate nil)
 
 
+(setopt iflipb-wrap-around t)
 (setopt helpful-max-buffers nil) ;; wats the point of killing buffers
 (setopt ranger-map-style 'emacs)
 (setopt which-key-idle-delay 0.25)
 (setopt rainbow-x-colors nil) ;; only colorize hex strings
+
 (setopt +doom-dashboard-functions
         '(doom-dashboard-widget-shortmenu
           doom-dashboard-widget-loaded))
@@ -95,7 +97,31 @@
   :mode ("\\.epub\\'" . nov-mode))
 
 (use-package! deianira
-  :config (deianira-mode))
+  :config
+  (after! hydra
+    (define-key hydra-base-map (kbd "<f5>") #'hydra-repeat))
+  (general-auto-unbind-keys 'undo) ;; ensure it works with and without general
+  (add-hook 'dei-keymap-found-hook #'dei-homogenize-all-keymaps)
+  (add-hook 'dei-keymap-found-hook #'dei-define-super-like-ctl-everywhere)
+  (setq dei-debug t)
+  (setq dei-invisible-leafs
+        (seq-difference dei-invisible-leafs '("<menu>" "SPC")))
+  (setq dei-homogenizing-winners
+        '(("s-x s-s")
+          ("s-x s-f" . global-map)
+          ("s-x s-;" . global-map)
+          ("s-x s-l" . global-map)
+          ("s-c s-c" . org-mode-map)
+          ("s-c s-," . org-mode-map)
+          ;;; ------------
+          ("C-x C-s")
+          ("C-x C-f")
+          ("C-x C-;")
+          ("C-x C-l")
+          ("C-c C-c" . org-mode-map)
+          ("C-c C-," . org-mode-map)
+          ))
+  (deianira-mode))
 
 (use-package! nameless
   :hook (emacs-lisp-mode . nameless-mode)
@@ -118,12 +144,11 @@
   (fset 'rainbow-delimiters-mode #'prism-mode)
   (add-hook 'doom-load-theme-hook #'prism-set-colors))
 
-(setopt rmh-elfeed-org-files
-        (list (expand-file-name "elfeed.org" doom-private-dir)))
-
 (use-package! elfeed
   :defer
   :config
+  (setopt rmh-elfeed-org-files
+          (list (expand-file-name "elfeed.org" doom-private-dir)))
   (add-hook 'elfeed-new-entry-hook
             (elfeed-make-tagger :entry-title (rx (or "MCMXXX"
                                                      "A&R"))

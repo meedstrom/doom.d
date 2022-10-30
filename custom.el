@@ -9,11 +9,9 @@
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(safe-local-variable-values
-   '((org-refile-targets quote
-      (("/home/kept/roam/20210827184025-someday_maybe.org" :maxlevel . 3)))
-     (org-confirm-babel-evaluate)
+   '((org-confirm-babel-evaluate)
+     (nameless-current-name . "dei")
      (org-drill-scope . directory)
-     (nameless-current-name . "my")
      (require-final-newline . t)
      (require-final-newline))))
 (custom-set-faces

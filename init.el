@@ -22,7 +22,8 @@
        word-wrap
 
        :emacs
-       (dired +icons)
+       ;;(dired +icons)
+       dired
        vc
 
        :term

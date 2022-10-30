@@ -16,10 +16,36 @@
 (add-hook 'dired-mode-hook #'my-adjust-scale-2)
 
 
+;; TODO: Avoid matching on initialisms during plaintext search (consult-line,
+;; consult-grep).
+;;
+;; How?
+;;
+;; With the Doom layer, it can be done manually by prepending or appending a =
+;; sign to the search term
+;;
+;; But it should always be the case.
+;;
+;; completion-category-overrides has no category for simple text search.
+;;
+;; vertico-multiform-mode can know it's using consult-line, and it can control
+;; completion-styles or orderless-matching-styles.
+
+
+;; Partial fix: only the first component should match on initialisms.  Then I
+;; only need to append a = on the first search term, and the rest will anyway
+;; not be analyzed for initialisms.
+(defun my-orderless-first-piece-may-be-initialism (pattern index _total)
+  (if (= index 0)
+      (or (+vertico-orderless-dispatch pattern index _total) ;; so the usual `=@! still work
+          '(orderless-initialism orderless-literal orderless-regexp))
+    nil))
+
+(after! orderless
+  (add-to-list 'orderless-style-dispatchers #'my-orderless-first-piece-may-be-initialism))
 
 (setopt orderless-matching-styles '(orderless-literal
-                                    orderless-regexp
-                                    orderless-initialism))
+                                    orderless-regexp))
 
 ;; embark
 (setopt y-or-n-p-use-read-key t)
