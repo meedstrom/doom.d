@@ -15,16 +15,20 @@
                                    ([?\s-n] . [down])
                                    ([?\s-p] . [up])
                                    ([?\s-s] . [C-f])
+                                   ([?\s-t] . [S-right C-x left C-v])
                                    ([?\s-v] . [next])
-                                   ([?\s-w] . [C-c])
+                                   ([?\s-w] . [C-x])
                                    ([?\s-y] . [C-v])
                                    ([?\s-/] . [C-z])
+                                   ([?\M-w] . [C-c])
                                    ([?\M-d] . [C-S-right delete])
-                                   ;; ([f8]    . [menu])
+                                   ([?\M-t] . [C-S-right C-x C-left C-v])
+                                   ([f8]    . [menu])
                                    ))
-(setq exwm-input-prefix-keys '(?\M-1 ?\M-2 menu f1 f2 f3 f4 f5 f7 f10 f11 f12))
+(setq exwm-input-prefix-keys '(?\s-1 ?\s-2 ?\s-x ?\s-c menu f1 f2 f3 f4 f5 f7 f10 f11 f12 katakana henkan
+                               ;; (vconcat "<katakana>")
+                               ))
 (setq exwm-input-global-keys `((,(kbd "C-M-<delete>") . exwm-reset)
-                               (,(kbd "s-<delete>") . exwm-reset)
                                (,(kbd "M-<f4>") . kill-current-buffer)
                                (,(kbd "<XF86MonBrightnessDown>") . my-backlight-dec)
                                (,(kbd "<XF86MonBrightnessUp>") . my-backlight-inc)))
@@ -33,9 +37,6 @@
   (when (eq major-mode 'exwm-mode)
     (golden-ratio)))
 
-;; FIXME: does not work beyond the first time the program appears
-(add-hook 'exwm-manage-finish-hook #'my-golden-ratio-if-exwm)
-(add-hook 'window-selection-change-functions #'my-golden-ratio-if-exwm)
 (add-hook 'window-buffer-change-functions #'my-golden-ratio-if-exwm)
 
 ;; (add-hook 'focus-out-hook #'my-golden-ratio-if-exwm)
@@ -53,8 +54,8 @@
 
 (use-package! exwm
   :config
-  ;; NOTE: exwm-enable just adds exwm-init on various hooks, so the actual exwm-init
-  ;; doesn't happen at this stage of the emacs startup.
+  ;; NOTE: exwm-enable just adds exwm-init on various hooks which will be called
+  ;; later, so the actual exwm-init doesn't happen at this stage.
   (exwm-enable))
 
 ;; not good

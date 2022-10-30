@@ -25,7 +25,8 @@
 ;; Backport from Emacs 29 in case I'm on 28
 (unless (version<= "29" emacs-version)
   (require 'general)
-  (defmacro keymap-unset (a b &optional _c)
+  (defmacro keymap-unset (a b &optional _c) ;; drop the extra emacs29 arg
+    "Note: silently fails if you pass sexps inside A or B."
     `(general-unbind ,a ,b))
   (defmacro keymap-set (&rest args)
     `(general-def ,@args))
@@ -61,13 +62,15 @@ Danger: assumes numbers are character codes."
         ((symbolp x) (symbol-name x))
         ((characterp x) (char-to-string x))))
 
-(defun lines (&rest args)
-  "Intersperse newlines between the strings in ARGS. The purpose is to allow
-typing the following, which plays well with indentation.
+(defun lines (&rest strings)
+  "Like `concat', but intersperse newlines between the STRINGS.
+This allows typing the following, which plays well with
+indentation.
+
 (lines \"foo\"
        \"bar\"
        \"baz\")"
-  (string-join args "\n"))
+  (string-join strings "\n"))
 
 ;; Preserved because it was a Lisp lesson
 (defun ^ (x power)
@@ -107,8 +110,9 @@ echo-area, but not to *Messages*."
              ,@forms)
         `(let ((inhibit-message t)
                (save-silently t))
-           (prog1 ,@forms (message ""))))))
-  
+           (prog1 ,@forms (message "")))))))
+
+(unless (boundp 'doom-version)
   (defmacro after! (package &rest body)
   "Evaluate BODY after PACKAGE have loaded.
 

@@ -31,7 +31,7 @@
       )))
 
 (after! dired-git-info
-  (setopt dgi-commit-message-format "%s") ;; undoom
+  ;; (setopt dgi-commit-message-format "%s") ;; undoom
   ;; Disabling for now -- slow as hell on large dirs
   ;; (add-hook 'dired-after-readin-hook #'dired-git-info-auto-enable)
   ;; (add-hook 'dired-before-readin-hook #'my-dired-git-info-prevent-maybe) ;; doesnt prevent

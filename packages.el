@@ -57,6 +57,7 @@
 (package! help-find)
 (package! hyperbole)
 (package! iedit)
+(package! iflipb)
 (package! iscroll)
 (package! key-assist)
 (package! key-chord)
