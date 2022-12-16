@@ -22,14 +22,32 @@
 (require 'seq)
 (require 'subr-x)
 (require 'dash)
+(require 'crux)
 
 (autoload #'server-running-p "server")
 (autoload #'tramp-time-diff  "tramp")
-(autoload #'crux-buffer-mode "crux")
-(autoload #'crux-reopen-as-root "crux")
-(autoload #'crux-rename-file-and-buffer "crux")
 (autoload #'objed-ipipe "objed")
 (autoload #'piper "piper")
+
+;; TODO: would be cool to use the "motion" program and start it watching me right away.
+(defun my-browse-random-lw-post ()
+  "For personal practice."
+  (interactive)
+  (eww-browse-url
+   (seq-random-elt (cl-loop
+                    for x in eww-bookmarks
+                    as url = (plist-get x :url)
+                    when (string-search "wrong.com/" url)
+                    collect url)))
+  (let ((guvc-running (cl-loop for p in (process-list)
+                               when (string-search "guvcview" (process-name p))
+                               return t)))
+    (unless guvc-running
+      (my-spawn-process "guvcview"))))
+
+(defun my-browse-random-eww-bookmark ()
+  (interactive)
+  (eww-browse-url (plist-get (seq-random-elt eww-bookmarks) :url)))
 
 (defun my-guix-profile ())
 
@@ -40,57 +58,48 @@ It skips prompting, and inserts the metadata I want."
   (save-excursion
     (org-back-to-heading-or-point-min t)
     (when (bobp) (user-error "Already a top-level node"))
-    (let ((parent-node (org-roam-node-at-point)))
-      (org-id-get-create)
+    (org-id-get-create)
+    (save-buffer)
+    (org-roam-db-update-file)
+    (let* ((template-info nil)
+           (node (org-roam-node-at-point))
+           (template (org-roam-format-template
+                      (string-trim (org-capture-fill-template org-roam-extract-new-file-path))
+                      (lambda (key default-val)
+                        (let ((fn (intern key))
+                              (node-fn (intern (concat "org-roam-node-" key)))
+                              (ksym (intern (concat ":" key))))
+                          (cond
+                           ((fboundp fn)
+                            (funcall fn node))
+                           ((fboundp node-fn)
+                            (funcall node-fn node))
+                           (t (let ((r (read-from-minibuffer (format "%s: " key) default-val)))
+                                (plist-put template-info ksym r)
+                                r)))))))
+           (file-path
+            (expand-file-name template org-roam-directory)))
+      (when (file-exists-p file-path)
+        (user-error "%s exists. Aborting" file-path))
+      (org-cut-subtree)
+      (open-line 1)
+      (insert "- " (org-link-make-string
+                    (concat "id:" (org-roam-node-id node))
+                    (org-roam-node-formatted node)))
       (save-buffer)
-      (org-roam-db-update-file)
-      (let* ((template-info nil)
-             (node (org-roam-node-at-point))
-             (template (org-roam-format-template
-                        (string-trim (org-capture-fill-template org-roam-extract-new-file-path))
-                        (lambda (key default-val)
-                          (let ((fn (intern key))
-                                (node-fn (intern (concat "org-roam-node-" key)))
-                                (ksym (intern (concat ":" key))))
-                            (cond
-                             ((fboundp fn)
-                              (funcall fn node))
-                             ((fboundp node-fn)
-                              (funcall node-fn node))
-                             (t (let ((r (read-from-minibuffer (format "%s: " key) default-val)))
-                                  (plist-put template-info ksym r)
-                                  r)))))))
-             (file-path
-              (expand-file-name template org-roam-directory)))
-        (when (file-exists-p file-path)
-          (user-error "%s exists. Aborting" file-path))
-        (org-cut-subtree)
-        (open-line 1)
-        (insert "- " (org-link-make-string
-                      (concat "id:" (org-roam-node-id node))
-                      (org-roam-node-formatted node)))
-        (save-buffer)
-        (find-file file-path)
-        (org-paste-subtree)
-        (while (> (org-current-level) 1) (org-promote-subtree))
-        (save-buffer)
-        (org-roam-promote-entire-buffer)
-        (goto-char (point-min))
-        (search-forward "#+title")
-        (goto-char (line-beginning-position))
-        (delete-char -1)
-        (forward-line 1)
-        (open-line 2)
-        (insert "#+date: [" (format-time-string "%F") "]")
-
-        ;; Insert a link to the parent (DEPRECATED, I changed my mind)
-        ;; (when parent-node
-        ;;   (newline 2)
-        ;;   (insert (org-link-make-string
-        ;;            (concat "id:" (org-roam-node-id parent-node))
-        ;;            (org-roam-node-formatted parent-node)) ","))
-
-        (save-buffer)))))
+      (find-file file-path)
+      (org-paste-subtree)
+      (while (> (org-current-level) 1) (org-promote-subtree))
+      (save-buffer)
+      (org-roam-promote-entire-buffer)
+      (goto-char (point-min))
+      (search-forward "#+title")
+      (goto-char (line-beginning-position))
+      (delete-char -1)
+      (forward-line 1)
+      (open-line 2)
+      (insert "#+date: [" (format-time-string "%F") "]")
+      (save-buffer))))
 
 (defmacro my-hook-once (hook &rest body)
   "Add temporary actions to HOOK to run only once.
@@ -117,18 +126,78 @@ executing BODY."
        (-map #'key-description)
        (--remove (string-match-p my--ignore-keys-regexp it))))
 
-;; (string-join (my-locate-key #'dired-jump))
-;; (key-description "<f3> o -")
-;; (string-match-p my--ignore-keys-regexp "<f3> o -")
-
 (defun my-script-1 ())
 
-(defun my-stim ()
+(defvar my-stim-origin-buffer nil)
+
+(defvar my-stim-buffers nil)
+
+;; See also the concept of user excursions in eva.el.  It could be a library.
+(defvar my-stim-transient-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "q") (lambda () (interactive)
+                                (switch-to-buffer my-stim-origin-buffer)
+                                (cl-loop for buf in my-stim-buffers
+                                         do (kill-buffer-if-not-modified buf))))
+    map))
+
+(defvar my-stim-collection nil)
+
+(defun my-stim-collection-generate ()
+  (let ((documented-commands nil)
+        (roam-files
+         (append (directory-files "/home/kept/roam/" t ".org$")
+                 (directory-files "/home/kept/roam/blog" t ".org$")
+                 (directory-files "/home/kept/roam/beorg" t ".org$")
+                 (directory-files "/home/kept/roam/daily" t ".org$"))))
+    (mapatoms
+     (lambda (sym)
+       (when (and (commandp sym)
+                  (documentation sym t)
+                  (null (get sym 'byte-obsolete-info)))
+         (push sym documented-commands))))
+    (setq roam-files (cl-loop
+                      for file in roam-files
+                      unless (string-search ".sync-conflict" file)
+                      collect file))
+    (list
+     (cons #'find-file roam-files)
+     (cons #'describe-function documented-commands))))
+
+(defun my-stim (&optional collection)
   "Show something random.
-Hopefully this helps for working while ADHD.  The user is to feel
-free to call this command at exactly any time, however many times
-they wish."
-  )
+Hopefully this helps for working while addled by bees \(ADHD).
+The user is to feel free to call this command at any time,
+however many times they wish.  Pressing q brings back the buffer
+that was previously active."
+  (interactive)
+  (unless my-stim-collection
+    (setq my-stim-collection (my-stim-collection-generate)))
+  (if (eq last-command #'my-stim)
+      (push (current-buffer) my-stim-buffers)
+    (setq my-stim-buffers nil)
+    (setq my-stim-origin-buffer (current-buffer)))
+  (set-transient-map my-stim-transient-map)
+  (let ((sublist (seq-random-elt (or collection my-stim-collection))))
+    (funcall-interactively (car sublist) (seq-random-elt (cdr sublist)))))
+
+(defvar my-stim-collection-online nil)
+
+(defun my-stim-with-online ()
+  "Show something random.
+Hopefully this helps for working while addled by bees \(ADHD).
+The user is to feel free to call this command at any time,
+however many times they wish.  Pressing q brings back the buffer
+that was previously active."
+  (interactive)
+  (require 'eww)
+  (unless my-stim-collection-online
+    (setq my-stim-collection-online
+          (append (my-stim-collection-generate)
+                  (list (cons #'eww-browse-url
+                              (cl-loop for x in eww-bookmarks
+                                       collect (plist-get x :url)))))))
+  (my-stim my-stim-collection-online))
 
 ;; Wishlist: A command for repeat with universal arg
 ;; Wishlist: A command for undo then repeat with universal arg
@@ -1012,7 +1081,7 @@ first."
 ;;       that extent, and can always call the toggle twice to bring the new
 ;;       ones into the fold.
 (defun my-normie-toggle ()
-  "Toggle between normie-friendly and weird personal settings.
+  "Toggle between normie-friendly and weirder personal settings.
 Note that this function will populate the list of modes to toggle
 every time it turns on the \"normal\" settings, so the assumption
 is that your initfiles put everything in your preferred
@@ -1093,7 +1162,7 @@ See `my-normie-toggle'."
 
 (defun my-normie:abnormalize ()
   "Revert to abnormal mode (turn on settings I personally like).
-See `my-normie-toggle'."
+See `my-normie-toggle' for explanation."
   ;; Global
   (setq my-normie-p nil)
   (cua-mode 0)

@@ -1,5 +1,20 @@
 ;; -*- lexical-binding: t; -*-
 
+;; Wishlist:
+
+;; - Unbreak the prompts occasionally going read-only
+
+;; - Stop writing .eshell-scrolback and .eshell-command-history, keep track in
+;;   .emacs.d/cache/ instead
+
+;;   - Stretch goal: For robustness, attempt to sync to at least two places:
+;;     locally in the dir AND in .emacs.d.  To merge mismatched syncs, just add
+;;     together the logs, which are of course timestamped to the nanosecond,
+;;     order by time, and dedup. This way, the local dir file can regenerate from
+;;     .emacs.d, and .emacs.d can regenerate from the local dir file.  And local
+;;     file need not exist at all (helps when dir unwritable, or when the user
+;;     disabled writing local files).
+
 (require 'subr-x)
 
 (set-eshell-alias! "less" "view-file $1")
@@ -78,13 +93,18 @@
   (setopt eshell-show-lisp-completions t)
 
   ;; TODO: instead of building a string to return all at once, insert text
-  ;; iteratively in the buffer so we can give it text properties.
+  ;; iteratively in the buffer so we can give it text properties.  But for what?
   (setopt eshell-banner-message
           '(cl-loop
             for cmd in
             (append
-             (my-commands-starting-with "my-eshell-")
-             '(my-copy-region-or-rest-of-line-to-other-window
+             ;; (my-commands-starting-with "my-eshell-")
+             '(my-eshell-consult-history
+               my-eshell-switch
+               my-eshell-narrow-to-output
+               my-eshell-narrow-to-prompt
+               my-eshell-narrow-dwim
+               my-copy-region-or-rest-of-line-to-other-window
                my-cycle-path-at-point-repeat
                my-insert-other-buffer-file-name-and-cycle-repeat
                my-eval-and-replace-print
@@ -93,12 +113,10 @@
                my-new-eshell
                my-next-buffer-of-same-mode-repeat
                my-previous-buffer-of-same-mode-repeat
-               app-launcher-run-app
                dired-jump
-               helm-selector-shell
                shelldon))
             with hints
-            collect (concat (string-pad (car (my-locate-keys cmd)) 14)
+            collect (concat (string-pad (car (my-locate-keys cmd)) 12)
                             "  "
                             (symbol-name cmd))
             into hints
@@ -152,15 +170,15 @@
   (add-to-list 'eshell-modules-list 'eshell-xtra))
 
 (after! em-hist
-  (keymap-set eshell-hist-mode-map [remap consult-history] #'my-eshell-consult-history))
+  (define-key eshell-hist-mode-map [remap consult-history] #'my-eshell-consult-history))
 
 (after! eshell
   ;; Automatically narrow/widen to output on point motion.  Damn, it's weird
   ;; and often not what I want, but that's me abusing point motion.
-  (keymap-set eshell-mode-map [remap next-line] #'my-eshell-next-line)
-  (keymap-set eshell-mode-map [remap previous-line] #'my-eshell-prev-line)
-  (keymap-set eshell-mode-map [remap eshell-next-prompt] #'my-eshell-next-prompt)
-  (keymap-set eshell-mode-map [remap eshell-previous-prompt] #'my-eshell-previous-prompt))
+  (define-key eshell-mode-map [remap next-line] #'my-eshell-next-line)
+  (define-key eshell-mode-map [remap previous-line] #'my-eshell-prev-line)
+  (define-key eshell-mode-map [remap eshell-next-prompt] #'my-eshell-next-prompt)
+  (define-key eshell-mode-map [remap eshell-previous-prompt] #'my-eshell-previous-prompt))
 
 ;; Encourage idiomatic ways to work with Emacs
 (after! eshell
@@ -183,8 +201,10 @@
 ;; TODO: Make a command that cycles between a trio of buffers: the dired, the
 ;; eshell, and the buffer it was first called from.
 (keymap-set global-map "M-r" #'my-dired-jump)
-(keymap-set eshell-mode-map "M-r" #'dired-jump)
-(keymap-set dired-mode-map "M-r" #'my-eshell-here)
+(after! eshell
+  (keymap-set eshell-mode-map "M-r" #'dired-jump))
+(after! dired
+  (keymap-set dired-mode-map "M-r" #'my-eshell-here))
 
 ;; Emulate my Dired "b" key for going up one directory.
 (defun eshell/b (&optional _args)
@@ -194,8 +214,8 @@
 ;; undoom
 (after! eshell
   (fmakunbound #'eshell/emacs) ;; give me access to emacs --help
-  (setq! +eshell-enable-new-shell-on-split nil) ;; I prefer it pick a recent buffer
-  (setq! eshell-input-filter #'eshell-input-filter-default)
-  (setq! eshell-scroll-to-bottom-on-input nil)
-  (setq! eshell-scroll-to-bottom-on-output nil)
-  (map! :map eshell-mode-map "C-l" #'recenter-top-bottom))
+  (setopt +eshell-enable-new-shell-on-split nil) ;; I prefer it pick a recent buffer
+  (setopt eshell-input-filter #'eshell-input-filter-default)
+  (setopt eshell-scroll-to-bottom-on-input nil)
+  (setopt eshell-scroll-to-bottom-on-output nil)
+  (keymap-set eshell-mode-map "C-l" #'recenter-top-bottom))

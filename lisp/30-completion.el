@@ -32,6 +32,11 @@
 ;; completion-styles or orderless-matching-styles.
 
 
+
+
+
+;; This worked in Emacs 28.  Why 29 causes warning?
+
 ;; Partial fix: only the first component should match on initialisms.  Then I
 ;; only need to append a = on the first search term, and the rest will anyway
 ;; not be analyzed for initialisms.
@@ -46,6 +51,10 @@
 
 (setopt orderless-matching-styles '(orderless-literal
                                     orderless-regexp))
+
+
+
+
 
 ;; embark
 (setopt y-or-n-p-use-read-key t)
@@ -78,8 +87,8 @@
   :config
   (setopt completion-cycle-threshold 3)
   ;; invoke corfu for dabbrev instead of the opportunistic expand
-  (keymap-set "M-/" #'dabbrev-completion)
-  (keymap-set "C-M-/" #'dabbrev-expand)
+  (keymap-set global-map "M-/" #'dabbrev-completion)
+  (keymap-set global-map "C-M-/" #'dabbrev-expand)
   (global-corfu-mode)
 
   (defun corfu-send-shell (&rest _)

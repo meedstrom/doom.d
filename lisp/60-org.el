@@ -2,6 +2,18 @@
 
 (require 'my-lib-external)
 
+(after! delve
+  (add-hook 'delve-mode-hook #'delve-compact-view-mode)
+  ;; It normally inherits from org-roam-title, which I find too big
+  (set-face-attribute 'delve-title-face () :inherit 'org-document-title))
+
+;; undoom
+(after! org
+  (remove-hook 'read-only-mode-hook 'doom-docs--toggle-read-only-h))
+;; Crude but guaranteed to work
+(fset 'doom-docs-org-mode nil)
+(fset 'doom-docs--toggle-read-only-h nil)
+
 (after! org
   (setopt org-startup-folded 'fold)
   ;; Undoom. Having exactly two states makes for comfy toggling.
@@ -201,6 +213,14 @@
 
 ;; WIP
 ;; I don't think this will work. I think the code that looks up values entered by user, has to run after, not in the template function.
+;;
+;;To go with a capture template that goes like this
+;; ("p" "Person" plain "%?" :if-new
+;;    (file+head "%<%Y-%m-%d>-${slug}.org")
+;;    (function my-person-template)
+;;    :unnarrowed t
+;;    :immediate-finish t
+;;    :jump-to-captured t)
 (defun my-person-template ()
   "Do a capture to two places: an usual new note and a link
 to the new note in the \"timeline\" note."
@@ -234,14 +254,6 @@ to the new note in the \"timeline\" note."
                       "#+title: ${title}\n#+date: \[%<%Y-%m-%d>\]\n#+filetags: :stub:\n")
            :unnarrowed t
            :immediate-finish t)
-
-          ;; WIP
-          ("p" "Person" plain "%?" :if-new
-           (file+head "%<%Y-%m-%d>-${slug}.org")
-           (function my-person-template)
-           :unnarrowed t
-           :immediate-finish t
-           :jump-to-captured t)
           
           )))
 

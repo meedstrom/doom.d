@@ -113,6 +113,19 @@
 (let ((modifiers '("C-" "M-" "s-" "H-" "A-"))
       (digits (split-string "1234567890" "" t)))
   (dolist (mod modifiers)
+    ;; Some modes bind e.g. M-- (org-mode with org-replace-disputed-keys t), so
+    ;; override everywhere.  Actually even if we haven't discovered any
+    ;; conflicts it makes sense to encode that this must work everywhere.
+    ;; However we may run into a problem where it also overrides hydra-base-map...
+    ;;
+    ;; TODO: Don't rely on general (perhaps provide a way in
+    ;; deianira-mass-remap.el, although just Emacs internals would be great).
+    ;; You'll note dei--known-keymaps does NOT include hydra-base-map as it's
+    ;; not a mode map.  In other words transient maps like that will work as
+    ;; intended.  Elegant.  Does general override have the same elegance?
+    (define-key general-override-mode-map (kbd (concat mod "=")) #'universal-argument)
+    (define-key general-override-mode-map (kbd (concat mod "-")) #'negative-argument)
+
     (define-key global-map (kbd (concat mod "=")) #'universal-argument)
     (define-key global-map (kbd (concat mod "-")) #'negative-argument)
     (define-key universal-argument-map (kbd (concat mod "=")) #'universal-argument-more)
@@ -133,11 +146,11 @@
 ;; https://tildegit.org/acdw/define-repeat-map.el
 (after! define-repeat-map
 
-  (define-repeat-map my-iflipb
-    ("<next>"   iflipb-next-buffer
-     "C-<next>" iflipb-next-buffer
-     "<prior>"    iflipb-previous-buffer
-     "C-<prior>"  iflipb-previous-buffer))
+  (define-repeat-map my-buffer-thumbing
+    ("<right>"   next-buffer
+     "C-<right>" next-buffer
+     "<left>"   previous-buffer
+     "C-<left>" previous-buffer))
 
   (define-repeat-map my-nav
     ("f" forward-char
@@ -155,6 +168,8 @@
     (:enter downcase-dwim
             upcase-dwim
             capitalize-dwim)))
+
+(define-key global-map [remap org-roam-node-random] (defrepeater #'org-roam-node-random))
 
 ;; mc/ commands have some magic to avoid asking about re-running themselves once
 ;; for all cursors ... We need to apply the magic to the repeating version of
@@ -175,6 +190,7 @@
 ;; Let me type a digit such as 5 after a `repeat' to repeat another 5 times.
 (advice-add #'repeat :after #'my-enable-post-repeat-transient-map)
 
+
 
 ;;; Create minor mode maps for modes that lack them
 
@@ -183,6 +199,27 @@
 
 (defvar my-anki-editor-mode-map (make-sparse-keymap))
 (add-to-list 'minor-mode-map-alist (cons 'anki-editor-mode my-anki-editor-mode-map))
+
+
+;;; Key translations
+;; TODO:  move this stuff to kmonad or some such external program
+
+;; Civilize GUI Emacs.  It doesn't always work, see https://debbugs.gnu.org/cgi/bugreport.cgi?bug=58808
+;; TODO: do this in kmonad, but do it only for eamcs, or use exwm simulation keys to turn escape back into a real escape for other apps.
+(keymap-set function-key-map "<escape>" "C-g")
+(keymap-set key-translation-map "<escape>" "C-g")
+(keymap-set input-decode-map "<escape>" "C-g")
+(keymap-set input-decode-map "C-g" "<f35>") ;; to unlearn it
+
+;; Make my Lenovo Thinkpad like the Dell Latitude I used to have
+(keymap-set key-translation-map "<XF86Back>" "<prior>")
+(keymap-set key-translation-map "C-<XF86Back>" "C-<prior>")
+(keymap-set key-translation-map "M-<XF86Back>" "M-<prior>")
+(keymap-set key-translation-map "s-<XF86Back>" "s-<prior>")
+(keymap-set key-translation-map "<XF86Forward>" "<next>")
+(keymap-set key-translation-map "C-<XF86Forward>" "C-<next>")
+(keymap-set key-translation-map "M-<XF86Forward>" "M-<next>")
+(keymap-set key-translation-map "s-<XF86Forward>" "s-<next>")
 
 
 ;;; Main
@@ -257,31 +294,31 @@
 ;; Xah's simplification: https://old.reddit.com/r/emacs/comments/3sfmkz/could_this_be_a_pareditsmartparens_killer/cwxocld/
 (after! smartparens
   (keymap-set smartparens-strict-mode-map ";" #'sp-comment)
-  (keymap-set "C-'" #'sp-mark-sexp)
-  (keymap-set "C-;" #'sp-comment)
-  (keymap-set "C-<left>" #'sp-forward-barf-sexp)
-  (keymap-set "C-<right>" #'sp-forward-slurp-sexp)
-  (keymap-set "C-M-<left>" #'sp-backward-slurp-sexp)
-  (keymap-set "C-M-<right>" #'sp-backward-barf-sexp)
-  (keymap-set "M-<backspace>" #'sp-backward-unwrap-sexp)
-  (keymap-set "M-<delete>" #'sp-unwrap-sexp)
-  (keymap-set "C-M-<SPC>" #'sp-mark-sexp)
-  (keymap-set "C-M-<left>" #'sp-backward-slurp-sexp)
-  (keymap-set "C-M-<right>" #'sp-backward-barf-sexp)
-  (keymap-set "C-M-<delete>" #'sp-splice-sexp-killing-forward)
-  (keymap-set "C-M-<backspace>" #'sp-splice-sexp-killing-backward)
-  (keymap-set "C-M-a" #'sp-backward-down-sexp)
-  (keymap-set "C-M-b" #'sp-backward-sexp)
-  (keymap-set "C-M-f" #'sp-forward-sexp)
-  (keymap-set "C-M-d" #'sp-down-sexp)
-  (keymap-set "C-M-e" #'sp-up-sexp)
-  (keymap-set "C-M-h" #'sp-mark-sexp)
-  (keymap-set "C-M-k" #'sp-kill-sexp)
-  (keymap-set "C-M-n" #'sp-next-sexp)
-  (keymap-set "C-M-p" #'sp-previous-sexp)
-  (keymap-set "C-M-t" #'sp-transpose-sexp)
-  (keymap-set "C-M-u" #'sp-backward-up-sexp)
-  (keymap-set "M-[" #'sp-wrap-round)
+  (keymap-set global-map "C-'" #'sp-mark-sexp)
+  (keymap-set global-map "C-;" #'sp-comment)
+  (keymap-set global-map "C-<left>" #'sp-forward-barf-sexp)
+  (keymap-set global-map "C-<right>" #'sp-forward-slurp-sexp)
+  (keymap-set global-map "C-M-<left>" #'sp-backward-slurp-sexp)
+  (keymap-set global-map "C-M-<right>" #'sp-backward-barf-sexp)
+  (keymap-set global-map "M-<backspace>" #'sp-backward-unwrap-sexp)
+  (keymap-set global-map "M-<delete>" #'sp-unwrap-sexp)
+  (keymap-set global-map "C-M-<SPC>" #'sp-mark-sexp)
+  (keymap-set global-map "C-M-<left>" #'sp-backward-slurp-sexp)
+  (keymap-set global-map "C-M-<right>" #'sp-backward-barf-sexp)
+  (keymap-set global-map "C-M-<delete>" #'sp-splice-sexp-killing-forward)
+  (keymap-set global-map "C-M-<backspace>" #'sp-splice-sexp-killing-backward)
+  (keymap-set global-map "C-M-a" #'sp-backward-down-sexp)
+  (keymap-set global-map "C-M-b" #'sp-backward-sexp)
+  (keymap-set global-map "C-M-f" #'sp-forward-sexp)
+  (keymap-set global-map "C-M-d" #'sp-down-sexp)
+  (keymap-set global-map "C-M-e" #'sp-up-sexp)
+  (keymap-set global-map "C-M-h" #'sp-mark-sexp)
+  (keymap-set global-map "C-M-k" #'sp-kill-sexp)
+  (keymap-set global-map "C-M-n" #'sp-next-sexp)
+  (keymap-set global-map "C-M-p" #'sp-previous-sexp)
+  (keymap-set global-map "C-M-t" #'sp-transpose-sexp)
+  (keymap-set global-map "C-M-u" #'sp-backward-up-sexp)
+  (keymap-set global-map "M-[" #'sp-wrap-round)
   ;; TODO: use keymap-substitute?
   (define-key global-map [remap kill-whole-line] #'sp-kill-whole-line))
 
@@ -321,143 +358,131 @@
   ;; guess I should take a page from their book
   (general-def general-override-mode-map "<menu>" #'execute-extended-command))
 
-;; Civilize Emacs.  It doesn't always work, see https://debbugs.gnu.org/cgi/bugreport.cgi?bug=58808
-(keymap-set input-decode-map "<escape>" "C-g")
-(keymap-set key-translation-map "<escape>" "C-g")
-(keymap-set function-key-map "<escape>" "C-g")
-(keymap-set input-decode-map "C-g" "<f35>") ;; to unlearn
+(after! embark
+  (keymap-set embark-general-map "M-<menu>" #'hkey-either)
+  (keymap-set embark-general-map "C-;"     #'hkey-either))
 
-;; Make Lenovo Thinkpad just like the Dell Latitude I used to have
-(keymap-set key-translation-map "<XF86Back>" "<prior>")
-(keymap-set key-translation-map "C-<XF86Back>" "C-<prior>")
-(keymap-set key-translation-map "M-<XF86Back>" "M-<prior>")
-(keymap-set key-translation-map "s-<XF86Back>" "s-<prior>")
-(keymap-set key-translation-map "<XF86Forward>" "<next>")
-(keymap-set key-translation-map "C-<XF86Forward>" "C-<next>")
-(keymap-set key-translation-map "M-<XF86Forward>" "M-<next>")
-(keymap-set key-translation-map "s-<XF86Forward>" "s-<next>")
+(after! view
+  (keymap-set view-mode-map "e" #'my-view-exit-and-reopen-as-root))
 
-;; Use the key physically labelled "Caps Lock" as my M-x.
-;; TIP: it also unlocks the comfortable combo M-<menu>.
+;; Use the key physically labelled "Caps Lock" as my new M-x.
+;; TIP: it also unlocks the comfy combo M-<menu>.
 (when (eq 'window-system 'x)
   (my-exec "setxkbmap" "-option" "caps:menu" "altwin:menu_super"))
-(keymap-set "<menu>" #'execute-extended-command)
-(keymap-set "M-<menu>" #'embark-act)
+(keymap-set global-map "<menu>" #'execute-extended-command)
+(keymap-set global-map "M-<menu>" #'embark-act)
 
 ;; Grand list
 
-(keymap-set view-mode-map "e"            #'my-view-exit-and-reopen-as-root)
-(keymap-set "<f10> a"                    #'my-save-buffer-and-amend)
-(keymap-set "<f10> d"                    #'org-download-yank)
-(keymap-set "<f10> e"                    #'eww)
-(keymap-set "<f10> g"                    #'guix-popup)
-(keymap-set "<f10> k"                    #'gif-screencast-start-or-stop)
-(keymap-set "<f10> l"                    #'mw-thesaurus-lookup)
-(keymap-set "<f10> n"                    #'my-normie-toggle)
-(keymap-set "<f10> p"                    #'my-pipe)
-(keymap-set "<f10> r c"                  #'my-copy-region-to-variable)
-(keymap-set "<f10> r e"                  #'my-eval-and-replace-print)
-(keymap-set "<f10> r p"     (defrepeater #'my-cycle-path-at-point))
-(keymap-set "<f10> r v"                  #'my-replace-var-at-point-with-value)
-(keymap-set "<f10> r w"                  #'my-copy-region-or-rest-of-line-to-other-window)
-(keymap-set "<f10> s"                    #'my-save-buffer-and-commit)
-(keymap-set "<f2> 1"        (defrepeater #'my-insert-other-buffer-file-name-and-cycle))
-(keymap-set "<f2> 2"        (defrepeater #'my-toggle-selective-display))
-(keymap-set "<f2> 3"                     #'elfeed)
-(keymap-set "<f2> 5"                     #'my-lookup-word)
-(keymap-set "<f2> <f2>"                  #'vc-msg-show)
-(keymap-set "<f2> <f3>"                  #'git-messenger:popup-message)
-(keymap-set "<f2> <next>"   (defrepeater #'my-next-buffer-of-same-mode))
-(keymap-set "<f2> <prior>"  (defrepeater #'my-previous-buffer-of-same-mode))
-(keymap-set "<f2> ("                     #'app-launcher-run-app)
-(keymap-set "<f2> b"                     #'backup-walker-start)
-(keymap-set "<f2> c"                     #'org-roam-capture)
-(keymap-set "<f2> d"                     #'my-insert-today)
-(keymap-set "<f2> e d"                   #'eval-defun)
-(keymap-set "<f2> e e"                   #'eval-last-sexp)
-(keymap-set "<f2> e l"                   #'load-library)
-(keymap-set "<f2> e p"                   #'eval-print-last-sexp)
-(keymap-set "<f2> e r"                   #'eval-region)
-(keymap-set "<f2> e s"                   #'ess-eval-region-or-function-or-paragraph-and-step) ;; ess everywhere
-(keymap-set "<f2> e x"                   #'eval-expression)
-(keymap-set "<f2> f"                     #'helpful-callable)
-(keymap-set "<f2> g"                     #'git-timemachine)
-(keymap-set "<f2> h"                     #'consult-find)
-(keymap-set "<f2> i"                     #'my-suggest-sub)
-(keymap-set "<f2> j"                     #'+vertico/find-file-in)
-(keymap-set "<f2> k"                     #'+vertico/project-search)
-(keymap-set "<f2> l"                     #'helm-locate)
-(keymap-set "<f2> m"                     #'my-show-my-files)
-(keymap-set "<f2> n"                     #'org-roam-dailies-capture-today)
-(keymap-set "<f2> o"                     #'helpful-symbol)
-(keymap-set "<f2> p"                     #'my-spawn-process)
-(keymap-set "<f2> r"                     #'vertico-repeat)
-(keymap-set "<f2> s"                     #'helm-selector-shell)
-(keymap-set "<f2> v"                     #'helpful-variable)
-(keymap-set "<f2> w"                     #'sp-rewrap-sexp)
-(keymap-set "<f2> x"                     #'execute-extended-command)
-(keymap-set "<f2> z"                     #'my-sleep)
-(keymap-set "<f5>"                       #'repeat)
-(keymap-set "C-x <next>"                 #'iflipb-next-buffer)
-(keymap-set "C-x <prior>"                #'iflipb-previous-buffer)
-(keymap-set "C-;"                        #'embark-act) ;; per doom, but globally
-(keymap-set "C-g"                        #'keyboard-quit)
-(keymap-set "C-h C-h"                    #'my-describe-last-key)
-(keymap-set "C-h q"                      #'quoted-insert)
-(keymap-set "C-x C-\;"      (defrepeater #'comment-line))
-(keymap-set "C-0"                        #'hippie-expand)
-(keymap-set "C-1"                        #'switch-to-buffer)
-(keymap-set "C-2"                        #'other-window)
-(keymap-set "C-3"                        #'unexpand-abbrev)
-(keymap-set "C-5"                        #'my-prev-file-in-dir)
-(keymap-set "C-6"                        #'my-next-file-in-dir)
-(keymap-set "C-8"                        #'kill-whole-line)
-(keymap-set "C-9"                        #'crux-duplicate-current-line-or-region)
-(keymap-set "M-<backspace>"              #'sp-backward-unwrap-sexp)
-(keymap-set "M-<delete>"                 #'sp-unwrap-sexp)
-(keymap-set "M-<f4>"                     #'kill-current-buffer)
-(keymap-set "M-<insert>"                 #'sp-rewrap-sexp)
-(keymap-set "M-g a a"       (defrepeater #'avy-pop-mark))
-(keymap-set "M-g a c"                    #'avy-goto-char-2)
-(keymap-set "M-g a g c"                  #'avy-goto-char-2)
-(keymap-set "M-g a g e"                  #'avy-goto-end-of-line)
-(keymap-set "M-g a g l"                  #'avy-goto-line)
-(keymap-set "M-g a g o"                  #'avy-goto-word-or-subword-1)
-(keymap-set "M-g a g q"                  #'avy-goto-subword-1)
-(keymap-set "M-g a g s"                  #'avy-goto-symbol-1)
-(keymap-set "M-g a g w"                  #'avy-goto-word-1)
-(keymap-set "M-g a k"                    #'avy-kill-region)
-(keymap-set "M-g a m l"                  #'avy-move-line)
-(keymap-set "M-g a m r"                  #'avy-move-region)
-(keymap-set "M-g a n"                    #'avy-next)
-(keymap-set "M-g a o"                    #'avy-goto-symbol)
-(keymap-set "M-g a p"                    #'avy-prev)
-(keymap-set "M-g a r"                    #'avy-resume)
-(keymap-set "M-g a s"                    #'avy-isearch)
-(keymap-set "M-g a w"                    #'avy-kill-ring-save-region)
-(keymap-set "M-g c"                      #'avy-goto-char-timer)
-(keymap-set "M-g e"                      #'consult-error)
-(keymap-set "M-g i"                      #'consult-imenu)
-(keymap-set "M-g k"                      #'consult-global-mark)
-(keymap-set "M-g l"                      #'consult-line)
-(keymap-set "M-g m"                      #'consult-mark)
-(keymap-set "M-g o"                      #'consult-outline)
-(keymap-set "M-g z"                      #'avy-goto-word-or-subword-1)
-(keymap-set "M-m g"         (defrepeater #'pop-global-mark)) ;; was C-x C-SPC
-(keymap-set "M-m m"                      #'set-mark-command) ;; was C-SPC
-(keymap-set "M-m p"         (defrepeater #'pop-to-mark-command))
-(keymap-set "M-m r"                      #'rectangle-mark-mode) ;; was C-x SPC
-(keymap-set "M-m x"                      #'exchange-point-and-mark) ;; also on C-x C-x
-(keymap-set "M-o ="                      #'doom/increase-font-size)
-(keymap-set "M-s 5"                      #'query-replace)
-(keymap-set "M-s f"         (defrepeater #'my-fill-unfill-respect-double-space))
-(keymap-set "M-s m"                      #'consult-multi-occur)
-(keymap-set "M-s r"                      #'isearch-backward)
-(keymap-set "M-s s"                      #'isearch-forward)
-(keymap-set "M-|"                        #'my-shell-command-replace-region)
-(keymap-set "TAB"                        #'my-tab-command)
-(keymap-set embark-general-map "M-<menu>" #'hkey-either)
-(keymap-set embark-general-map "C-;"     #'hkey-either)
+(keymap-set global-map "<f10> a"                    #'my-save-buffer-and-amend)
+(keymap-set global-map "<f10> d"                    #'org-download-yank)
+(keymap-set global-map "<f10> e"                    #'eww)
+(keymap-set global-map "<f10> g"                    #'guix-popup)
+(keymap-set global-map "<f10> k"                    #'gif-screencast-start-or-stop)
+(keymap-set global-map "<f10> l"                    #'mw-thesaurus-lookup)
+(keymap-set global-map "<f10> n"                    #'my-normie-toggle)
+(keymap-set global-map "<f10> p"                    #'my-pipe)
+(keymap-set global-map "<f10> r c"                  #'my-copy-region-to-variable)
+(keymap-set global-map "<f10> r e"                  #'my-eval-and-replace-print)
+(keymap-set global-map "<f10> r p"     (defrepeater #'my-cycle-path-at-point))
+(keymap-set global-map "<f10> r v"                  #'my-replace-var-at-point-with-value)
+(keymap-set global-map "<f10> r w"                  #'my-copy-region-or-rest-of-line-to-other-window)
+(keymap-set global-map "<f10> s"                    #'my-save-buffer-and-commit)
+(keymap-set global-map "<f2> 1"        (defrepeater #'my-insert-other-buffer-file-name-and-cycle))
+(keymap-set global-map "<f2> 2"        (defrepeater #'my-toggle-selective-display))
+(keymap-set global-map "<f2> 3"                     #'elfeed)
+(keymap-set global-map "<f2> 5"                     #'my-lookup-word)
+(keymap-set global-map "<f2> <f2>"                  #'vc-msg-show)
+(keymap-set global-map "<f2> <f3>"                  #'git-messenger:popup-message)
+(keymap-set global-map "<f2> <next>"   (defrepeater #'my-next-buffer-of-same-mode))
+(keymap-set global-map "<f2> <prior>"  (defrepeater #'my-previous-buffer-of-same-mode))
+(keymap-set global-map "<f2> ("                     #'app-launcher-run-app)
+(keymap-set global-map "<f2> b"                     #'backup-walker-start)
+(keymap-set global-map "<f2> c"                     #'org-roam-capture)
+(keymap-set global-map "<f2> d"                     #'my-insert-today)
+(keymap-set global-map "<f2> e d"                   #'eval-defun)
+(keymap-set global-map "<f2> e e"                   #'eval-last-sexp)
+(keymap-set global-map "<f2> e l"                   #'load-library)
+(keymap-set global-map "<f2> e p"                   #'eval-print-last-sexp)
+(keymap-set global-map "<f2> e r"                   #'eval-region)
+(keymap-set global-map "<f2> e s"                   #'ess-eval-region-or-function-or-paragraph-and-step) ;; ess everywhere
+(keymap-set global-map "<f2> e x"                   #'eval-expression)
+(keymap-set global-map "<f2> f"                     #'helpful-callable)
+(keymap-set global-map "<f2> g"                     #'git-timemachine)
+(keymap-set global-map "<f2> h"                     #'consult-find)
+(keymap-set global-map "<f2> i"                     #'my-suggest-sub)
+(keymap-set global-map "<f2> j"                     #'+vertico/find-file-in)
+(keymap-set global-map "<f2> k"                     #'+vertico/project-search)
+(keymap-set global-map "<f2> l"                     #'helm-locate)
+(keymap-set global-map "<f2> m"                     #'my-show-my-files)
+(keymap-set global-map "<f2> n"                     #'org-roam-dailies-capture-today)
+(keymap-set global-map "<f2> o"                     #'helpful-symbol)
+(keymap-set global-map "<f2> p"                     #'my-spawn-process)
+(keymap-set global-map "<f2> r"                     #'vertico-repeat)
+(keymap-set global-map "<f2> s"                     #'helm-selector-shell)
+(keymap-set global-map "<f2> v"                     #'helpful-variable)
+(keymap-set global-map "<f2> w"                     #'sp-rewrap-sexp)
+(keymap-set global-map "<f2> x"                     #'execute-extended-command)
+(keymap-set global-map "<f2> z"                     #'my-sleep)
+(keymap-set global-map "<f5>"                       #'repeat)
+(keymap-set global-map "C-<prior>"                  #'iflipb-previous-buffer)
+(keymap-set global-map "C-<next>"                   #'iflipb-next-buffer)
+(keymap-set global-map "C-;"                        #'embark-act) ;; like doom, but global
+(keymap-set global-map "C-h C-h"                    #'my-describe-last-key)
+(keymap-set global-map "C-h q"                      #'quoted-insert)
+(keymap-set global-map "C-x C-\;"      (defrepeater #'comment-line))
+(keymap-set global-map "C-0"                        #'hippie-expand)
+(keymap-set global-map "C-1"                        #'switch-to-buffer)
+(keymap-set global-map "C-2"                        #'other-window)
+(keymap-set global-map "C-3"                        #'unexpand-abbrev)
+(keymap-set global-map "C-4"                        #'my-stim)
+(keymap-set global-map "C-5"                        #'my-prev-file-in-dir)
+(keymap-set global-map "C-6"                        #'my-next-file-in-dir)
+(keymap-set global-map "C-8"                        #'kill-whole-line)
+(keymap-set global-map "C-9"                        #'crux-duplicate-current-line-or-region)
+(keymap-set global-map "M-<backspace>"              #'sp-backward-unwrap-sexp)
+(keymap-set global-map "M-<delete>"                 #'sp-unwrap-sexp)
+(keymap-set global-map "M-<f4>"                     #'kill-current-buffer)
+(keymap-set global-map "M-<insert>"                 #'sp-rewrap-sexp)
+(keymap-set global-map "M-g a a"       (defrepeater #'avy-pop-mark))
+(keymap-set global-map "M-g a c"                    #'avy-goto-char-2)
+(keymap-set global-map "M-g a g c"                  #'avy-goto-char-2)
+(keymap-set global-map "M-g a g e"                  #'avy-goto-end-of-line)
+(keymap-set global-map "M-g a g l"                  #'avy-goto-line)
+(keymap-set global-map "M-g a g o"                  #'avy-goto-word-or-subword-1)
+(keymap-set global-map "M-g a g q"                  #'avy-goto-subword-1)
+(keymap-set global-map "M-g a g s"                  #'avy-goto-symbol-1)
+(keymap-set global-map "M-g a g w"                  #'avy-goto-word-1)
+(keymap-set global-map "M-g a k"                    #'avy-kill-region)
+(keymap-set global-map "M-g a m l"                  #'avy-move-line)
+(keymap-set global-map "M-g a m r"                  #'avy-move-region)
+(keymap-set global-map "M-g a n"                    #'avy-next)
+(keymap-set global-map "M-g a o"                    #'avy-goto-symbol)
+(keymap-set global-map "M-g a p"                    #'avy-prev)
+(keymap-set global-map "M-g a r"                    #'avy-resume)
+(keymap-set global-map "M-g a s"                    #'avy-isearch)
+(keymap-set global-map "M-g a w"                    #'avy-kill-ring-save-region)
+(keymap-set global-map "M-g c"                      #'avy-goto-char-timer)
+(keymap-set global-map "M-g e"                      #'consult-error)
+(keymap-set global-map "M-g i"                      #'consult-imenu)
+(keymap-set global-map "M-g k"                      #'consult-global-mark)
+(keymap-set global-map "M-g l"                      #'consult-line)
+(keymap-set global-map "M-g m"                      #'consult-mark)
+(keymap-set global-map "M-g o"                      #'consult-outline)
+(keymap-set global-map "M-g z"                      #'avy-goto-word-or-subword-1)
+(keymap-set global-map "M-m g"         (defrepeater #'pop-global-mark)) ;; was C-x C-SPC
+(keymap-set global-map "M-m m"                      #'set-mark-command) ;; was C-SPC
+(keymap-set global-map "M-m p"         (defrepeater #'pop-to-mark-command))
+(keymap-set global-map "M-m r"                      #'rectangle-mark-mode) ;; was C-x SPC
+(keymap-set global-map "M-m x"                      #'exchange-point-and-mark) ;; also on C-x C-x
+(keymap-set global-map "M-o ="                      #'doom/increase-font-size)
+(keymap-set global-map "M-s 5"                      #'query-replace)
+(keymap-set global-map "M-s f"         (defrepeater #'my-fill-unfill-respect-double-space))
+(keymap-set global-map "M-s m"                      #'consult-multi-occur)
+(keymap-set global-map "M-s r"                      #'isearch-backward)
+(keymap-set global-map "M-s s"                      #'isearch-forward)
+(keymap-set global-map "M-|"                        #'my-shell-command-replace-region)
+(keymap-set global-map "TAB"                        #'my-tab-command)
 (keymap-set help-map "M"                 #'describe-mode)
 (keymap-set help-map "m"                 #'consult-minor-mode-menu)
 (keymap-set isearch-mode-map "<down>"    #'isearch-repeat-forward)

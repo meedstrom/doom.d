@@ -2,4 +2,8 @@
 
 Ever in development since 2015.  Requires Emacs 28.
 
-You can find the juicy stuff in the =lisp= subfolder.
+You can find the more unique code in the =lisp= subfolder.  Aside from that, this follows Doom Emacs' structure:
+
+- init.el -- which premade Doom modules to enable
+- packages.el -- which additional packages to make available
+- config.el -- loads every file in =lisp= subfolder

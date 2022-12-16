@@ -1,8 +1,9 @@
 ;; -*- lexical-binding: t; -*-
 
-;; Reuse current window on M-x shell, like with eshell.
-(add-to-list 'display-buffer-alist
-             (cons "\\*shell\\*" display-buffer--same-window-action))
+;; Emacs 28 fixed this
+;; ;; Reuse current window on M-x shell, like with eshell.
+;; (add-to-list 'display-buffer-alist
+;;              (cons "\\*shell\\*" display-buffer--same-window-action))
 
 ;; Limit scrollback because gcc and R can spit out enough to slow my system.
 (setopt comint-buffer-maximum-size (^ 2 12))
