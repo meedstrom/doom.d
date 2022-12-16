@@ -3,7 +3,7 @@
 ;; (general-unbind exwm-mode-map "C-c")
 ;; (general-def exwm-mode-map "M-s q" #'exwm-input-send-next-key)
 
-(setq exwm-replace t)
+;; (setq exwm-replace t)
 (setq exwm-input-simulation-keys '(([?\s-a] . [home])
                                    ([?\s-b] . [left])
                                    ([?\s-d] . [delete])
@@ -24,14 +24,21 @@
                                    ([?\M-d] . [C-S-right delete])
                                    ([?\M-t] . [C-S-right C-x C-left C-v])
                                    ([f8]    . [menu])
+                                   ([XF86Back]    . [prior])
+                                   ([XF86Forward]    . [next])
                                    ))
-(setq exwm-input-prefix-keys '(?\s-1 ?\s-2 ?\s-x ?\s-c menu f1 f2 f3 f4 f5 f7 f10 f11 f12 katakana henkan
+(setq exwm-input-prefix-keys '(?\s-1 ?\s-2 ?\s-x ?\s-c menu f1 f2 f3 f5 f7 f10 f11 f12 katakana henkan
                                ;; (vconcat "<katakana>")
                                ))
 (setq exwm-input-global-keys `((,(kbd "C-M-<delete>") . exwm-reset)
-                               (,(kbd "M-<f4>") . kill-current-buffer)
+                               (,(kbd "M-<f4>") . kill-current-buffer) ;; y u no work?
+                               ;; (,(kbd "A-<f4>") . kill-current-buffer)
                                (,(kbd "<XF86MonBrightnessDown>") . my-backlight-dec)
                                (,(kbd "<XF86MonBrightnessUp>") . my-backlight-inc)))
+
+(after! exwm-core
+  (keymap-set exwm-mode-map "s-c" (lookup-key exwm-mode-map "C-c"))
+  (keymap-unset exwm-mode-map "C-c"))
 
 (defun my-golden-ratio-if-exwm (&optional _arg)
   (when (eq major-mode 'exwm-mode)

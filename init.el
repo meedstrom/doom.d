@@ -1,6 +1,7 @@
 ;;; init.el -*- lexical-binding: t; -*-
 
 (doom! :completion
+       ;; (helm +childframe +icons)
        (vertico +icons)
 
        :ui
@@ -8,7 +9,8 @@
        ;; doom-dashboard
        ;; modeline
        hl-todo
-       (ligatures +extra)
+       ;; (ligatures +extra)
+       ligatures
        vc-gutter
        ;; window-select ;; good on big monitors, otherwise no
        ;; (popup +defaults) ;; retarded org capture window size
@@ -17,8 +19,8 @@
        :editor
        fold
        multiple-cursors
-       format
-       snippets
+       ;; format ;; check if the upstream started using apheleia
+       ;; snippets
        word-wrap
 
        :emacs
@@ -28,7 +30,7 @@
 
        :term
        vterm
-       eshell
+       ;; eshell
        shell
        term
 
@@ -40,7 +42,13 @@
        data
        emacs-lisp
        ess
-       (go +lsp)
+       go
+       javascript
+       web
+       ;; (go +tree-sitter)
+       ;; (javascript +tree-sitter)
+       ;; (web +tree-sitter)
+       rust
        json
        ledger
        markdown
@@ -60,8 +68,9 @@
        :tools
        biblio
        (magit +forge)
-       (lsp +eglot)
-       tree-sitter
+       ;; (lsp +eglot)
+       ;; tree-sitter
+       pdf
 
        :config
        (default +bindings +smartparens)

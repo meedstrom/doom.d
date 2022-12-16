@@ -3,8 +3,9 @@
 (add-load-path! "/home/kept/emacs/key-seqs-finder/"
                 "/home/kept/emacs/twee-mode/")
 
-;; Backups still save my skin, as of 2020.
-;; I put them in the unusual place /home/backups to prevent cluttering rg.
+;; Backups have saved my skin in 2015, 2016, 2018, and 2020.
+;; I put them in the unusual place /home/backups to prevent cluttering rg output.
+;; NOTE: it looks like now there's `tramp-backup-directory-alist'? don't need the exclusion below?
 (setq
  backup-directory-alist `((,tramp-file-name-regexp . nil) ;; exclude TRAMP, bad experience
                           ("." . "/home/backups"))
@@ -13,15 +14,19 @@
  make-backup-files t ;; WHY did Doom disable it
  version-control t)
 
+;; undoom; I want readable backup names since I rename files and directories all
+;; the time.
+(advice-remove #'make-backup-file-name-1 #'doom-make-hashed-backup-file-name-a)
+
 ;; check
 (unless (file-writable-p "/home/backups/")
   (error "Disabling backups because can't write to: /home/backups/")
   (setq backup-directory-alist nil)
   (setq make-backup-files nil))
 
-;; For Magit, also for email when I get around to that.
-(setq user-full-name "Martin Edström")
-(setq user-mail-address "meedstrom@teknik.io")
+;; Doom puts eww-bookmarks in doomemacs/.local/cache, which I find dangerous
+;; since I may unthinkingly wipe it.  Put it where I won't delete it.
+(setq eww-bookmarks-directory "/home/kept/emacs/conf-doom/")
 
 
 ;;; Font and theme
@@ -29,6 +34,11 @@
 ;; (setq doom-font (font-spec :family "Cozette" :size 10))
 ;; (setq doom-font (font-spec :family "Tamzen" :size 10))
 (setq doom-font (font-spec :family "Terminus" :size 15))
+;; (setq doom-font (font-spec :family "Dina" :size 20))
+;; (setq doom-font (font-spec :family "Modd" :size 20))
+;; (setq doom-font (font-spec :family "orp" :size 20))
+;; (setq doom-font (font-spec :family "peep" :size 20))
+;; (setq doom-font (font-spec :family "ProFont" :size 20))
 ;; (setq doom-font (font-spec :family "monospace" :size 30))
 ;; (setq doom-font (font-spec :family "Hasklig" :size 14))
 ;; (setq doom-font (font-spec :family "Iosevka" :size 14))
@@ -40,9 +50,9 @@
 ;; (setq doom-theme 'doom-storage-tube-amber-2)
 ;; (setq doom-theme 'doom-Iosvkem)
 ;; (setq doom-theme 'doom-zenburn)
-;; (setq doom-theme 'doom-outrun-electric)
+(setq doom-theme 'doom-outrun-electric)
 ;; (setq doom-theme 'doom-badger)
-(setq doom-theme 'doom-rouge)
+;; (setq doom-theme 'doom-rouge)
 
 
 ;;; Debugging
@@ -75,15 +85,25 @@
 
 ;;; Stuff
 
+;; For Magit, also for email when I get around to that.
+(setq user-full-name "Martin Edström")
+(setq user-mail-address "meedstrom@teknik.io")
+
 ;; Set up booleans I use here and there throughout init.
 (defvar debian (executable-find "apt-get"))
-(defvar arch (string-match "arch" operating-system-release))
-(defvar gentoo (string-match "gentoo" operating-system-release))
-(defvar guix (string-match "shepherd" (shell-command-to-string "ps -q 1 -o comm=")))
+(defvar arch (or (string-search "arch" operating-system-release)
+                 (string-search "arch" (shell-command-to-string "cat /etc/os-release"))))
+(defvar gentoo (string-search "gentoo" operating-system-release))
+(defvar guix (string-search "shepherd" (shell-command-to-string "ps -q 1 -o comm=")))
+(defvar internet nil) ;; periodically re-test internet connectivity and set this, would be useful for `my-stim'.
 
 (let* ((oses (list debian arch gentoo guix)))
-  (unless (<= 1 (length (seq-filter (-not #'null) oses)))
+  (unless (>= 1 (- (length oses) (-count #'null oses)))
     (warn "My init: Two or more OS checks succeeded")))
+
+;; TODO: how to find out parent process
+(defvar child-emacs nil)
+  ;; (process-attributes (emacs-pid))
 
 ;; In case I'm not on a tiling WM.
 (add-to-list 'initial-frame-alist '(fullscreen . fullheight))
@@ -103,30 +123,29 @@
 (put 'customize-face 'disabled nil)
 (put 'customize-variable 'disabled nil)
 
+;; FIXME: doom doesn't respect these
+(setopt recentf-max-saved-items 1200)
+(setopt shr-max-image-proportion 0.5)
+(setopt load-prefer-newer t) ;; don't spend another minute confused by this
+(setopt fill-column 79)
+
 (setopt auth-sources '("~/.authinfo")) ;; https://magit.vc/manual/ghub/Storing-a-Token.html
 (setopt abbrev-file-name (expand-file-name "abbrevs" doom-user-dir))
 (setopt mouse-yank-at-point t)
 (setopt save-interprogram-paste-before-kill t)
 (setopt select-enable-primary t)
 (setopt custom-safe-themes t)
-(setopt recentf-max-saved-items 1200)
-(setopt shr-max-image-proportion 0.5)
 (setopt suggest-key-bindings nil)
-(setopt calibredb-root-dir "~/Calibre Library/")
-(setopt calibredb-db-dir (expand-file-name "metadata.db" calibredb-root-dir))
-(setopt calibredb-format-width 8)
 (setopt kill-read-only-ok t)
 (setopt kill-ring-max 600)
 ;; (setopt byte-compile-warnings '(not free-vars))
 (setopt view-read-only t)
-(setopt load-prefer-newer t) ;; don't spend another minute confused by this
 (setopt indent-tabs-mode nil)
 (setopt vc-msg-newbie-friendly-msg nil)
 (setopt vc-msg-copy-id-to-kill-ring nil)
 (setopt display-line-numbers-type nil) ; undoom
 (setopt garbage-collection-messages nil)
 (setopt auto-save-no-message t)
-(setopt fill-column 79)
 
 (setopt browse-url-generic-program "firefox")
 (setopt browse-url-handlers
@@ -146,10 +165,12 @@
 
 
 ;;; Calendar...
-;; Phones track holidays too, but it's less aggravating to add many events at
-;; once here.  Interestingly, Org can probably take these into the agenda, and
-;; Beorg in turn can sync agenda stuff onto the actual phone calendar.  I've not
-;; tried that yet.
+;; Phones can track dates and subscribe to holidays too, but it's less
+;; aggravating to add and remove many events at once here (to my knowledge,
+;; neither iPhone nor Android expose anything remotely as convenient as xfconf
+;; or even a yaml/toml file).  Emacs provides a neat solution: Org can take
+;; these into the agenda, and the app Beorg in turn can sync all agenda stuff
+;; onto the actual phone calendar.  Fully automated.
 
 (setopt calendar-chinese-all-holidays-flag t)
 (setopt holiday-bahai-holidays nil)
@@ -190,7 +211,11 @@
                             (setq c-basic-offset 4
                                   tab-width 4)))
 
-;; doesn't play well with paren-mode + certain themes
+;; Hl-line-mode doesn't play along well when paren-mode is combined with certain
+;; themes (maybe fixed when prism-mode is used in place of paren-mode).  Also
+;; interferes with the trick of calling M-x describe-face to discover which face
+;; is under point.  But this is more appropriately fixed with a command
+;; "describe-face-at-point" or maybe a vertico/consult hack. Later...
 (remove-hook 'doom-first-buffer-hook #'global-hl-line-mode)
 
 ;; (add-hook 'after-save-hook #'my-fix-invalid-backup-settings)

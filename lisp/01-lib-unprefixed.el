@@ -19,7 +19,6 @@
 ;;; Code:
 
 (require 'cl-lib)
-(require 'l)
 (require 'subr-x)
 
 ;; Backport from Emacs 29 in case I'm on 28
@@ -38,12 +37,11 @@
 (defmacro call-if-fbound (func &rest args)
   `(when (fboundp #',func) (,func ,@args)))
 
-(defalias 'use #'use-package!)
-
 (defmacro c (fn &rest body)
   "Interactive version of `l'.
 FN and BODY as in `l'.  The typical use case is with `keymap-set'
 to make a simple command on the fly."
+  (require 'l)
   `(lambda ,(l--arguments body)
      (interactive)
      (,(if (car-safe fn)
@@ -72,14 +70,15 @@ indentation.
        \"baz\")"
   (string-join strings "\n"))
 
-;; Preserved because it was a Lisp lesson
+;; Preserved because it was a Lisp lesson to me
 (defun ^ (x power)
   (apply (function *) (make-list power x)))
 
 (defun cut-at (CUTOFF STRING)
-  "Variant of `substring'. Always cuts from the start. Permits
-the CUTOFF to exceed the length of the string, in which case the
-string is returned unaltered without complaint."
+  "Variant of `substring'.
+Always cuts from the start. Permits the CUTOFF to exceed the
+length of the string, in which case the string is returned
+unaltered with no complaints."
   (if (< (length STRING) CUTOFF)
       STRING
     (substring STRING 0 CUTOFF)))
@@ -169,20 +168,23 @@ This is a wrapper around `eval-after-load' that:
            (if (symbolp ',x)
                (symbol-name ,x)))))
 
-(defmacro sym (&rest args)
-  "Shorthand for the expression (intern (concat ARGS)), plus magic. Examples:
+(defmacro symcat (&rest args)
+  "Shorthand for (intern (concat ARGS)), plus magic for the lazy.
+Examples:
 
-(sym \"counsel-\" \"rg\") 
+\(symcat \"counsel-\" \"rg\")
    returns the symbol `counsel-rg'.
 
-(sym w3m-search-default-engine \"-search\") 
+\(symcat w3m-search-default-engine \"-search\")
    may return the symbol `duckduckgo-search'.
 
-(sym major-mode \"-map\") 
+\(symcat major-mode \"-map\")
    may return the symbol `exwm-mode-map'.
 
-Note that `w3m-search-default-engine' returned a string \"duckduckgo\".
-Note that `major-mode' returned a symbol `exwm-mode'."
+Note that the last two cases are subtly different:
+`w3m-search-default-engine' returned the string \"duckduckgo\"
+\(not a symbol!), while `major-mode' returned the symbol
+`exwm-mode' \(not a string!)."
   `(intern (mapconcat #'my-symbol-name-or-string-as-is ',args nil)))
 
 ;; Just an old habit from typing "date" at the terminal. It's how I check the

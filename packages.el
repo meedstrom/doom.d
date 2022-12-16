@@ -10,6 +10,8 @@
 ;; Pkg dev stuff
 
 (package! pfuture)
+(package! persist)
+(package! bui)
 (package! ts)
 (package! package-lint)
 (package! buttercup)
@@ -20,8 +22,11 @@
 
 ;; The rest
 
+(package! circadian)
 (package! academic-phrases)
-(package! affe)
+;; (package! affe)
+(package! apheleia)
+(package! smart-tabs-mode)
 (package! anki-editor)
 (package! app-launcher :recipe (:host github :repo "SebastienWae/app-launcher"))
 (package! artbollocks-mode)
@@ -30,8 +35,9 @@
 (package! calibredb)
 (package! cape)
 (package! corfu)
+(package! embark)
 (package! crux)
-(package! cycle-buffer)
+(package! cycle-buffer) ;; vs iflipb?
 (package! define-repeat-map :recipe (:host nil :repo "https://tildegit.org/acdw/define-repeat-map.el"))
 (package! director)
 (package! dired-hacks)
@@ -43,7 +49,9 @@
 (package! emacs-piper :recipe (:host gitlab :repo "howardabrams/emacs-piper"))
 (package! ess_rproj :recipe (:host github :repo "chainsawriot/ess_rproj"))
 (package! esup)
+(package! asyncloop :recipe (:host github :repo "meedstrom/asyncloop"))
 (package! deianira :recipe (:host github :repo "meedstrom/deianira"))
+(package! kbd-mode :recipe (:host github :repo "kmonad/kbd-mode"))
 (package! exwm)
 (package! exwm-edit)
 (package! exwm-firefox :recipe (:host github :repo "ieure/exwm-firefox"))
@@ -55,9 +63,8 @@
 (package! hacker-typer)
 (package! helm-selector)
 (package! help-find)
-(package! hyperbole)
 (package! iedit)
-(package! iflipb)
+(package! iflipb) ;; vs cycle-buffer?
 (package! iscroll)
 (package! key-assist)
 (package! key-chord)
@@ -134,12 +141,13 @@
 ;; (package! embrace)
 ;; (package! pulseaudio-control)
 (package! delve :recipe (:host github :repo "publicimageltd/delve"))
+;; (package! hyperbole)
 ;; (package! suggest)
 ;; (package! sly)
 ;; (package! osm)
 ;; (package! transmission)
 ;; (package! trashed)
-;; (package! snitch)
+(package! snitch)
 ;; (package! eshell-prompt-extras)
 ;; (package! navi-mode)
 ;; (package! snow)

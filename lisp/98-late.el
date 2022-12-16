@@ -19,10 +19,12 @@
 ;; - keymap-lookup instead of lookup-key and key-binding
 ;; - new fn: define-keymap and defvar-keymap
 ;; - M-x shortdoc RET keymaps RET
+;; - new fn: org-get-title
 (when (version<= "29" emacs-version)
   (pixel-scroll-precision-mode)
   (add-to-list 'default-frame-alist '(alpha-background . 90))
   ;; (setopt help-enable-variable-value-editing t)
+  ;; (add-hook 'org-cycle-hook #'org-cycle-display-inline-images)
   )
 ;; From reading Emacs 28 news
 ;; - C-x x a new keymap for "buffer actions"
@@ -42,24 +44,31 @@
   (setq abbrev-suggest t)
   )
 
-;; Undoom.  Doom has this thing called doom-buffer-frame-predicate, which gets
-;; in my way 80% of the time as I call next-buffer endlessly without ever
-;; finding the buffer I want.
-(assoc-delete-all 'buffer-predicate default-frame-alist)
-(set-frame-parameter nil 'buffer-predicate nil)
+;; Don't filter the buffer list when cycling.  How do these people actually find
+;; the filtered buffers when they want them?
+(assoc-delete-all 'buffer-predicate default-frame-alist) ;; undoom
+(set-frame-parameter nil 'buffer-predicate nil) ;; undoom
+(setopt iflipb-ignore-buffers nil)
 
+;; FWIW, might be worth knowing the command `unbury-buffer' and using that
+;; instead -- but would be great if there was a visual effect associated with a
+;; buffer being buried
+(fset 'bury-buffer #'ignore)
 
-(setopt iflipb-wrap-around t)
 (setopt helpful-max-buffers nil) ;; wats the point of killing buffers
+(setopt iflipb-wrap-around t)
 (setopt ranger-map-style 'emacs)
-(setopt which-key-idle-delay 0.25)
+(setopt which-key-idle-delay 0.2)
 (setopt rainbow-x-colors nil) ;; only colorize hex strings
+(setopt calibredb-root-dir "~/Calibre Library/")
+(setopt calibredb-db-dir (expand-file-name "metadata.db" calibredb-root-dir))
+(setopt calibredb-format-width 8)
 
 (setopt +doom-dashboard-functions
         '(doom-dashboard-widget-shortmenu
           doom-dashboard-widget-loaded))
 
-;; NOTE: put your user name and password if not using .authinfo
+;; NOTE: you can use .authinfo instead of putting your user name and password here
 (setopt mediawiki-site-alist
         '(("Wikipedia" "http://en.wikipedia.org/w/" "username" "password" nil "Main Page")
           ("WikEmacs" "http://wikemacs.org/" "username" "password" nil "Main Page")))
@@ -72,6 +81,7 @@
   ;; fix guix.el
   (add-to-list 'ws-butler-global-exempt-modes #'minibuffer-inactive-mode)
   ;; because org-element-cache (runs in background) throws warnings now (culprit Roam?)
+  ;; probably fixed in emacs 29
   (add-to-list 'ws-butler-global-exempt-modes #'org-mode))
 
 (use-package! form-feed
@@ -88,40 +98,51 @@
 (use-package! objed
   :commands objed-ipipe)
 
-;; NOTE: this mode sometimes messes things up. You could just manually
-;; call M-x crux-sudo-edit when you need it (initialism: M-x cse).
 (use-package! crux
-  :config (crux-reopen-as-root-mode))
+  :config
+  ;; Reopen as root specifically when exiting read-only-mode on a root-owned file.
+  ;; (add-hook 'read-only-mode-hook
+  ;;           (defun my-sudo-edit-maybe ()
+  ;;             "Call `crux-sudo-edit' if the file is unwritable."
+  ;;             (if buffer-read-only
+  ;;                 nil
+  ;;               (when (and (buffer-file-name)
+  ;;                          (not (file-writable-p (buffer-file-name)))
+  ;;                          (crux-sudo-edit))))))
+  )
 
 (use-package! nov
   :mode ("\\.epub\\'" . nov-mode))
+
+(use-package! deianira-mass-remap
+  :config
+  (setq dei-mass-remap-debug-level 1)
+  (general-auto-unbind-keys 'undo) ;; ensure it works with and without general
+  (add-hook 'window-buffer-change-functions #'dei-record-keymap-maybe -70)
+  (add-hook 'dei-keymap-found-hook #'dei-define-super-like-ctl-everywhere)
+  (add-hook 'dei-keymap-found-hook #'dei-homogenize-all-keymaps)
+  (setq dei-homogenizing-winners
+        '(("C-x C-s" . global-map)
+          ("C-x C-f" . global-map)
+          ("C-x C-q" . global-map)
+          ("C-x C-;" . global-map)
+          ("C-x C-l" . global-map)
+          ("C-c C-c" . org-mode-map)
+          ("C-c C-," . org-mode-map))))
 
 (use-package! deianira
   :config
   (after! hydra
     (define-key hydra-base-map (kbd "<f5>") #'hydra-repeat))
-  (general-auto-unbind-keys 'undo) ;; ensure it works with and without general
-  (add-hook 'dei-keymap-found-hook #'dei-homogenize-all-keymaps)
-  (add-hook 'dei-keymap-found-hook #'dei-define-super-like-ctl-everywhere)
-  (setq dei-debug t)
+  (setq asyncloop-debug-level 1)
   (setq dei-invisible-leafs
         (seq-difference dei-invisible-leafs '("<menu>" "SPC")))
-  (setq dei-homogenizing-winners
-        '(("s-x s-s")
-          ("s-x s-f" . global-map)
-          ("s-x s-;" . global-map)
-          ("s-x s-l" . global-map)
-          ("s-c s-c" . org-mode-map)
-          ("s-c s-," . org-mode-map)
-          ;;; ------------
-          ("C-x C-s")
-          ("C-x C-f")
-          ("C-x C-;")
-          ("C-x C-l")
-          ("C-c C-c" . org-mode-map)
-          ("C-c C-," . org-mode-map)
-          ))
-  (deianira-mode))
+  ;; (deianira-mode)
+  )
+
+(use-package! apheleia
+  :config
+  (apheleia-global-mode))
 
 (use-package! nameless
   :hook (emacs-lisp-mode . nameless-mode)
@@ -164,6 +185,4 @@
 ;; during a training period.  I'd also like the Hyperbole prompts to conform to
 ;; Vertico style instead of that ascetic oneliner.
 (use-package! hyperbole
-  :defer
-  :commands hkey-either
-  :config (hyperbole-mode))
+  :commands hkey-either)

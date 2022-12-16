@@ -361,8 +361,8 @@ This may remove the directory component, use a path relative from
 (defun my-eshell-history ()
   "Return merged history for passing to `consult-history'.
 Takes histories of all currently open eshell buffers."
-  (let* ((histories (->> (-map (l'buffer-local-value 'eshell-history-file-name %)
-                               (my-eshell-buffers))
+  (let* ((histories (->> (--map (buffer-local-value 'eshell-history-file-name it)
+                                (my-eshell-buffers))
                          (-filter #'f-exists-p)
                          (-filter #'f-readable-p)))
          (histories-oldest-first
@@ -398,8 +398,9 @@ have been set by `my-eshell-rename' on
 
 (defun my-eshell-buffers ()
   "Return a list of live eshell buffers."
-  (--filter (eq (buffer-local-value 'major-mode it) #'eshell-mode)
-            (buffer-list)))
+  (cl-loop for buf in (buffer-list)
+           when (eq (buffer-local-value 'major-mode buf) #'eshell-mode)
+           collect it))
 
 ;; wip
 ;; TODO: test it

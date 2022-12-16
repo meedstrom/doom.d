@@ -9,8 +9,10 @@
                   ;; List of my git repos
                   (apply #'append
                    ;; Specific dirs
-                   (list "~/doom-emacs/.local/straight/repos/eva/"
-                         )
+                         (list "~/doomemacs/.local/straight/repos/eva/"
+                               "~/doomemacs/.local/straight/repos/deianira/"
+                               "~/doomemacs/.local/straight/repos/chain/"
+                               )
                    ;; Recursive (many subdirs of these are git repos)
                    (-keep (lambda (path)
                             (if (file-directory-p path)

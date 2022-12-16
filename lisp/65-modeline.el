@@ -1,6 +1,7 @@
 ;; -*- lexical-binding: t; -*-
 
 (setopt mode-line-percent-position nil)
+(setopt mode-line-modes nil)
 (setopt mini-modeline-display-gui-line nil)
 (setopt mini-modeline-face-attr '(:background "#001100" :foreground "pale green"))
 
