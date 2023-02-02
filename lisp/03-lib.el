@@ -29,9 +29,21 @@
 (autoload #'objed-ipipe "objed")
 (autoload #'piper "piper")
 
+(defun my-eww-bookmark-copy-url ()
+  "Kill the current bookmark."
+  (interactive nil eww-bookmark-mode)
+  (let* ((start (line-beginning-position))
+         (bookmark (get-text-property start 'eww-bookmark))
+         (url (plist-get bookmark :url)))
+    (unless bookmark
+      (user-error "No bookmark on the current line"))
+    (forward-line 1)
+    (kill-new url)
+    (message "Copied %s" url)))
+
 ;; TODO: would be cool to use the "motion" program and start it watching me right away.
 (defun my-browse-random-lw-post ()
-  "For personal practice."
+  "Practice something for my Youtube channel."
   (interactive)
   (eww-browse-url
    (seq-random-elt (cl-loop
@@ -52,7 +64,7 @@
 (defun my-guix-profile ())
 
 (defun my-org-roam-extract-subtree ()
-  "Variant of org-roam-extract-subtree.
+  "Variant of `org-roam-extract-subtree'.
 It skips prompting, and inserts the metadata I want."
   (interactive)
   (save-excursion
@@ -141,15 +153,13 @@ executing BODY."
                                          do (kill-buffer-if-not-modified buf))))
     map))
 
-(defvar my-stim-collection nil)
-
 (defun my-stim-collection-generate ()
   (let ((documented-commands nil)
         (roam-files
          (append (directory-files "/home/kept/roam/" t ".org$")
-                 (directory-files "/home/kept/roam/blog" t ".org$")
-                 (directory-files "/home/kept/roam/beorg" t ".org$")
-                 (directory-files "/home/kept/roam/daily" t ".org$"))))
+                 (directory-files "/home/kept/roam/blog/" t ".org$")
+                 (directory-files "/home/kept/roam/beorg/" t ".org$")
+                 (directory-files "/home/kept/roam/daily/" t ".org$"))))
     (mapatoms
      (lambda (sym)
        (when (and (commandp sym)
@@ -164,15 +174,30 @@ executing BODY."
      (cons #'find-file roam-files)
      (cons #'describe-function documented-commands))))
 
+(defvar my-stim-collection (my-stim-collection-generate))
+
+(my-hook-once 'doom-after-init-hook
+  (setq my-stim-collection (my-stim-collection-generate)))
+
 (defun my-stim (&optional collection)
   "Show something random.
-Hopefully this helps for working while addled by bees \(ADHD).
-The user is to feel free to call this command at any time,
-however many times they wish.  Pressing q brings back the buffer
-that was previously active."
+Hopefully this helps for working while addled by bees \(afflicted
+by ADHD).  The user is to feel free to call this command at any
+time, however many times they wish.  Pressing q brings back the
+buffer that was previously active.
+
+Optional argument COLLECTION defaults to the value of
+`my-stim-collection' if not provided.  It must be a list of lists
+in this format:
+
+\(\(COMMAND ITEM ITEM ITEM ...)
+ \(COMMAND ITEM ITEM ITEM ...)
+ ...)
+
+where the ITEMs are things to visit, such as web addresses, and
+the COMMAND is the command to use on such an item, such as
+`eww-browse-url'."
   (interactive)
-  (unless my-stim-collection
-    (setq my-stim-collection (my-stim-collection-generate)))
   (if (eq last-command #'my-stim)
       (push (current-buffer) my-stim-buffers)
     (setq my-stim-buffers nil)

@@ -18,7 +18,7 @@
 (package! nameless)
 (package! gif-screencast)
 (package! screencast)
-(package! keymap-utils) ;; prefix kmu-*
+;; (package! keymap-utils) ;; prefix kmu-*
 
 ;; The rest
 
@@ -26,6 +26,7 @@
 (package! academic-phrases)
 ;; (package! affe)
 (package! apheleia)
+(package! copy-as-format)
 (package! smart-tabs-mode)
 (package! anki-editor)
 (package! app-launcher :recipe (:host github :repo "SebastienWae/app-launcher"))
@@ -37,7 +38,7 @@
 (package! corfu)
 (package! embark)
 (package! crux)
-(package! cycle-buffer) ;; vs iflipb?
+(package! cycle-buffer) ;; last updated 1997, but has more useful commands than iflipb
 (package! define-repeat-map :recipe (:host nil :repo "https://tildegit.org/acdw/define-repeat-map.el"))
 (package! director)
 (package! dired-hacks)
@@ -47,7 +48,7 @@
 (package! doom-snippets :ignore t) ;; disable doom's yasnippets
 (package! elisp-format)
 (package! emacs-piper :recipe (:host gitlab :repo "howardabrams/emacs-piper"))
-(package! ess_rproj :recipe (:host github :repo "chainsawriot/ess_rproj"))
+(package! ess-rproj :recipe (:host github :repo "chainsawriot/ess-rproj"))
 (package! esup)
 (package! asyncloop :recipe (:host github :repo "meedstrom/asyncloop"))
 (package! deianira :recipe (:host github :repo "meedstrom/deianira"))
@@ -61,7 +62,7 @@
 (package! goggles)
 (package! golden-ratio)
 (package! hacker-typer)
-(package! helm-selector)
+;; (package! helm-selector)
 (package! help-find)
 (package! iedit)
 (package! iflipb) ;; vs cycle-buffer?
@@ -75,7 +76,7 @@
 (package! objed) ;; for objed-ipipe
 (package! org-drill)
 (package! org-recent-headings)
-(package! org-roam-bibtex) ;; yes still relevant
+(package! org-roam-bibtex) ;; yes still relevant for org 9.5
 (package! org-roam-ui)
 (package! org-transclusion)
 (package! org-tanglesync)

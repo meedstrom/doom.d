@@ -4,8 +4,10 @@
                 "/home/kept/emacs/twee-mode/")
 
 ;; Backups have saved my skin in 2015, 2016, 2018, and 2020.
-;; I put them in the unusual place /home/backups to prevent cluttering rg output.
-;; NOTE: it looks like now there's `tramp-backup-directory-alist'? don't need the exclusion below?
+;; So I should not stop using them until 2030 or so, given no more incidents.
+;; I put them in the unusual path /home/backups/ to prevent cluttered rg output.
+;; NOTE: it looks like now there's `tramp-backup-directory-alist'? don't need
+;; the below exclusion anymore?
 (setq
  backup-directory-alist `((,tramp-file-name-regexp . nil) ;; exclude TRAMP, bad experience
                           ("." . "/home/backups"))
@@ -26,7 +28,9 @@
 
 ;; Doom puts eww-bookmarks in doomemacs/.local/cache, which I find dangerous
 ;; since I may unthinkingly wipe it.  Put it where I won't delete it.
-(setq eww-bookmarks-directory "/home/kept/emacs/conf-doom/")
+(setopt eww-bookmarks-directory doom-user-dir)
+
+(setopt abbrev-file-name (expand-file-name "abbrevs" doom-user-dir))
 
 
 ;;; Font and theme
@@ -45,12 +49,12 @@
 
 ;; (setq doom-theme 'doom-one)
 ;; (setq doom-theme 'doom-tomorrow-night)
-;; (setq doom-theme 'doom-dark+)
+(setq doom-theme 'doom-dark+)
 ;; (setq doom-theme 'doom-manegarm)
 ;; (setq doom-theme 'doom-storage-tube-amber-2)
 ;; (setq doom-theme 'doom-Iosvkem)
 ;; (setq doom-theme 'doom-zenburn)
-(setq doom-theme 'doom-outrun-electric)
+;; (setq doom-theme 'doom-outrun-electric)
 ;; (setq doom-theme 'doom-badger)
 ;; (setq doom-theme 'doom-rouge)
 
@@ -89,17 +93,20 @@
 (setq user-full-name "Martin Edström")
 (setq user-mail-address "meedstrom@teknik.io")
 
-;; Set up booleans I use here and there throughout init.
+;; Set up booleans I can use here and there throughout init.
 (defvar debian (executable-find "apt-get"))
 (defvar arch (or (string-search "arch" operating-system-release)
                  (string-search "arch" (shell-command-to-string "cat /etc/os-release"))))
 (defvar gentoo (string-search "gentoo" operating-system-release))
 (defvar guix (string-search "shepherd" (shell-command-to-string "ps -q 1 -o comm=")))
-(defvar internet nil) ;; periodically re-test internet connectivity and set this, would be useful for `my-stim'.
 
 (let* ((oses (list debian arch gentoo guix)))
   (unless (>= 1 (- (length oses) (-count #'null oses)))
     (warn "My init: Two or more OS checks succeeded")))
+
+;; TODO: periodically re-test internet connectivity and set this, would be
+;; useful for `my-stim'.
+(defvar internet nil)
 
 ;; TODO: how to find out parent process
 (defvar child-emacs nil)
@@ -116,21 +123,21 @@
   )
 (my-fix-pdf-midnight-colors)
 
-;; undoom
+;; undoom; I find customize a handy exploration tool
 (put 'customize-themes 'disabled nil)
 (put 'customize-group 'disabled nil)
 (put 'customize-changed 'disabled nil)
 (put 'customize-face 'disabled nil)
 (put 'customize-variable 'disabled nil)
 
-;; FIXME: doom doesn't respect these
-(setopt recentf-max-saved-items 1200)
-(setopt shr-max-image-proportion 0.5)
+(after! recentf
+  (setopt recentf-max-saved-items 1200))
+
+;; FIXME: doom doesn't respect this
 (setopt load-prefer-newer t) ;; don't spend another minute confused by this
-(setopt fill-column 79)
 
 (setopt auth-sources '("~/.authinfo")) ;; https://magit.vc/manual/ghub/Storing-a-Token.html
-(setopt abbrev-file-name (expand-file-name "abbrevs" doom-user-dir))
+(setopt shr-max-image-proportion 0.5)
 (setopt mouse-yank-at-point t)
 (setopt save-interprogram-paste-before-kill t)
 (setopt select-enable-primary t)
@@ -150,7 +157,7 @@
 (setopt browse-url-generic-program "firefox")
 (setopt browse-url-handlers
         '(
-          ("github.com" . browse-url-generic)
+          ;; ("github.com" . browse-url-generic)
           ("melpa.org" . browse-url-generic)
           ("fanfiction.net" . browse-url-generic)
 
@@ -165,12 +172,12 @@
 
 
 ;;; Calendar...
-;; Phones can track dates and subscribe to holidays too, but it's less
-;; aggravating to add and remove many events at once here (to my knowledge,
-;; neither iPhone nor Android expose anything remotely as convenient as xfconf
-;; or even a yaml/toml file).  Emacs provides a neat solution: Org can take
-;; these into the agenda, and the app Beorg in turn can sync all agenda stuff
-;; onto the actual phone calendar.  Fully automated.
+;; Modern phones do calendar, but it's less aggravating to add and remove many
+;; events at once here (to my knowledge, neither iPhone nor Android expose
+;; anything remotely as convenient as xfconf or even a yaml/toml file).  Emacs
+;; provides a neat solution: since Org takes these into the agenda, and the app
+;; Beorg can sync all agenda stuff onto the actual phone calendar, adding it
+;; here adds it there.  Magic.
 
 (setopt calendar-chinese-all-holidays-flag t)
 (setopt holiday-bahai-holidays nil)
@@ -200,7 +207,7 @@
           (holiday-fixed 12 10 "Simon's birthday")))
 
 
-;;; Hooks
+;;; Some hooks
 
 (add-hook! (special-mode prog-mode text-mode) #'my-hippie-config)
 (add-hook 'after-save-hook #'my-compile-and-drop)
@@ -217,5 +224,8 @@
 ;; is under point.  But this is more appropriately fixed with a command
 ;; "describe-face-at-point" or maybe a vertico/consult hack. Later...
 (remove-hook 'doom-first-buffer-hook #'global-hl-line-mode)
+
+;; undoom
+(remove-hook 'term-mode-hook #'hide-mode-line-mode)
 
 ;; (add-hook 'after-save-hook #'my-fix-invalid-backup-settings)

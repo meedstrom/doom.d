@@ -172,7 +172,7 @@
 (after! em-hist
   (define-key eshell-hist-mode-map [remap consult-history] #'my-eshell-consult-history))
 
-(after! eshell
+(after! esh-mode
   ;; Automatically narrow/widen to output on point motion.  Damn, it's weird
   ;; and often not what I want, but that's me abusing point motion.
   (define-key eshell-mode-map [remap next-line] #'my-eshell-next-line)
@@ -201,7 +201,7 @@
 ;; TODO: Make a command that cycles between a trio of buffers: the dired, the
 ;; eshell, and the buffer it was first called from.
 (keymap-set global-map "M-r" #'my-dired-jump)
-(after! eshell
+(after! esh-mode
   (keymap-set eshell-mode-map "M-r" #'dired-jump))
 (after! dired
   (keymap-set dired-mode-map "M-r" #'my-eshell-here))

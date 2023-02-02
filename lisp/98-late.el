@@ -3,7 +3,7 @@
 (display-battery-mode)
 
 ;; From reading Emacs 29 news
-;; - image-dired is fast now
+;; - image-dired is faster now
 ;; - image-dired slideshow on S
 ;; - in image-dired, marking an image in the display buffer shows the next
 ;;   image
@@ -52,8 +52,12 @@
 
 ;; FWIW, might be worth knowing the command `unbury-buffer' and using that
 ;; instead -- but would be great if there was a visual effect associated with a
-;; buffer being buried
+;; buffer being buried as opposed to just switched-away-from.
+;; Note that `unbury-buffer' is just a debatably-named wrapper for
+;; (switch-to-buffer (last-buffer)).  So maybe you could use it all the time in
+;; place of `iflipb-previous-buffer'/`iflipb-next-buffer'.
 (fset 'bury-buffer #'ignore)
+(fset 'bury-buffer-internal #'ignore)
 
 (setopt helpful-max-buffers nil) ;; wats the point of killing buffers
 (setopt iflipb-wrap-around t)
@@ -68,7 +72,7 @@
         '(doom-dashboard-widget-shortmenu
           doom-dashboard-widget-loaded))
 
-;; NOTE: you can use .authinfo instead of putting your user name and password here
+;; NOTE: you can use ~/.authinfo instead of putting your user name and password here
 (setopt mediawiki-site-alist
         '(("Wikipedia" "http://en.wikipedia.org/w/" "username" "password" nil "Main Page")
           ("WikEmacs" "http://wikemacs.org/" "username" "password" nil "Main Page")))
@@ -116,10 +120,9 @@
 
 (use-package! deianira-mass-remap
   :config
-  (setq dei-mass-remap-debug-level 1)
   (general-auto-unbind-keys 'undo) ;; ensure it works with and without general
   (add-hook 'window-buffer-change-functions #'dei-record-keymap-maybe -70)
-  (add-hook 'dei-keymap-found-hook #'dei-define-super-like-ctl-everywhere)
+  (add-hook 'dei-keymap-found-hook #'dei-define-super-like-ctl)
   (add-hook 'dei-keymap-found-hook #'dei-homogenize-all-keymaps)
   (setq dei-homogenizing-winners
         '(("C-x C-s" . global-map)
@@ -127,7 +130,7 @@
           ("C-x C-q" . global-map)
           ("C-x C-;" . global-map)
           ("C-x C-l" . global-map)
-          ("C-c C-c" . org-mode-map)
+          ("C-c C-c")
           ("C-c C-," . org-mode-map))))
 
 (use-package! deianira
@@ -179,10 +182,57 @@
   ;; (ignore-errors (elfeed-org)) ;; does not work
   )
 
-;; It sounds like Hyperbole is not only a sort of greybeard Embark, it has lots
-;; of premade "buttons" (what are those?) that Embark lacks, for one thing.  I
-;; think to learn it, I'd like all possible targets/buttons colorized for me
-;; during a training period.  I'd also like the Hyperbole prompts to conform to
-;; Vertico style instead of that ascetic oneliner.
+;; It sounds like Hyperbole is a sort of greybeard's Embark, and it packs a
+;; lot more "batteries included".  A drawback is that Hyperbole uses different
+;; UI metaphors than does Embark, metaphors that could feel natural to an
+;; Ido/icomplete user, but not to us Helm/Vertico users.  Anyway, that shouldn't
+;; be too hard to get over.  A feature that caught my interest: lots of premade
+;; "buttons" that Embark lacks.
+;;
+;; I haven't even used Embark much, as I also struggle with its UI metaphor.
+;; Could be worth trying Hyperbole.  While it has a hand-rolled UI, that also
+;; means it's thought-through.  Every Embark popup is full of suggestions I
+;; don't need.  I think to learn Hyperbole, I'd like all possible
+;; targets/buttons colorized for me during a training period.  I'd also like the
+;; Hyperbole prompts to come in a form utilizable by Vertico instead of that
+;; ascetic oneline minibuffer -- not that the ascetic minibuffer is a bad idea,
+;; but it feels less inviting as it breaks the paradigms I'm used to, and it's
+;; less discoverable so I must put in more effort to discover what does what
+;; (names like "hyrolo" certainly tell me nothing).
+;;
+;; To be clear, I don't believe it's useful to regard Embark and Hyperbole as
+;; competing for popularity. (I'm the kind of user who uses Vertico for some
+;; things and Helm for other things.)  It may well be that when one gets more
+;; popular, so does the other.  Not zero-sum.  But I observe that people seem
+;; much more ready to adopt Embark than they ever were ready to adopt Hyperbole,
+;; so there could be a risk it goes the way of Icicles where there's a handful
+;; of faithful users who don't publish anything about their workflows and the
+;; rest of us have no idea if it contains any lessons to carry over to the wider
+;; ecosystem and will not bother learning it in order to see, because it's too
+;; strange.  I don't know the full scope of Hyperbole so stop me if I'm wrong
+;; but would it be possible to reimplement Hyperbole to be a large collection of
+;; commands together with recommendations for where to bind them and how to
+;; configure Embark and maybe some other packages?
 (use-package! hyperbole
   :commands hkey-either)
+
+;; FIXME: need to hook prism-set-colors...
+;; (use-package! circadian
+;;   :config
+;;   (setq circadian-themes '(("8:00"   . doom-storage-tube-green)
+;;                            ("18:00"  . doom-storage-tube-amber-2)))
+;;   (circadian-setup))
+
+(defun my-auto-commit-maybe ()
+  (interactive) ;; for testing
+  (require 'ts)
+  (let ((last-commit-time (ts-parse
+                           (my-process-output-to-string
+                            "git" "log" "-n" "1" "--pretty=format:%cI"))))
+    ;; (float-time (time-since (parse-time-string last-commit-time)))
+    (if (> (ts-diff (ts-now) last-commit-time) 86400)
+        // New day, new commit
+        (magit-commit-create "--all" "-m" "Auto-commit")
+      (magit-commit-amend)
+    )
+  ))

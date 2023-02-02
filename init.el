@@ -3,6 +3,7 @@
 (doom! :completion
        ;; (helm +childframe +icons)
        (vertico +icons)
+       ;; (vertico +childframe +icons)
 
        :ui
        doom
@@ -24,7 +25,6 @@
        word-wrap
 
        :emacs
-       ;;(dired +icons)
        dired
        vc
 
@@ -35,19 +35,18 @@
        term
 
        :checkers
-       syntax
+       ;; syntax
        grammar
 
        :lang
        data
        emacs-lisp
        ess
-       go
-       javascript
+       (go +lsp +tree-sitter)
        web
-       ;; (go +tree-sitter)
-       ;; (javascript +tree-sitter)
        ;; (web +tree-sitter)
+       ;; javascript
+       ;; (javascript +tree-sitter)   ;; tsserver freezes Emacs, maybe edit tide-server-max-response-length
        rust
        json
        ledger
@@ -69,7 +68,8 @@
        biblio
        (magit +forge)
        ;; (lsp +eglot)
-       ;; tree-sitter
+       lsp
+       tree-sitter
        pdf
 
        :config

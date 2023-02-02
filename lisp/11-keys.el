@@ -253,7 +253,8 @@
   (keymap-set ess-mode-map "C-<return>" #'ess-eval-line))
 
 (after! eww
-  (keymap-set eww-mode-map "q" #'kill-current-buffer))
+  (keymap-set eww-mode-map "q" #'kill-current-buffer)
+  (keymap-set eww-bookmark-mode-map "w" #'my-eww-bookmark-copy-url))
 
 (after! vertico
   (keymap-unset vertico-map "<backspace>" t) ;; undoom

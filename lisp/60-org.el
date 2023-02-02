@@ -2,8 +2,9 @@
 
 (require 'my-lib-external)
 
+(add-hook 'delve-mode-hook #'delve-compact-view-mode)
+(add-hook 'lister-mode-hook #'View-exit)
 (after! delve
-  (add-hook 'delve-mode-hook #'delve-compact-view-mode)
   ;; It normally inherits from org-roam-title, which I find too big
   (set-face-attribute 'delve-title-face () :inherit 'org-document-title))
 
@@ -11,48 +12,14 @@
 (after! org
   (remove-hook 'read-only-mode-hook 'doom-docs--toggle-read-only-h))
 ;; Crude but guaranteed to work
-(fset 'doom-docs-org-mode nil)
-(fset 'doom-docs--toggle-read-only-h nil)
+(fset 'doom-docs-org-mode #'ignore)
+(fset 'doom-docs--toggle-read-only-h #'ignore)
 
 (after! org
+  (org-recent-headings-mode)
   (setopt org-startup-folded 'fold)
   ;; Undoom. Having exactly two states makes for comfy toggling.
   (setopt org-todo-keywords '((sequence "TODO" "DONE"))))
-
-(defun my-md-export-hook (backend)
-  (when (eq backend 'md)
-    (let ((title (save-excursion
-                   (goto-char (point-min))
-                   (when (search-forward "#+title: " nil t)
-                     (buffer-substring (point) (line-end-position)))))
-          (planted-date (save-excursion
-                   (goto-char (point-min))
-                   (when (search-forward "#+date: " nil t)
-                     (buffer-substring (point) (line-end-position))))))
-      (when title
-        (save-excursion
-          (goto-char (point-min))
-          (re-search-forward (rx bol (not (any "#" ":"))))
-          (if (save-excursion (re-search-backward (rx bol "#+begin") (point-min) t))
-              (message "my-md-export-hook: not sure where I am, so not messing with output")
-            (goto-char (line-beginning-position))
-            (open-line 1)
-            (insert "#+BEGIN_EXPORT md")
-            (newline)
-            (insert "---")
-            (newline)
-            (insert "title: " title)
-            (newline)
-            (insert "date: " (format-time-string "%F"))
-            (newline)
-            (insert "---")
-            (newline)
-            (insert "#+END_EXPORT")
-            (when planted-date
-              (insert "Planted " planted-date))
-            (newline)))))))
-
-(add-hook 'org-export-before-processing-hook #'my-md-export-hook)
 
 (after! org-roam-node
   ;; Override the slug to use hyphens rather than underscores
@@ -123,14 +90,171 @@
 (when guix
   (add-to-list 'browse-url-chromium-arguments "--no-sandbox"))
 
+;; Modified version of `org-roam-node-slug'
+(defun my-slugify (title)
+    (let ((slug-trim-chars '(;; Combining Diacritical Marks https://www.unicode.org/charts/PDF/U0300.pdf
+                             768 ; U+0300 COMBINING GRAVE ACCENT
+                             769 ; U+0301 COMBINING ACUTE ACCENT
+                             770 ; U+0302 COMBINING CIRCUMFLEX ACCENT
+                             771 ; U+0303 COMBINING TILDE
+                             772 ; U+0304 COMBINING MACRON
+                             774 ; U+0306 COMBINING BREVE
+                             775 ; U+0307 COMBINING DOT ABOVE
+                             776 ; U+0308 COMBINING DIAERESIS
+                             777 ; U+0309 COMBINING HOOK ABOVE
+                             778 ; U+030A COMBINING RING ABOVE
+                             779 ; U+030B COMBINING DOUBLE ACUTE ACCENT
+                             780 ; U+030C COMBINING CARON
+                             795 ; U+031B COMBINING HORN
+                             803 ; U+0323 COMBINING DOT BELOW
+                             804 ; U+0324 COMBINING DIAERESIS BELOW
+                             805 ; U+0325 COMBINING RING BELOW
+                             807 ; U+0327 COMBINING CEDILLA
+                             813 ; U+032D COMBINING CIRCUMFLEX ACCENT BELOW
+                             814 ; U+032E COMBINING BREVE BELOW
+                             816 ; U+0330 COMBINING TILDE BELOW
+                             817 ; U+0331 COMBINING MACRON BELOW
+                             )))
+      (cl-flet* ((nonspacing-mark-p (char) (memq char slug-trim-chars))
+                 (strip-nonspacing-marks (s) (string-glyph-compose
+                                              (apply #'string
+                                                     (seq-remove #'nonspacing-mark-p
+                                                                 (string-glyph-decompose s)))))
+                 (cl-replace (title pair) (replace-regexp-in-string (car pair) (cdr pair) title)))
+        (let* ((pairs `(
+                        ("[[:space:]]+" . "-")
+                        ("[^[:alnum:][:digit:]+=-]" . "") ;; convert anything not alphanumeric
+                        ("--*" . "-")                  ;; remove sequential dashes
+                        ("^-" . "")                    ;; remove starting dash
+                        ("-$" . "")                    ;; remove ending dash
+                        ("-a-" . "-")
+                        ("-i-" . "-")
+                        ("-in-" . "-")
+                        ("-of-" . "-")
+                        ("-is-" . "-")
+                        ("-the-" . "-")
+                        ("-to-" . "-")
+                        ("-as-" . "-")
+                        ("-that-" . "-")
+                        ("-\\+-" . "+")
+                        ("-=-" . "=")
+                        ))
+               (slug (-reduce-from #'cl-replace (strip-nonspacing-marks title) pairs)))
+          (downcase slug)))))
 
-;; TODO: Rename the exported file as a Jekyll-compatible slug, so I don't need
-;; the original filename to be any particular way.
+;; (my-slugify "A/B testing")
+;; (my-slugify "No one can feel a probability that small")
+;; (my-slugify "\"But there's still a chance, right?\"")
+;; (my-slugify "Löb's Theorem")
+;; (my-slugify "How to convince me that 2 + 2 = 3")
+;; (my-slugify "C. S. Peirce")
+;; (my-slugify "Do one thing at a time")
+
+;(dolist (backlink (org-roam-backlinks-get (org-roam-node-at-point)
+;                                          :unique t))
+;  (let ((source (org-roam-backlink-source-node backlink))))
+;  (org-roam-node-title
+;   (org-roam-backlink-source-node backlink)))
+
+(defun my-rename-roam-file-by-title (&optional path title)
+  (interactive)
+  (unless path
+    (setq path (buffer-file-name)))
+  (unless (equal ".org" (file-name-extension path))
+    (error "Unexpected that file doesn't end in .org, halting on: %s" path))
+  (unless title
+    (with-temp-buffer
+      (insert-file-contents path)
+      (let ((case-fold-search t))
+        (setq title (save-excursion
+                      (goto-char (point-min))
+                      (when (search-forward "#+title: " nil t)
+                        (buffer-substring (point) (line-end-position))))))))
+  (let* ((filename-preamble
+          (when (string-match-p (rx (= 4 digit) "-" (= 2 digit) "-" (= 2 digit))
+                                (file-name-nondirectory path))
+            (substring (file-name-nondirectory path) 0 10)))
+         (slugified-path (concat (file-name-directory path)
+                                 filename-preamble
+                                 "-"
+                                 (my-slugify title)
+                                 ".org"))
+         (visiting (find-buffer-visiting path)))
+    (unless (equal slugified-path path)
+      (if (and visiting (buffer-modified-p visiting))
+          (message "Unsaved file, letting it be: %s" path)
+        (when visiting
+          (kill-buffer visiting))
+        (and (file-writable-p path)
+             (file-writable-p slugified-path)
+             (rename-file path slugified-path))
+        (when visiting
+          (find-file slugified-path))))))
+
+;; Struggled so long looking for a hook that would work like the old
+;; before-export-hook.  Let this be a lesson.  We never actually need there to
+;; exist before-hooks or after-hooks, since it is always possible to use
+;; add-function or write a wrapper like this.  The hook system exists to let you
+;; subtly modify a function in the middle of its body.
+(defun my-publish-to-blog (plist filename pub-dir)
+  (my-rename-roam-file-by-title filename)
+  (with-temp-buffer
+    (insert-file-contents filename)
+    (let* ((case-fold-search t)
+           (title (save-excursion
+                   (goto-char (point-min))
+                   (when (search-forward "#+title: " nil t)
+                     (buffer-substring (point) (line-end-position)))))
+          (planted-date (save-excursion
+                          (goto-char (point-min))
+                          (when (search-forward "#+date: " nil t)
+                            (buffer-substring (point) (line-end-position)))))
+          (org-html-extension ""))
+      (org-publish-org-to 'html filename org-html-extension plist pub-dir)
+      ;; Add title into the finished HTML, as a <h1> element.
+      (when title
+        ;; Some logic borrowed from `org-publish-org-to' 2023-02-02
+        (let* ((org-inhibit-startup t)
+               (visiting (find-buffer-visiting filename))
+               (work-buffer (or visiting (find-file-noselect filename))))
+          (unwind-protect
+              (with-current-buffer work-buffer
+                (let* ((output (org-export-output-file-name org-html-extension nil pub-dir))
+                       (output-buf (find-buffer-visiting output)))
+                  (when output-buf
+                    (unless (buffer-modified-p output-buf)
+                      (kill-buffer output-buf)))
+                  (with-temp-file output
+                    (insert "<h1>" title "</h1>")
+                    (when planted-date
+                      (newline)
+                      (insert "<p>Planted " planted-date "</p>"))
+                    (newline)
+                    (insert-file-contents output))))
+            (unless visiting (kill-buffer work-buffer))))))))
+
+(setopt org-html-checkbox-type 'unicode)
 (setopt org-publish-project-alist
+        ;; TODO: Rename the exported file as a Jekyll-compatible slug, so I don't need
+        ;; the original filename to be any particular way.
         '(("blag"
            :base-directory "/home/kept/roam/blog/"
            :publishing-directory "/home/kept/blog/meedstrom.github.io/_posts/"
            :publishing-function org-md-publish-to-md
+           )
+          ("react-blog"
+           :base-directory "/home/kept/roam/"
+           :publishing-directory "/home/kept/blog/baz/baz-backend/posts/"
+           :publishing-function my-publish-to-blog
+           :recursive t
+           :preparation-function (lambda (_)
+                                   (setopt org-export-use-babel nil)
+                                   )
+           :completion-function (lambda (_) (setopt org-export-use-babel t))
+           :with-toc nil
+           :body-only t
+           :exclude "daily/"
+           :exclude-tags ("noexport" "private" "personal" "censor")
            )))
 
 ;; (setopt org-agenda-prefix-format '((agenda . " %i %-12:c%?-12t% s")
@@ -147,8 +271,8 @@
 (setopt org-agenda-files '("/home/kept/archive/journal/diary.org"
                            ;; to always cache the org-id locations
                            "/home/kept/emacs/conf-doom/elfeed.org"
-                           "/home/kept/roam/gtd.org"
-                           "/home/kept/roam/2021-08-27-someday_maybe.org"))
+                           "/home/kept/roam/"
+                           "/home/sync-phone/beorg/"))
 
 ;; (setopt org-archive-location "/home/kept/archive/journal/diary.org::datetree/")
 (setopt org-archive-save-context-info '(time file itags olpath))
@@ -174,7 +298,7 @@
 ;; (setopt org-latex-compiler "xelatex") ; allow unicode (åäö) in VERBATIM blocks
 (setopt org-log-done 'time)
 (setopt org-log-into-drawer t) ; hide spam
-(setopt org-modules '(org-id ol-info))
+(setopt org-modules '(org-id ol-info ol-eww)) ;;org-eww-copy-for-org-mode
 (setopt org-pretty-entities t)
 (setopt org-use-speed-commands t)
 (setopt org-clock-x11idle-program-name (or (executable-find "xprintidle") "x11idle"))
@@ -204,6 +328,8 @@
   )
 
 (after! org
+  (require 'org-protocol) ;; for org capture from firefox
+
   (require 'named-timer) ;; an indispensable 70-line library
   (named-timer-run :my-clock-reminder nil 600
                    (defun my-clock-remind ()
@@ -280,9 +406,18 @@ to the new note in the \"timeline\" note."
            "* \[%<%Y-%m-%d %T>\]
 :PROPERTIES:
 :ID:  %(org-id-uuid)
-:DATE: \[%<%Y-%m-%d>\]\n
 :END:
-%?")
+:DATE: \[%<%Y-%m-%d>\]
+%i%?
+%a")
+          (";" "firefox capture" plain
+           (file "/tmp/captures.org")
+           "* %a
+:PROPERTIES:
+:ID:  %(org-id-uuid)
+:END:
+:DATE: \[%<%Y-%m-%d>\]
+%i%?")
 
           ("e" "Emacs idea" entry (file+headline "/home/kept/roam/2021-08-27-someday_maybe.org" "Ideas"))
           ("q" "Statistics question" entry (file+headline "/home/kept/roam/stats.org" "Questions"))
