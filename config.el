@@ -4,6 +4,7 @@
 ;; `directory-files' FULL argument, so when init breaks, the error messages
 ;; print the full path to the broken file and I can `ffap' my way to it.
 (let ((load-prefer-newer t))
-  (dolist (module (directory-files (concat (getenv "DOOMDIR") "/lisp/") t "^[0-9].+el$"))
+  (dolist (module (directory-files (concat (getenv "DOOMDIR") t "^[0-9].+el$")))
+    ;; Syncthing sometimes produces sync-conflict backups, don't load them
     (unless (string-search ".sync-conflict" module)
       (load module))))
