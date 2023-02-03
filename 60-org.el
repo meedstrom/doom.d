@@ -22,45 +22,10 @@
   (setopt org-todo-keywords '((sequence "TODO" "DONE"))))
 
 (after! org-roam-node
-  ;; Override the slug to use hyphens rather than underscores
+  ;; Use my own slug style
   (cl-defmethod org-roam-node-slug ((node org-roam-node))
     "Return the slug of NODE."
-    (let ((title (org-roam-node-title node))
-          (slug-trim-chars '(;; Combining Diacritical Marks https://www.unicode.org/charts/PDF/U0300.pdf
-                             768 ; U+0300 COMBINING GRAVE ACCENT
-                             769 ; U+0301 COMBINING ACUTE ACCENT
-                             770 ; U+0302 COMBINING CIRCUMFLEX ACCENT
-                             771 ; U+0303 COMBINING TILDE
-                             772 ; U+0304 COMBINING MACRON
-                             774 ; U+0306 COMBINING BREVE
-                             775 ; U+0307 COMBINING DOT ABOVE
-                             776 ; U+0308 COMBINING DIAERESIS
-                             777 ; U+0309 COMBINING HOOK ABOVE
-                             778 ; U+030A COMBINING RING ABOVE
-                             779 ; U+030B COMBINING DOUBLE ACUTE ACCENT
-                             780 ; U+030C COMBINING CARON
-                             795 ; U+031B COMBINING HORN
-                             803 ; U+0323 COMBINING DOT BELOW
-                             804 ; U+0324 COMBINING DIAERESIS BELOW
-                             805 ; U+0325 COMBINING RING BELOW
-                             807 ; U+0327 COMBINING CEDILLA
-                             813 ; U+032D COMBINING CIRCUMFLEX ACCENT BELOW
-                             814 ; U+032E COMBINING BREVE BELOW
-                             816 ; U+0330 COMBINING TILDE BELOW
-                             817 ; U+0331 COMBINING MACRON BELOW
-                             )))
-      (cl-flet* ((nonspacing-mark-p (char) (memq char slug-trim-chars))
-                 (strip-nonspacing-marks (s) (string-glyph-compose
-                                              (apply #'string
-                                                     (seq-remove #'nonspacing-mark-p
-                                                                 (string-glyph-decompose s)))))
-                 (cl-replace (title pair) (replace-regexp-in-string (car pair) (cdr pair) title)))
-        (let* ((pairs `(("[^[:alnum:][:digit:]]" . "-") ;; convert anything not alphanumeric
-                        ("--*" . "-")                   ;; remove sequential dashes
-                        ("^-" . "")                     ;; remove starting dash
-                        ("-$" . "")))                   ;; remove ending dash
-               (slug (-reduce-from #'cl-replace (strip-nonspacing-marks title) pairs)))
-          (downcase slug))))))
+    (my-slugify (org-roam-node-title node))))
 
 (add-hook 'org-roam-buffer-postrender-functions #'magit-section-show-level-2)
 (setopt org-roam-directory "/home/kept/roam/")
@@ -73,7 +38,6 @@
 ;; See also C-h d m :tools biblio
 (setopt citar-bibliography '("/home/kept/roam/refs/library_biblatex.bib"))
 
-
 (add-hook 'org-noter-notes-mode-hook #'abbrev-mode)
 (add-hook 'org-noter-notes-mode-hook (l'rainbow-delimiters-mode 0))
 (add-hook 'org-mode-hook #'my-org-prettify)
@@ -82,7 +46,6 @@
 ;;(add-hook 'org-mode-hook #'org-clock-persistence-insinuate)
 (add-hook 'org-clock-in-hook #'org-clock-save)
 (add-hook 'text-mode-hook (defun my-kill-smartparens () (smartparens-mode 0)))
-
 
 ;; see Org-roam UI in Chromium's kiosk mode
 (setopt browse-url-chromium-arguments '("--app=http://localhost:35901"))
@@ -123,19 +86,21 @@
                  (cl-replace (title pair) (replace-regexp-in-string (car pair) (cdr pair) title)))
         (let* ((pairs `(
                         ("[[:space:]]+" . "-")
-                        ("[^[:alnum:][:digit:]+=-]" . "") ;; convert anything not alphanumeric
-                        ("--*" . "-")                  ;; remove sequential dashes
-                        ("^-" . "")                    ;; remove starting dash
-                        ("-$" . "")                    ;; remove ending dash
+                        ("[^[:alnum:][:digit:]+=-]" . "")
+                        ("--*" . "-")                  
+                        ("^-" . "")
+                        ("-$" . "")
                         ("-a-" . "-")
+                        ("-the-" . "-")
                         ("-i-" . "-")
                         ("-in-" . "-")
                         ("-of-" . "-")
                         ("-is-" . "-")
-                        ("-the-" . "-")
                         ("-to-" . "-")
                         ("-as-" . "-")
                         ("-that-" . "-")
+                        ("-are-" . "-")
+                        ("-you-" . "-")
                         ("-\\+-" . "+")
                         ("-=-" . "=")
                         ))
@@ -143,24 +108,20 @@
           (downcase slug)))))
 
 ;; (my-slugify "A/B testing")
+;; (my-slugify "Someday/Maybe whale carcass")
 ;; (my-slugify "No one can feel a probability that small")
 ;; (my-slugify "\"But there's still a chance, right?\"")
 ;; (my-slugify "Löb's Theorem")
 ;; (my-slugify "How to convince me that 2 + 2 = 3")
 ;; (my-slugify "C. S. Peirce")
 ;; (my-slugify "Do one thing at a time")
-
-;(dolist (backlink (org-roam-backlinks-get (org-roam-node-at-point)
-;                                          :unique t))
-;  (let ((source (org-roam-backlink-source-node backlink))))
-;  (org-roam-node-title
-;   (org-roam-backlink-source-node backlink)))
+;; (my-slugify "Are you losing items in recentf, bookmarks, org-id-locations? Solution: Run kill-emacs-hook periodically.")
 
 (defun my-rename-roam-file-by-title (&optional path title)
   (interactive)
   (unless path
     (setq path (buffer-file-name)))
-  (unless (equal ".org" (file-name-extension path))
+  (unless (equal "org" (file-name-extension path))
     (error "Unexpected that file doesn't end in .org, halting on: %s" path))
   (unless title
     (with-temp-buffer
@@ -191,13 +152,33 @@
         (when visiting
           (find-file slugified-path))))))
 
+(add-hook 'org-export-before-parsing-functions #'my-add-backlinks-if-roam)
+
+(defun my-add-backlinks-if-roam (&rest _)
+  (when (ignore-errors (org-roam-node-at-point))
+    (let ((backlinks nil))
+      (dolist (obj (org-roam-backlinks-get (org-roam-node-at-point)
+                                           :unique t))
+        (let ((node (org-roam-backlink-source-node obj)))
+          (cl-pushnew (cons (org-roam-node-id node) (org-roam-node-title node)) backlinks)))
+      (when backlinks
+        (if (bobp)
+            (progn
+              (goto-char (point-max))
+              (insert "* What links here"))
+          (org-insert-subheading nil)
+          (insert "What links here"))
+        (dolist (backlink backlinks)
+          (newline)
+          (insert "- [[id:" (car backlink) "][" (cdr backlink) "]]"))))))
+
 ;; Struggled so long looking for a hook that would work like the old
 ;; before-export-hook.  Let this be a lesson.  We never actually need there to
 ;; exist before-hooks or after-hooks, since it is always possible to use
 ;; add-function or write a wrapper like this.  The hook system exists to let you
 ;; subtly modify a function in the middle of its body.
 (defun my-publish-to-blog (plist filename pub-dir)
-  (my-rename-roam-file-by-title filename)
+  ;; (my-rename-roam-file-by-title filename)
   (with-temp-buffer
     (insert-file-contents filename)
     (let* ((case-fold-search t)
@@ -210,6 +191,7 @@
                           (when (search-forward "#+date: " nil t)
                             (buffer-substring (point) (line-end-position)))))
           (org-html-extension ""))
+
       (org-publish-org-to 'html filename org-html-extension plist pub-dir)
       ;; Add title into the finished HTML, as a <h1> element.
       (when title
@@ -230,7 +212,11 @@
                       (newline)
                       (insert "<p>Planted " planted-date "</p>"))
                     (newline)
-                    (insert-file-contents output))))
+                    (insert-file-contents output)
+                    (goto-char (point-max))
+                    (when (search-backward "What links here<" nil t)
+                      (goto-char (line-beginning-position))
+                      (replace-string "h2" "h1" t (point) (line-end-position))))))
             (unless visiting (kill-buffer work-buffer))))))))
 
 (setopt org-html-checkbox-type 'unicode)
@@ -247,13 +233,13 @@
            :publishing-directory "/home/kept/blog/baz/baz-backend/posts/"
            :publishing-function my-publish-to-blog
            :recursive t
-           :preparation-function (lambda (_)
-                                   (setopt org-export-use-babel nil)
-                                   )
+           :preparation-function (lambda (_) (setopt org-export-use-babel nil))
            :completion-function (lambda (_) (setopt org-export-use-babel t))
            :with-toc nil
+           :section-numbers nil
            :body-only t
            :exclude "daily/"
+           ;; this does not work! because filetag?
            :exclude-tags ("noexport" "private" "personal" "censor")
            )))
 
@@ -291,7 +277,6 @@
 (setopt org-datetree-add-timestamp t)
 (setopt org-edit-src-content-indentation 0)
 (setopt org-ellipsis "⤵")
-(setopt org-export-creator-string "")
 (setopt org-hide-emphasis-markers t) ; hide the *, =, and / markers
 (setopt org-image-actual-width '(200)) ; use #ATTR if available, else 200 px
 (setopt org-insert-heading-respect-content t)
@@ -359,7 +344,7 @@ to the new note in the \"timeline\" note."
                             " ("
                             (read-string "Years of birth and death (YYYY--YYYY)")
                             ")"))
-  "#+title: ${title}\n#+date: \[%<%Y-%m-%d>\]\n#+filetags: :person:stub:\n")
+  "#+title: ${title}\n#+filetags: :person:stub:\n#+date: \[%<%Y-%m-%d>\]\n")
 
 (after! org-roam
   (add-hook 'doom-load-theme-hook
@@ -370,14 +355,14 @@ to the new note in the \"timeline\" note."
   (setopt org-roam-capture-templates
         `(("d" "default" plain "%?" :if-new
            (file+head "%<%Y-%m-%d>-${slug}.org"
-                      "#+title: ${title}\n#+date: \[%<%Y-%m-%d>\]\n#+filetags: :stub:\n")
+                      "#+title: ${title}\n#+filetags: :stub:\n#+date: \[%<%Y-%m-%d>\]\n")
            :unnarrowed t
            :immediate-finish t
            :jump-to-captured t)
 
           ("i" "instantly create this node" plain "%?" :if-new
            (file+head "%<%Y-%m-%d>-${slug}.org"
-                      "#+title: ${title}\n#+date: \[%<%Y-%m-%d>\]\n#+filetags: :stub:\n")
+                      "#+title: ${title}\n#+filetags: :stub:\n#+date: \[%<%Y-%m-%d>\]\n")
            :unnarrowed t
            :immediate-finish t)
           

@@ -224,7 +224,8 @@
 ;;   (circadian-setup))
 
 (defvar my-auto-commit-dirs
-  '("/home/kept/roam/"))
+  '("/home/kept/roam/"
+    "/home/kept/emacs/conf-doom/"))
 
 (defun my-auto-commit-maybe ()
   "Create a new commit if the last was on a different day.
@@ -243,7 +244,7 @@ Suitable on `after-save-hook'."
                              "git" "log" "-n" "1" "--pretty=format:%cs")))
       (if (string-search "Fatal" last-commit-date)
           (message "Git failed, probably not a Git repo: %s" default-directory)
-        ;; Special case for new Org-Roam nodes
+        ;; Special case for new Org-Roam nodes: auto-stage them
         (and (equal "org" (file-name-extension (buffer-file-name)))
              (or (string-search "/home/kept/roam" default-directory)
                  (string-search "/home/sync-phone/beorg" default-directory))
