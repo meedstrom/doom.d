@@ -223,16 +223,66 @@
 ;;                            ("18:00"  . doom-storage-tube-amber-2)))
 ;;   (circadian-setup))
 
+(defvar my-auto-commit-dirs
+  '("/home/kept/roam/"))
+
 (defun my-auto-commit-maybe ()
-  (interactive) ;; for testing
+  "Create a new commit if the last was on a different day.
+Otherwise just amend today's commit.
+
+Do nothing if
+- there are untracked files
+- the repo root directory is not one of those in `my-auto-commit-dirs'
+
+Suitable on `after-save-hook'."
   (require 'ts)
-  (let ((last-commit-time (ts-parse
-                           (my-process-output-to-string
-                            "git" "log" "-n" "1" "--pretty=format:%cI"))))
-    ;; (float-time (time-since (parse-time-string last-commit-time)))
-    (if (> (ts-diff (ts-now) last-commit-time) 86400)
-        // New day, new commit
-        (magit-commit-create "--all" "-m" "Auto-commit")
-      (magit-commit-amend)
-    )
-  ))
+  (require 'project)
+  (when (and (project-current)
+             (member (project-root (project-current)) my-auto-commit-dirs))
+    (let ((last-commit-date (my-process-output-to-string
+                             "git" "log" "-n" "1" "--pretty=format:%cs")))
+      (if (string-search "Fatal" last-commit-date)
+          (message "Git failed, probably not a Git repo: %s" default-directory)
+        ;; Special case for new Org-Roam nodes
+        (and (equal "org" (file-name-extension (buffer-file-name)))
+             (or (string-search "/home/kept/roam" default-directory)
+                 (string-search "/home/sync-phone/beorg" default-directory))
+          (magit-run-git "add" (buffer-file-name)))
+        (if (magit-untracked-files)
+            (message "Won't auto-commit.  Stage untracked files or edit .gitignore")
+          (if (equal last-commit-date (format-time-string "%F"))
+              (magit-commit-amend '("--all" "--reuse-message=HEAD"))
+            ;; New day, new commit
+            (magit-commit-create '("--all" "--message=Auto-commit"))
+            ))))))
+
+(add-hook 'after-save-hook #'my-auto-commit-maybe)
+
+;; It's insane to put data-syncs on kill-emacs-hook.  Most of the time my emacs
+;; goes down, it happens in a non-clean way -- why would I intentionally shut
+;; off Emacs if everything is fine?  The result is that lots of data is gone
+;; every time I start Emacs: I can't find org notes by org-id, recentf
+;; suffers partial amnesia, and so on.  This has been annoying me for years.
+(defun my-write-data ()
+  "Write histories and caches to disk.
+This runs many members of `kill-emacs-hook' so we don't have to
+wait for that hook.  You may put this on a repeating timer."
+  (let ((hooks (seq-intersection
+                ;; any more items of interest in your `kill-emacs-hook', add them here
+                #'(bookmark-exit-hook-internal
+                   savehist-autosave
+                   transient-maybe-save-history
+                   org-recent-headings--save-list
+                   org-persist-gc
+                   org-persist-write-all
+                   org-id-locations-save
+                   save-place-kill-emacs-hook
+                   recentf-save-list
+                   recentf-cleanup
+                   doom-cleanup-project-cache-h
+                   doom-persist-scratch-buffers-h)
+                kill-emacs-hook)))
+    (run-hooks 'hooks)))
+
+;; Run after 3 minutes of idle.
+(setq my-write-data-timer (run-with-idle-timer (* 3 60) t #'my-write-data))
