@@ -189,7 +189,7 @@
           (planted-date (save-excursion
                           (goto-char (point-min))
                           (when (search-forward "#+date: " nil t)
-                            (buffer-substring (point) (line-end-position)))))
+                            (buffer-substring (1+ (point)) (1- (line-end-position))))))
           (org-html-extension ""))
 
       (org-publish-org-to 'html filename org-html-extension plist pub-dir)
@@ -202,22 +202,46 @@
           (unwind-protect
               (with-current-buffer work-buffer
                 (let* ((output (org-export-output-file-name org-html-extension nil pub-dir))
-                       (output-buf (find-buffer-visiting output)))
+                       (output-buf (find-buffer-visiting output))
+                       (was-opened nil)
+                       (relative-slug (replace-regexp-in-string "^.*/posts/" "" output)))
                   (when output-buf
+                    (setq was-opened t)
                     (unless (buffer-modified-p output-buf)
                       (kill-buffer output-buf)))
                   (with-temp-file output
-                    (insert "<h1>" title "</h1>")
+                    ;; JSON
+                    (insert "{  slug: '" relative-slug "',")
+                    (insert "\n  title: '" title "',")
                     (when planted-date
-                      (newline)
-                      (insert "<p>Planted " planted-date "</p>"))
-                    (newline)
+                      (insert "\n   date: '" planted-date "',"))
+                    (insert "\n  content: '")
+                    (setq content-start-pos (point))
+
+                    ;; Content
+                    (insert "<!-- " relative-slug " -->")
+                    (insert "\n<h1>" title "</h1>")
+                    (when planted-date
+                      (insert "\n<p>Planted " planted-date "</p>"))
                     (insert-file-contents output)
                     (goto-char (point-max))
                     (when (search-backward "What links here<" nil t)
                       (goto-char (line-beginning-position))
-                      (replace-string "h2" "h1" t (point) (line-end-position))))))
-            (unless visiting (kill-buffer work-buffer))))))))
+                      (while (search-forward "h2" (line-end-position) t)
+                        (replace-match "h1" nil t)))
+
+                    ;; JSON again
+                    (goto-char content-start-pos)
+                    ;; Unnecessary because Org produces &rsquo; anyway, but it
+                    ;; doesn't hurt to keep this logic.
+                    (while (search-forward "'" nil t)
+                      (replace-match "\\'" nil t))
+                    (goto-char (point-max))
+                    (insert "' }"))
+                  (when was-opened
+                    (find-file-noselect output))))
+            (unless visiting (kill-buffer work-buffer))
+            ))))))
 
 (setopt org-html-checkbox-type 'unicode)
 (setopt org-publish-project-alist
