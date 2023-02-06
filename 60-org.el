@@ -90,17 +90,17 @@
                         ("--*" . "-")                  
                         ("^-" . "")
                         ("-$" . "")
-                        ("-a-" . "-")
-                        ("-the-" . "-")
-                        ("-i-" . "-")
-                        ("-in-" . "-")
-                        ("-of-" . "-")
-                        ("-is-" . "-")
-                        ("-to-" . "-")
-                        ("-as-" . "-")
-                        ("-that-" . "-")
-                        ("-are-" . "-")
-                        ("-you-" . "-")
+                        ;; ("-a-" . "-")
+                        ;; ("-the-" . "-")
+                        ;; ("-i-" . "-")
+                        ;; ("-in-" . "-")
+                        ;; ("-of-" . "-")
+                        ;; ("-is-" . "-")
+                        ;; ("-to-" . "-")
+                        ;; ("-as-" . "-")
+                        ;; ("-that-" . "-")
+                        ;; ("-are-" . "-")
+                        ;; ("-you-" . "-")
                         ("-\\+-" . "+")
                         ("-=-" . "=")
                         ))
@@ -172,6 +172,74 @@
           (newline)
           (insert "- [[id:" (car backlink) "][" (cdr backlink) "]]"))))))
 
+
+(defun my-publish-to-blog (plist filename pub-dir)
+  ;; (my-rename-roam-file-by-title filename)
+  (with-temp-buffer
+    (insert-file-contents filename)
+    (let* ((case-fold-search t)
+           (title (save-excursion
+                    (goto-char (point-min))
+                    (when (search-forward "#+title: " nil t)
+                      (buffer-substring (point) (line-end-position)))))
+           (planted-date (save-excursion
+                   (goto-char (point-min))
+                   (when (search-forward "#+date: " nil t)
+                     (buffer-substring (1+ (point)) (1- (line-end-position))))))
+           (org-html-extension ""))
+
+      ;; Black box
+      (org-publish-org-to 'html filename org-html-extension plist pub-dir)
+
+      ;; Some logic borrowed from `org-publish-org-to' 2023-02-02
+      (let* ((org-inhibit-startup t)
+             (visiting (find-buffer-visiting filename))
+             (work-buffer (or visiting (find-file-noselect filename))))
+        (unwind-protect
+            (with-current-buffer work-buffer
+              (let* ((output (org-export-output-file-name org-html-extension nil pub-dir))
+                     (output-buf (find-buffer-visiting output))
+                     (was-opened nil)
+                     (relative-slug (replace-regexp-in-string "^.*/posts/" "" output))
+                     (data `((slug . ,relative-slug)
+                             (title . ,title)
+                             (date . ,planted-date)
+                             (content . nil))))
+                (unless (and title planted-date)
+                  (delete-file output)
+                  (message "FILE LACKING TITLE OR DATE: %s" output))
+                ;; This file has no body because it met :exclude-tags, idk why it gets created
+                (if (= 0 (doom-file-size output))
+                    (progn
+                      (delete-file output)
+                      (message "File deleted because empty: %s" output))
+                  (when (and title planted-date)
+                    (when output-buf
+                      (setq was-opened t)
+                      (unless (buffer-modified-p output-buf)
+                        (kill-buffer output-buf)))
+                    (with-temp-file output
+                      (insert
+                       (with-temp-buffer
+                         (insert "\n<h1>" title "</h1>")
+                         (insert "\n<p>Planted " planted-date "</p>")
+                         (insert-file-contents output)
+
+                         ;; Adjust the result from `my-add-backlinks-if-roam'
+                         (goto-char (point-max))
+                         (when (search-backward "What links here<" nil t)
+                           (goto-char (line-beginning-position))
+                           (while (search-forward "h2" (line-end-position) t)
+                             (replace-match "h1" nil t)))
+
+                         (setf (alist-get 'content data) (buffer-string))
+                         (json-encode data))))
+                    (when was-opened
+                      (find-file-noselect output))))))
+          (unless visiting (kill-buffer work-buffer))))
+      )))
+
+
 ;; Struggled so long looking for a hook that would work like the old
 ;; before-export-hook.  Let this be a lesson.  We never actually need there to
 ;; exist before-hooks or after-hooks, since it is always possible to use
@@ -183,67 +251,81 @@
     (insert-file-contents filename)
     (let* ((case-fold-search t)
            (title (save-excursion
+                    (goto-char (point-min))
+                    (when (search-forward "#+title: " nil t)
+                      (buffer-substring (point) (line-end-position)))))
+           (date (save-excursion
                    (goto-char (point-min))
-                   (when (search-forward "#+title: " nil t)
-                     (buffer-substring (point) (line-end-position)))))
-          (planted-date (save-excursion
-                          (goto-char (point-min))
-                          (when (search-forward "#+date: " nil t)
-                            (buffer-substring (1+ (point)) (1- (line-end-position))))))
-          (org-html-extension ""))
+                   (when (search-forward "#+date: " nil t)
+                     (buffer-substring (1+ (point)) (1- (line-end-position))))))
+           (org-html-extension ""))
 
       (org-publish-org-to 'html filename org-html-extension plist pub-dir)
-      ;; Add title into the finished HTML, as a <h1> element.
-      (when title
-        ;; Some logic borrowed from `org-publish-org-to' 2023-02-02
-        (let* ((org-inhibit-startup t)
-               (visiting (find-buffer-visiting filename))
-               (work-buffer (or visiting (find-file-noselect filename))))
-          (unwind-protect
-              (with-current-buffer work-buffer
-                (let* ((output (org-export-output-file-name org-html-extension nil pub-dir))
-                       (output-buf (find-buffer-visiting output))
-                       (was-opened nil)
-                       (relative-slug (replace-regexp-in-string "^.*/posts/" "" output)))
-                  (when output-buf
-                    (setq was-opened t)
-                    (unless (buffer-modified-p output-buf)
-                      (kill-buffer output-buf)))
-                  (with-temp-file output
-                    ;; JSON
-                    (insert "{  slug: '" relative-slug "',")
-                    (insert "\n  title: '" title "',")
-                    (when planted-date
-                      (insert "\n   date: '" planted-date "',"))
-                    (insert "\n  content: '")
-                    (setq content-start-pos (point))
 
-                    ;; Content
-                    (insert "<!-- " relative-slug " -->")
-                    (insert "\n<h1>" title "</h1>")
-                    (when planted-date
-                      (insert "\n<p>Planted " planted-date "</p>"))
-                    (insert-file-contents output)
-                    (goto-char (point-max))
-                    (when (search-backward "What links here<" nil t)
-                      (goto-char (line-beginning-position))
-                      (while (search-forward "h2" (line-end-position) t)
-                        (replace-match "h1" nil t)))
+      ;; Some logic borrowed from `org-publish-org-to' 2023-02-02
+      (let* ((org-inhibit-startup t)
+             (visiting (find-buffer-visiting filename))
+             (work-buffer (or visiting (find-file-noselect filename))))
+        (unwind-protect
+            (with-current-buffer work-buffer
+              (let* ((output (org-export-output-file-name org-html-extension nil pub-dir))
+                     (output-buf (find-buffer-visiting output))
+                     (was-opened nil)
+                     (relative-slug (replace-regexp-in-string "^.*/posts/" "" output)))
+                (unless (and title date)
+                  (delete-file output)
+                  (message "FILE LACKING TITLE OR DATE: %s" output))
+                ;; This file has no body because it met :exclude-tags, idk why it gets created
+                (if (= 0 (doom-file-size output))
+                    (progn
+                      (delete-file output)
+                      (message "File deleted because empty: %s" output))
+                  (when (and title date)
+                    (when output-buf
+                      (setq was-opened t)
+                      (unless (buffer-modified-p output-buf)
+                        (kill-buffer output-buf)))
+                    ;; Hand-craft a JSON object.  Apparently, Elisp's
+                    ;; `json-encode' doesn't escape quotes enough for
+                    ;; javascript's JSON.parse() to understand (the latter
+                    ;; seems shitty overall with shitty error messages).
+                    (with-temp-file output
+                      ;; JSON
+                      (insert "  {")
+                      (insert "\n    \"slug\": \"" relative-slug "\",")
+                      (insert "\n    \"title\": \"" (string-replace "\"" "\\\"" title) "\",")
+                      (insert "\n    \"date\": \"" date "\",")
+                      (insert "\n    \"content\": \"")
+                      (setq content-start-pos (point))
 
-                    ;; JSON again
-                    (goto-char content-start-pos)
-                    ;; Unnecessary because Org produces &rsquo; anyway, but it
-                    ;; doesn't hurt to keep this logic.
-                    (while (search-forward "'" nil t)
-                      (replace-match "\\'" nil t))
-                    (goto-char (point-max))
-                    (insert "' }"))
-                  (when was-opened
-                    (find-file-noselect output))))
-            (unless visiting (kill-buffer work-buffer))
-            ))))))
+                      ;; Content
+                      (insert "\n<h1>" title "</h1>")
+                      (insert "\n<p>Planted " date "</p>")
+                      (insert-file-contents output)
+                      
+                      ;; Adjust the result from `my-add-backlinks-if-roam'
+                      (goto-char (point-max))
+                      (when (search-backward "What links here<" nil t)
+                        (goto-char (line-beginning-position))
+                        (while (search-forward "h2" (line-end-position) t)
+                          (replace-match "h1" nil t)))
 
-(setopt org-html-checkbox-type 'unicode)
+                      ;; JSON again
+                      (goto-char content-start-pos)
+                      (while (search-forward "
+" nil t)
+                        (replace-match "\\n" nil t))
+                      (goto-char content-start-pos)
+                      (while (search-forward "\"" nil t)
+                        (replace-match "\\\\\\\"" nil t))
+                      (goto-char (point-max))
+                      (insert "\"\n  }"))
+                    (when was-opened
+                      (find-file-noselect output))))))
+          (unless visiting (kill-buffer work-buffer))))
+      )))
+
+(setopt org-html-checkbox-type 'html)
 (setopt org-publish-project-alist
         ;; TODO: Rename the exported file as a Jekyll-compatible slug, so I don't need
         ;; the original filename to be any particular way.
