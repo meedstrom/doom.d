@@ -173,7 +173,7 @@
           (insert "- [[id:" (car backlink) "][" (cdr backlink) "]]"))))))
 
 
-(defun my-publish-to-blog (plist filename pub-dir)
+(defun my-publish-to-blog2 (plist filename pub-dir)
   ;; (my-rename-roam-file-by-title filename)
   (with-temp-buffer
     (insert-file-contents filename)
@@ -251,18 +251,19 @@
     (insert-file-contents filename)
     (let* ((case-fold-search t)
            (title (save-excursion
-                    (goto-char (point-min))
                     (when (search-forward "#+title: " nil t)
                       (buffer-substring (point) (line-end-position)))))
            (date (save-excursion
-                   (goto-char (point-min))
                    (when (search-forward "#+date: " nil t)
                      (buffer-substring (1+ (point)) (1- (line-end-position))))))
+           (wordcount (save-excursion
+                        (re-search-forward "^[^#:\n]" nil t)
+                        (count-words (point) (point-max))))
            (org-html-extension ""))
 
       (org-publish-org-to 'html filename org-html-extension plist pub-dir)
 
-      ;; Some logic borrowed from `org-publish-org-to' 2023-02-02
+      ;; Some modified logic from `org-publish-org-to' that was pasted on 2023-02-02
       (let* ((org-inhibit-startup t)
              (visiting (find-buffer-visiting filename))
              (work-buffer (or visiting (find-file-noselect filename))))
@@ -272,58 +273,76 @@
                      (output-buf (find-buffer-visiting output))
                      (was-opened nil)
                      (relative-slug (replace-regexp-in-string "^.*/posts/" "" output)))
-                (unless (and title date)
-                  (delete-file output)
-                  (message "FILE LACKING TITLE OR DATE: %s" output))
-                ;; This file has no body because it met :exclude-tags, idk why it gets created
-                (if (= 0 (doom-file-size output))
-                    (progn
-                      (delete-file output)
-                      (message "File deleted because empty: %s" output))
-                  (when (and title date)
-                    (when output-buf
-                      (setq was-opened t)
-                      (unless (buffer-modified-p output-buf)
-                        (kill-buffer output-buf)))
-                    ;; Hand-craft a JSON object.  Apparently, Elisp's
-                    ;; `json-encode' doesn't escape quotes enough for
-                    ;; javascript's JSON.parse() to understand (the latter
-                    ;; seems shitty overall with shitty error messages).
-                    (with-temp-file output
-                      ;; JSON
-                      (insert "  {")
-                      (insert "\n    \"slug\": \"" relative-slug "\",")
-                      (insert "\n    \"title\": \"" (string-replace "\"" "\\\"" title) "\",")
-                      (insert "\n    \"date\": \"" date "\",")
-                      (insert "\n    \"content\": \"")
-                      (setq content-start-pos (point))
+                (cond ((not (and title date))
+                       (delete-file output)
+                       (message "FILE LACKING TITLE OR DATE: %s" output))
+                      ;; This file has no body because it met :exclude-tags, idk why it gets created
+                      ((= 0 (doom-file-size output))
+                       (delete-file output)
+                       (message "File deleted because empty: %s" output))
+                      ((and title date)
+                       (when output-buf
+                         (setq was-opened t)
+                         (unless (buffer-modified-p output-buf)
+                           (kill-buffer output-buf)))
+                       ;; Hand-craft a JSON object.  Apparently, Elisp's
+                       ;; `json-encode' doesn't escape quotes enough for
+                       ;; javascript's JSON.parse() to understand (the latter
+                       ;; seems shitty overall with shitty error messages).
+                       (with-temp-file output
+                         ;; JSON
+                         (insert "  {")
+                         (insert "\n    \"slug\": \"" relative-slug "\",")
+                         (insert "\n    \"title\": \"" (string-replace "\"" "\\\"" title) "\",")
+                         (insert "\n    \"date\": \"" date "\",")
+                         (insert "\n    \"wordcount\": " (number-to-string wordcount) ",")
+                         (insert "\n    \"content\": \"")
+                         (setq content-start-pos (point))
 
-                      ;; Content
-                      (insert "\n<h1>" title "</h1>")
-                      (insert "\n<p>Planted " date "</p>")
-                      (insert-file-contents output)
-                      
-                      ;; Adjust the result from `my-add-backlinks-if-roam'
-                      (goto-char (point-max))
-                      (when (search-backward "What links here<" nil t)
-                        (goto-char (line-beginning-position))
-                        (while (search-forward "h2" (line-end-position) t)
-                          (replace-match "h1" nil t)))
+                         ;; Content
+                         (insert "<h1>" title "</h1>")
+                         (insert "<p>Planted " date "</p>")
+                         (insert-file-contents output)
 
-                      ;; JSON again
-                      (goto-char content-start-pos)
-                      (while (search-forward "
-" nil t)
-                        (replace-match "\\n" nil t))
-                      (goto-char content-start-pos)
-                      (while (search-forward "\"" nil t)
-                        (replace-match "\\\\\\\"" nil t))
-                      (goto-char (point-max))
-                      (insert "\"\n  }"))
-                    (when was-opened
-                      (find-file-noselect output))))))
-          (unless visiting (kill-buffer work-buffer))))
-      )))
+                         ;; Adjust the result from `my-add-backlinks-if-roam'
+                         (goto-char (point-max))
+                         (when (search-backward "What links here<" nil t)
+                           (goto-char (line-beginning-position))
+                           (while (search-forward "h2" (line-end-position) t)
+                             (replace-match "h1" nil t)))
+
+                         ;; Logic from `json--print-string'. Thanks!
+                         (goto-char content-start-pos)
+                         (while (re-search-forward (rx (in "\"" "\\" cntrl)) nil t)
+                           (let ((char (preceding-char)))
+                             (delete-char -1)
+                             (insert "\\" (or
+                                          ;; Special JSON character (\n, \r, etc.).
+                                          (car (rassq char json-special-chars))
+                                          ;; Fallback: UCS code point in \uNNNN form.
+                                          (format "u%04x" char)))))
+
+                         ;;                          ;; JSON again
+                         ;;                          (goto-char content-start-pos)
+                         ;;                          (while (search-forward "\\" nil t)
+                         ;;                            (replace-match "\\\\" nil t))
+                         ;;                          (goto-char content-start-pos)
+                         ;;                          (while (search-forward "
+                         ;; " nil t)
+                         ;;                            (replace-match "\\n" nil t))
+
+                         ;; ;; For some reason, I need triple-escaped quotes for
+                         ;; ;; where I call JSON.parse() in my Javascript.
+                         ;; (goto-char content-start-pos)
+                         ;; (while (search-forward "\\\"" nil t)
+                         ;;   (replace-match "\\\\\\\"" nil t))
+                         ;; (goto-char (point-max))
+
+                         (insert "\"\n }")
+                         )
+                       (when was-opened
+                         (find-file-noselect output))))))
+          (unless visiting (kill-buffer work-buffer)))))))
 
 (setopt org-html-checkbox-type 'html)
 (setopt org-publish-project-alist
@@ -346,7 +365,7 @@
            :body-only t
            :exclude "daily/"
            ;; this does not work! because filetag?
-           :exclude-tags ("noexport" "private" "personal" "censor")
+           :exclude-tags ("noexport" "private" "personal" "censor" "drill")
            )))
 
 ;; (setopt org-agenda-prefix-format '((agenda . " %i %-12:c%?-12t% s")
