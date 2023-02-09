@@ -484,14 +484,17 @@ to the new note in the \"timeline\" note."
            :unnarrowed t
            :immediate-finish t
            :jump-to-captured t)
-
           ("i" "instantly create this node" plain "%?" :if-new
            (file+head "%<%Y-%m-%d>-${slug}.org"
                       "#+title: ${title}\n#+filetags: :stub:\n#+date: \[%<%Y-%m-%d>\]\n")
            :unnarrowed t
            :immediate-finish t)
-          
           )))
+
+(defun my-insert-heading-with-id ()
+  (interactive)
+  (org-insert-heading)
+  (org-id-get-create))
 
 ;; has to happen after load bc doom sets capture templates at load time.
 ;; incidentally also means we cannot use custom-file to config them.

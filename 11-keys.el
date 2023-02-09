@@ -366,6 +366,11 @@
 (after! view
   (keymap-set view-mode-map "e" #'my-view-exit-and-reopen-as-root))
 
+(after! org-keys
+  (keymap-set org-mode-map "C-c u" #'my-insert-heading-with-id)
+  (keymap-set org-mode-map "C-c f"#'org-roam-node-find)
+  (keymap-set org-mode-map "C-c i"#'org-roam-node-insert))
+
 ;; Use the key physically labelled "Caps Lock" as my new M-x.
 ;; TIP: it also unlocks the comfy combo M-<menu>.
 (when (eq 'window-system 'x)
@@ -408,10 +413,10 @@
 (keymap-set global-map "<f2> e r"                   #'eval-region)
 (keymap-set global-map "<f2> e s"                   #'ess-eval-region-or-function-or-paragraph-and-step) ;; ess everywhere
 (keymap-set global-map "<f2> e x"                   #'eval-expression)
-(keymap-set global-map "<f2> f"                     #'helpful-callable)
+(keymap-set global-map "<f2> f"                     #'org-roam-node-find)
+(keymap-set global-map "<f2> i"                     #'org-roam-node-insert)
 (keymap-set global-map "<f2> g"                     #'git-timemachine)
 (keymap-set global-map "<f2> h"                     #'consult-find)
-(keymap-set global-map "<f2> i"                     #'my-suggest-sub)
 (keymap-set global-map "<f2> j"                     #'+vertico/find-file-in)
 (keymap-set global-map "<f2> k"                     #'+vertico/project-search)
 (keymap-set global-map "<f2> l"                     #'helm-locate)
