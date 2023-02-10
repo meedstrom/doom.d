@@ -365,7 +365,7 @@
            :body-only t
            :exclude "daily/"
            ;; this does not work! because filetag?
-           :exclude-tags ("noexport" "private" "personal" "censor" "drill")
+           :exclude-tags ("noexport" "private" "personal" "censor" "drill" "fc")
            )))
 
 ;; (setopt org-agenda-prefix-format '((agenda . " %i %-12:c%?-12t% s")
