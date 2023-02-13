@@ -5,7 +5,7 @@
 ;; (eshell-command "wget --base=https://www.greaterwrong.com  " (string-join my-lw-urls-to-visit " "))
 (eshell-command (concat "aria2c -x 16 " (string-join my-lw-urls-to-visit " ")))
 (setq urls-filenames
-      (cl-loop for url in my-lw-urls-to-visit
+      (cl-loop for url in my-lw-urls-to-visit-extra
                collect
                (cons url (replace-regexp-in-string
                           "https://www.greaterwrong.com/posts/.*?/" "" url))))
@@ -17,9 +17,11 @@
            (find-file-literally (cdr x))
            (shr-render-buffer (current-buffer))
            (my-lw-gather-crosslinks-from-file (car x))
-           (kill-buffer (find-buffer-visiting (cdr x)))))
+           (kill-buffer (find-buffer-visiting (cdr x)))
+           (pop urls-filenames)))
 
 (defun my-lw-gather-crosslinks-from-file (url)
+  (message "Gathering from %s" url)
   (let* (
          (title (string-replace
                  " - LessWrong 2.0 viewer" "" (buffer-substring-no-properties
@@ -38,16 +40,17 @@
                         (point)))
          (date (progn
                  (goto-char (point-min))
-                 (re-search-forward
-                  (rx digit (?? digit) " " (= 3 word) " " (= 4 digit)))
-                 (ts-format "%F" (ts-parse (match-string 0)))))
+                 (if (re-search-forward
+                      (rx digit (?? digit) " " (= 3 word) " " (= 4 digit)) nil t)
+                     (ts-format "%F" (ts-parse (match-string 0)))
+                   (message "Did not find date, skipping %s" url)
+                   (setq skip t))))
          (crosslinks nil))
+    (goto-char (point-min))
+    (unless (search-forward "Post permalink" nil t)
+      (message "Did not find start of post, skipping %s" url))
+    (forward-line 2)
     (unless skip
-      ;; Start of post
-      (goto-char (point-min))
-      (unless (search-forward "Post permalink" nil t)
-        (error "Did not find start of post"))
-      (forward-line 2)
       ;; Get links in main body
       (while (< (point) end-of-post)
         (let ((match (text-property-search-forward 'shr-url nil nil t)))

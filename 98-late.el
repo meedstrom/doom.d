@@ -274,8 +274,8 @@ wait for that hook.  You may put this on a repeating timer."
                    savehist-autosave
                    transient-maybe-save-history
                    org-recent-headings--save-list
-                   org-persist-gc
-                   org-persist-write-all
+                   ;;org-persist-gc
+                   ;;org-persist-write-all
                    org-id-locations-save
                    save-place-kill-emacs-hook
                    recentf-save-list

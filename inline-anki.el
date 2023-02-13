@@ -13,11 +13,8 @@
 ;;
 ;; - Clozes only.  The hardcoded note type is called "Cloze", with fields "Text"
 ;;   and "Text Extra".
-;;
-;; - 
 
 ;;; Code:
-
 
 (defun anki-editor-push-notes ()
   (interactive)
@@ -30,28 +27,25 @@
                 (anki-editor--push-note (anki-editor-note-at-point))
               (error
                ;; (cl-incf failed)
-               (message "Note at point %d failed: %s" (point) (error-message-string err))))))))
-
-    ))
+               (message "Note at point %d failed: %s" (point) (error-message-string err))))))))))
 
 (defun anki-editor-note-at-point ()
   "Construct an alist representing a note from current entry."
   (let* ((org-trust-scanner-tags t)
-        (deck (or (org-entry-get-with-inheritance anki-editor-prop-deck)
-                  inline-anki-default-deck))
-        (note-id (inline-anki-thing-id))
-        (note-type "Cloze")
-        (tags (org-get-tags-at))
-        ;; (fields (anki-editor--build-fields))
-        (begin (org-element-property :contents-begin (org-element-at-point)))
-        (end (save-excursion
-               (goto-char (org-element-property :contents-end (org-element-at-point)))
-               (re-search-backward "[_^]{" begin)
-               (point)))
-        (fields (list (cons "Text"
-                            (inline-anki-convert-implicit-clozes
-                             (buffer-substring begin end)))
-                      (cons "Back Extra" (buffer-file-name)))))
+         (deck (or (org-entry-get-with-inheritance anki-editor-prop-deck)
+                   inline-anki-default-deck))
+         (note-id (inline-anki-thing-id))
+         (note-type "Cloze")
+         (tags (org-get-tags-at))
+         (begin (org-element-property :contents-begin (org-element-at-point)))
+         (end (save-excursion
+                (goto-char (org-element-property :contents-end (org-element-at-point)))
+                (re-search-backward "[_^]{" begin)
+                (point)))
+         (fields (list (cons "Text"
+                             (inline-anki-convert-implicit-clozes
+                              (buffer-substring begin end)))
+                       (cons "Back Extra" ""))))
 
     (unless deck (error "No deck specified"))
     (unless note-type (error "Missing note type"))
@@ -78,13 +72,13 @@
 
 ;; Unused
 (defcustom inline-anki-flag ""
-  "A string that flags a paragraph or list item as a flashcard.
+  "A string for flagging a paragraph or list item as a flashcard.
 I recommend this string to be quite unique, so if you change your
 mind you can confidently search-replace across all your files.
-If you were to set this to a common string like \"#\", you would
-have a much harder time changing from it.  To also have it
-compact, the trick is to pick some Unicode symbol you never use
-otherwise, like this joker-card emoji: 🃏.")
+If you were to set this to a common string like \"#\", you will
+need more effort to migrate from it.  To also have it compact,
+the trick is to pick some Unicode symbol you never use otherwise,
+like this card emoji: 🃏.")
 
 ;; Unused
 (defcustom inline-anki-script-shift "^"
@@ -111,25 +105,12 @@ otherwise, like this joker-card emoji: 🃏.")
         id-maybe))))
 
 (defun inline-anki-map-note-things (func)
-  (let ((ctr 0) 
-        (start-list-item-rx (rx bol (* space) (any "-+") (+ space) (literal inline-anki-flag) (or "_" "^") "{"))
-        (start-line-rx (rx bol (* space) (literal inline-anki-flag) (or "_" "^") "{"))
-        ;; don't use rx due to bug: (rx (any "_" "^")) returns [^_]
+  (let ((ctr 0)
         (eol-rx "[[:graph:]][_^]{.*?}$"))
     (goto-char (point-min))
     (while (re-search-forward eol-rx nil t)
       (cl-incf ctr)
       (funcall func))
-
-    ;; (goto-char (point-min))
-    ;; (while (re-search-forward start-line-rx nil t)
-    ;;   (cl-incf ctr)
-    ;;   (funcall func))
-    ;; (goto-char (point-min))
-    ;; (while (re-search-forward start-list-item-rx nil t)
-    ;;   (cl-incf ctr)
-    ;;   (funcall func))
-
     ctr))
 
 (defcustom inline-anki-cloze-emphasis '(bold)
@@ -151,39 +132,17 @@ Set this to '(bold), '(italic), or '(underline)."
           (delete-char 1)
           (insert "}}"))))
     ;; (buffer-string)
-    (buffer-substring-no-properties (point-min) (point-max))
-    ))
+    (buffer-substring-no-properties (point-min) (point-max))))
 
 (defvar inline-anki-default-deck "Default")
 
-;; (define-minor-mode inline-anki-mode
-;;   "boca"
-;;   (if inline-anki-mode
-;;       (progn
-;;         (setq-local font-lock-defaults
-;;                     `((
-;;                        (,(concat inline-anki-flag ".*?$") . font-lock-comment-face)
-
-;;                        ("^::[^<\|\n]*" . font-lock-keyword-face) ;;headers
-;;                        ;; ("<[^<].*?,.*?[^>]>[^>]" . font-lock-comment-face) ;;pos
-;;                        ;; ("\[.*?\]\]" . 'link) ;;links
-;;                        ("^\\s *//.*" . font-lock-comment-face) ;; js/sass comments
-;;                        ("\\W\\(//.*?//\\)\\W" 1 'italic) ;; //italic text//
-;;                        ("http.?://[^])\"\s \n]*" . 'link)
-;;                        ("<<.*?>>" . font-lock-comment-face) ;;sugarcube macro
-;;                        ("<.*?>" . font-lock-function-name-face) ;;html
-;;                        ("\\$\\w*" . font-lock-variable-name-face) ;;$variables
-;;                        ("\\W\\('.*?'\\)\\W" 1 font-lock-string-face)
-;;                        ;; ("(.*?:.*)" . font-lock-comment-face) ;;harlowe macro
-;;                        )))
-;;         )))
-
-
-
-(defconst high-base-alphabet "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/`'!@#$%&_-=()|\"\\.,:;<>~?€£¤§½абвгдеёжзийклмнопрстуфхцчшщъыьэюяͰͱͲͳͶͷͺͻͼͽ;ͿΆΈΉΊΌΎΏΐΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩΪΫάέήίΰαβγδεζηθικλμνξοπρςστυφχψωϊϋόύώϏϐϑϒϓϔϕϖϗϘϙϚϛϜϝϞϟϠϡϢϣϤϥϦϧϨϩϪϫϬϭϮϯϰϱϲϳϴϵ϶ϷϸϹϺϻϼϽϾϿ")
-
 ;; As per RFC 4648 https://en.wikipedia.org/wiki/Base_64
 (defconst base64-alphabet "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/")
+
+(defconst base36-alphabet "0123456789abcdefghijklmnopqrstuvwxyz")
+
+;; The entire Basic Multilingual Plane
+;; (setq stupidly-long-alphabet (apply #'string (cl-loop for x from 33 to 65535 collect x)))
 
 (defun int-to-base64 (num)
   "Re-express a number in base-64, and return that as a string.
@@ -231,28 +190,5 @@ THING from an array of bytes.  You have been warned."
           (- total)
         total))))
 
-(base64-to-int (int-to-base64 65342334))
-(int-to-base64 (base64-to-int "D5Qt+"))
-
-
-(defun int-to-base (num radix)
-  (let ((sign "")
-        (o-string ""))
-    (when (> 0 num)
-      (setq sign "-")
-      (setq num (abs num)))
-    (if (< num radix)
-        ;; Simply return alphabet[num].
-        (concat sign (char-to-string (aref high-base-alphabet num)))
-      ;; 64 or more, now it's complicated.
-      (while (/= 0 num)
-        (let* ((remainder (% num radix))
-               ;; not sure it's necessary to do this interim result, but
-               (integer-dividable-dividend (- num remainder))
-               (quotient (/ integer-dividable-dividend radix)))
-          (setq num quotient)
-          (setq o-string (concat (char-to-string (aref high-base-alphabet remainder))
-                                   o-string))))
-      (concat sign o-string))))
-
-(int-to-base 2352352321 93)
+;; (base64-to-int (int-to-base64 65342334))
+;; (int-to-base64 (base64-to-int "D5Qt+"))

@@ -35,6 +35,10 @@
 
 ;;; Font and theme
 
+;; The default is Symbola, but I can't find it on pacman repos.
+;; Note that this is ignored when the module :ui unicode is enabled.
+(setq doom-unicode-font (font-spec :family "DejaVu Sans Mono"))
+
 ;; (setq doom-font (font-spec :family "Cozette" :size 10))
 ;; (setq doom-font (font-spec :family "Tamzen" :size 10))
 (setq doom-font (font-spec :family "Terminus" :size 15))

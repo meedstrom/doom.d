@@ -7,6 +7,8 @@
 
        :ui
        doom
+       unicode
+       (emoji +unicode)
        ;; doom-dashboard
        ;; modeline
        hl-todo
