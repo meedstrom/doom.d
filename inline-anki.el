@@ -1,0 +1,258 @@
+;;;
+;;; Commentary:
+
+;; REQUIREMENTS
+
+;; - org-fontify-emphasized-text should be t in all relevant buffers, and none
+;; of the buffers are visited literally (with find-file-literally).  That is to
+;; say, when we scan for flashcards, we need that text wrapped in asterisks are
+;; in fact given the 'bold text property in your Org buffers.  Org is already
+;; good at rooting out false matches via org-do-emphasis-faces, so
+;; inline-anki-convert-implicit-clozes follows in its tracks and look only at
+;; the substrings Org already bolded.
+;;
+;; - Clozes only.  The hardcoded note type is called "Cloze", with fields "Text"
+;;   and "Text Extra".
+;;
+;; - 
+
+;;; Code:
+
+
+(defun anki-editor-push-notes ()
+  (interactive)
+  (let ((failed 0)
+        (times
+         (inline-anki-map-note-things
+          (lambda ()
+            (message "Processing notes in buffer \"%s\", wait a moment..." (buffer-name))
+            (condition-case-unless-debug err
+                (anki-editor--push-note (anki-editor-note-at-point))
+              (error
+               ;; (cl-incf failed)
+               (message "Note at point %d failed: %s" (point) (error-message-string err))))))))
+
+    ))
+
+(defun anki-editor-note-at-point ()
+  "Construct an alist representing a note from current entry."
+  (let* ((org-trust-scanner-tags t)
+        (deck (or (org-entry-get-with-inheritance anki-editor-prop-deck)
+                  inline-anki-default-deck))
+        (note-id (inline-anki-thing-id))
+        (note-type "Cloze")
+        (tags (org-get-tags-at))
+        ;; (fields (anki-editor--build-fields))
+        (begin (org-element-property :contents-begin (org-element-at-point)))
+        (end (save-excursion
+               (goto-char (org-element-property :contents-end (org-element-at-point)))
+               (re-search-backward "[_^]{" begin)
+               (point)))
+        (fields (list (cons "Text"
+                            (inline-anki-convert-implicit-clozes
+                             (buffer-substring begin end)))
+                      (cons "Back Extra" (buffer-file-name)))))
+
+    (unless deck (error "No deck specified"))
+    (unless note-type (error "Missing note type"))
+    (unless fields (error "Missing fields"))
+
+    `((deck . ,deck)
+      (note-id . ,(if note-id
+                      (base64-to-int note-id)
+                    -1))
+      (note-type . ,note-type)
+      (tags . ,tags)
+      (fields . ,fields))))
+
+(defun anki-editor--set-note-id (id)
+  (unless id
+    (error "Note creation failed for unknown reason"))
+  (goto-char (line-beginning-position))
+  (re-search-forward (rx (literal inline-anki-flag) (or "^" "_") "{"))
+  (when (looking-at-p "[^}]}")
+    (error "Attempted to create note for note already with ID"))
+  (if (looking-at-p "}$")
+      (insert (int-to-base64 id))
+    (error "Note creation failed for unknown reason")))
+
+;; Unused
+(defcustom inline-anki-flag ""
+  "A string that flags a paragraph or list item as a flashcard.
+I recommend this string to be quite unique, so if you change your
+mind you can confidently search-replace across all your files.
+If you were to set this to a common string like \"#\", you would
+have a much harder time changing from it.  To also have it
+compact, the trick is to pick some Unicode symbol you never use
+otherwise, like this joker-card emoji: 🃏.")
+
+;; Unused
+(defcustom inline-anki-script-shift "^"
+  "One-character string, either ^ or _."
+  :type 'string
+  :options '("^" "_"))
+
+(defun inline-anki-thing-id ()
+  (goto-char (line-beginning-position))
+  (let ((end (if (org-at-item-p)
+                 ;; List item
+                 (save-excursion
+                   (org-end-of-item)
+                   (1- (point)))
+               ;; Paragraph
+               (save-excursion
+                 (org-forward-paragraph)
+                 (1- (point))))))
+    (re-search-forward (rx (literal inline-anki-flag) (or "_" "^") "{" (group (*? nonl)) "}") end)
+    (let ((id-maybe (match-string 1)))
+      (if (equal id-maybe "")
+          ;; No ID yet
+          nil
+        id-maybe))))
+
+(defun inline-anki-map-note-things (func)
+  (let ((ctr 0) 
+        (start-list-item-rx (rx bol (* space) (any "-+") (+ space) (literal inline-anki-flag) (or "_" "^") "{"))
+        (start-line-rx (rx bol (* space) (literal inline-anki-flag) (or "_" "^") "{"))
+        ;; don't use rx due to bug: (rx (any "_" "^")) returns [^_]
+        (eol-rx "[[:graph:]][_^]{.*?}$"))
+    (goto-char (point-min))
+    (while (re-search-forward eol-rx nil t)
+      (cl-incf ctr)
+      (funcall func))
+
+    ;; (goto-char (point-min))
+    ;; (while (re-search-forward start-line-rx nil t)
+    ;;   (cl-incf ctr)
+    ;;   (funcall func))
+    ;; (goto-char (point-min))
+    ;; (while (re-search-forward start-list-item-rx nil t)
+    ;;   (cl-incf ctr)
+    ;;   (funcall func))
+
+    ctr))
+
+(defcustom inline-anki-cloze-emphasis '(bold)
+  "Which emphasis type to parse as implicit clozes.
+Set this to '(bold), '(italic), or '(underline)."
+  :type 'sexp)
+
+(defun inline-anki-convert-implicit-clozes (str)
+  (with-temp-buffer
+    (insert str)
+    (goto-char (point-min))
+    (let ((n 0))
+      (while (setq prop (text-property-search-forward 'face inline-anki-cloze-emphasis t))
+        (let ((num (number-to-string (cl-incf n))))
+          (goto-char (prop-match-beginning prop))
+          (delete-char -1)
+          (insert "{{c" num "::")
+          (goto-char (+ (prop-match-end prop) 4 (length num)))
+          (delete-char 1)
+          (insert "}}"))))
+    ;; (buffer-string)
+    (buffer-substring-no-properties (point-min) (point-max))
+    ))
+
+(defvar inline-anki-default-deck "Default")
+
+;; (define-minor-mode inline-anki-mode
+;;   "boca"
+;;   (if inline-anki-mode
+;;       (progn
+;;         (setq-local font-lock-defaults
+;;                     `((
+;;                        (,(concat inline-anki-flag ".*?$") . font-lock-comment-face)
+
+;;                        ("^::[^<\|\n]*" . font-lock-keyword-face) ;;headers
+;;                        ;; ("<[^<].*?,.*?[^>]>[^>]" . font-lock-comment-face) ;;pos
+;;                        ;; ("\[.*?\]\]" . 'link) ;;links
+;;                        ("^\\s *//.*" . font-lock-comment-face) ;; js/sass comments
+;;                        ("\\W\\(//.*?//\\)\\W" 1 'italic) ;; //italic text//
+;;                        ("http.?://[^])\"\s \n]*" . 'link)
+;;                        ("<<.*?>>" . font-lock-comment-face) ;;sugarcube macro
+;;                        ("<.*?>" . font-lock-function-name-face) ;;html
+;;                        ("\\$\\w*" . font-lock-variable-name-face) ;;$variables
+;;                        ("\\W\\('.*?'\\)\\W" 1 font-lock-string-face)
+;;                        ;; ("(.*?:.*)" . font-lock-comment-face) ;;harlowe macro
+;;                        )))
+;;         )))
+
+
+
+(defconst high-base-alphabet "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/`'!@#$%&_-=()|\"\\.,:;<>~?€£¤§½абвгдеёжзийклмнопрстуфхцчшщъыьэюяͰͱͲͳͶͷͺͻͼͽ;ͿΆΈΉΊΌΎΏΐΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩΪΫάέήίΰαβγδεζηθικλμνξοπρςστυφχψωϊϋόύώϏϐϑϒϓϔϕϖϗϘϙϚϛϜϝϞϟϠϡϢϣϤϥϦϧϨϩϪϫϬϭϮϯϰϱϲϳϴϵ϶ϷϸϹϺϻϼϽϾϿ")
+
+;; As per RFC 4648 https://en.wikipedia.org/wiki/Base_64
+(defconst base64-alphabet "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/")
+
+(defun int-to-base64 (num)
+  "Re-express a number in base-64, and return that as a string.
+See also the inverse, `base64-to-int'.  Do not confuse with
+`base64-encode-string'."
+  (let ((sign "")
+        (b64-string ""))
+    (when (> 0 num)
+      (setq sign "-")
+      (setq num (abs num)))
+    (if (< num 64)
+        ;; Simply return alphabet[num].
+        (concat sign (char-to-string (aref base64-alphabet num)))
+      ;; 64 or more, now it's complicated.
+      (while (/= 0 num)
+        (let* ((remainder (% num 64))
+               ;; not sure it's necessary to do this interim result, but
+               (integer-dividable-dividend (- num remainder))
+               (quotient (/ integer-dividable-dividend 64)))
+          (setq num quotient)
+          (setq b64-string (concat (char-to-string (aref base64-alphabet remainder))
+                                   b64-string))))
+      (concat sign b64-string))))
+
+(defun base64-to-int (b64-string)
+  "Turn a number expressed as a base-64 string, into a base-10 integer.
+Please note that you most likely want `base64-decode-string'\;
+most uses of base-64 encoding are not meant to be decoded
+mathematically as base-10 numbers, but as arrays of bytes, such
+as strings of UTF-8 characters or binary \"blobs\" like the
+on-disk content of an image file.  A number is A COMPLETELY DIFFERENT
+THING from an array of bytes.  You have been warned."
+  (let ((negative nil))
+    (when (equal "-" (substring b64-string 0 1))
+      (setq b64-string (substring b64-string 1))
+      (setq negative t))
+    (let* ((highest-place (length b64-string))
+           (total (cl-loop
+                   for i from 1 to highest-place
+                   sum (let* ((glyph (char-to-string (aref b64-string (1- i))))
+                              (glyph-value (string-search glyph base64-alphabet))
+                              (place-value (^ 64 (- highest-place i))))
+                         (* glyph-value place-value)))))
+      (if negative
+          (- total)
+        total))))
+
+(base64-to-int (int-to-base64 65342334))
+(int-to-base64 (base64-to-int "D5Qt+"))
+
+
+(defun int-to-base (num radix)
+  (let ((sign "")
+        (o-string ""))
+    (when (> 0 num)
+      (setq sign "-")
+      (setq num (abs num)))
+    (if (< num radix)
+        ;; Simply return alphabet[num].
+        (concat sign (char-to-string (aref high-base-alphabet num)))
+      ;; 64 or more, now it's complicated.
+      (while (/= 0 num)
+        (let* ((remainder (% num radix))
+               ;; not sure it's necessary to do this interim result, but
+               (integer-dividable-dividend (- num remainder))
+               (quotient (/ integer-dividable-dividend radix)))
+          (setq num quotient)
+          (setq o-string (concat (char-to-string (aref high-base-alphabet remainder))
+                                   o-string))))
+      (concat sign o-string))))
+
+(int-to-base 2352352321 93)
