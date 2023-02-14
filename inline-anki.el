@@ -11,8 +11,8 @@
 ;; inline-anki-convert-implicit-clozes follows in its tracks and look only at
 ;; the substrings Org already bolded.
 ;;
-;; - Clozes only.  The hardcoded note type is called "Cloze", with fields "Text"
-;;   and "Text Extra".
+;; - Clozes only.  The hardcoded note type is called "Cloze" with a field
+;;   called "Text".
 
 ;;; Code:
 
@@ -45,7 +45,7 @@
          (fields (list (cons "Text"
                              (inline-anki-convert-implicit-clozes
                               (buffer-substring begin end)))
-                       (cons "Back Extra" ""))))
+                       )))
 
     (unless deck (error "No deck specified"))
     (unless note-type (error "Missing note type"))
@@ -64,9 +64,11 @@
     (error "Note creation failed for unknown reason"))
   (goto-char (line-beginning-position))
   (re-search-forward (rx (literal inline-anki-flag) (or "^" "_") "{"))
-  (when (looking-at-p "[^}]}")
+  (when (looking-at-p "[^}]+?}")
     (error "Attempted to create note for note already with ID"))
-  (if (looking-at-p "}$")
+  (when (looking-at-p "[^}]")
+    (error "no closing brace"))
+  (if (looking-at-p "}[[:space:]]*?$")
       (insert (int-to-base64 id))
     (error "Note creation failed for unknown reason")))
 
@@ -79,12 +81,6 @@ If you were to set this to a common string like \"#\", you will
 need more effort to migrate from it.  To also have it compact,
 the trick is to pick some Unicode symbol you never use otherwise,
 like this card emoji: 🃏.")
-
-;; Unused
-(defcustom inline-anki-script-shift "^"
-  "One-character string, either ^ or _."
-  :type 'string
-  :options '("^" "_"))
 
 (defun inline-anki-thing-id ()
   (goto-char (line-beginning-position))
@@ -106,14 +102,21 @@ like this card emoji: 🃏.")
 
 (defun inline-anki-map-note-things (func)
   (let ((ctr 0)
-        (eol-rx "[[:graph:]][_^]{.*?}$"))
+        (start-of-item-rx (rx bol (*? space) (any "+-") (+? space) (literal inline-anki-flag) (?? (or "^" "_")) "{" (group (*? nonl)) "}"))
+        (eol-rx "[[:graph:]][_^]{\\(.*?\\)}$"))
     (goto-char (point-min))
     (while (re-search-forward eol-rx nil t)
+      (forward-char -1)
+      (cl-incf ctr)
+      (funcall func))
+    (goto-char (point-min))
+    (while (re-search-forward start-of-item-rx nil t)
+      (forward-char -1)
       (cl-incf ctr)
       (funcall func))
     ctr))
 
-(defcustom inline-anki-cloze-emphasis '(bold)
+(defcustom inline-anki-emphasis-type '(bold)
   "Which emphasis type to parse as implicit clozes.
 Set this to '(bold), '(italic), or '(underline)."
   :type 'sexp)
@@ -123,7 +126,7 @@ Set this to '(bold), '(italic), or '(underline)."
     (insert str)
     (goto-char (point-min))
     (let ((n 0))
-      (while (setq prop (text-property-search-forward 'face inline-anki-cloze-emphasis t))
+      (while (setq prop (text-property-search-forward 'face inline-anki-emphasis-type t))
         (let ((num (number-to-string (cl-incf n))))
           (goto-char (prop-match-beginning prop))
           (delete-char -1)
@@ -139,10 +142,11 @@ Set this to '(bold), '(italic), or '(underline)."
 ;; As per RFC 4648 https://en.wikipedia.org/wiki/Base_64
 (defconst base64-alphabet "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/")
 
+(defconst base62-alphabet "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
 (defconst base36-alphabet "0123456789abcdefghijklmnopqrstuvwxyz")
 
-;; The entire Basic Multilingual Plane
-;; (setq stupidly-long-alphabet (apply #'string (cl-loop for x from 33 to 65535 collect x)))
+;; Unicode's entire Basic Multilingual Plane: from 0033 to FFFF.
+;; (quiet! (setq base65503-alphabet (apply #'string (cl-loop for x from 33 to 65535 collect x))))
 
 (defun int-to-base64 (num)
   "Re-express a number in base-64, and return that as a string.
