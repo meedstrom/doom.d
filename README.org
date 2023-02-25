@@ -1,9 +1,60 @@
 * My Emacs config dir
 
-Ever in development since 2015.  Requires Emacs 28.
+In development since 2015.  Requires Emacs 28.
 
-You can find the more unique code in the =lisp= subfolder.  Aside from that, this follows Doom Emacs' structure:
+Most of the interesting code is in the files starting with a number, like =98-late.el= and =10-general.el=.
 
-- init.el -- which premade Doom modules to enable
-- packages.el -- which additional packages to make available
-- config.el -- loads every file in =lisp= subfolder
+** Undooms
+
+This is a Doom Emacs config, but I undo many Doom features (commented with the term "undoom").  Mind you, I still find Doom to save a lot of effort and well worth it.  Here are some things I undo:
+
+#+begin_src elisp
+;; undoom; I want readable backup names since I rename files and directories all
+;; the time
+(advice-remove #'make-backup-file-name-1 #'doom-make-hashed-backup-file-name-a)
+
+;; undoom; I find customize a handy exploration tool
+(put 'customize-themes 'disabled nil)
+(put 'customize-group 'disabled nil)
+(put 'customize-changed 'disabled nil)
+(put 'customize-face 'disabled nil)
+(put 'customize-variable 'disabled nil)
+
+;; undoom; I actually use the modeline to show present directory
+(remove-hook 'term-mode-hook #'hide-mode-line-mode)
+
+(after! dired
+  ;; undoom
+  (keymap-set dired-mode-map "q" #'kill-current-buffer))
+
+(remove-hook 'dired-mode-hook #'dired-omit-mode) ;; undoom
+
+(after! vertico
+  ;; undoom
+  (keymap-unset vertico-map "<backspace>" t))
+
+;; undoom
+(after! eshell
+  (fmakunbound #'eshell/emacs) ;; give me access to emacs --help, heh
+  (setopt eshell-input-filter #'eshell-input-filter-default)
+  ;; I like normal buffer as opposed to terminal-like behavior 
+  (setopt eshell-scroll-to-bottom-on-input nil)
+  (setopt eshell-scroll-to-bottom-on-output nil)
+  (keymap-set eshell-mode-map "C-l" #'recenter-top-bottom)
+  ;; I prefer it pick a recent buffer (but tbh all other Emacs buffers are
+  ;; similarly unhelpful on split, I should fix them too)
+  (setopt +eshell-enable-new-shell-on-split nil))
+
+;; undoom
+(after! org
+  ;; IDK why but I find this doom-docs-mode just gets in my way
+  (fset 'doom-docs-org-mode #'ignore)
+  (fset 'doom-docs--toggle-read-only-h #'ignore)
+  ;; Having exactly two states makes for comfy toggling.  I liked that about vanilla Org.
+  (setopt org-todo-keywords '((sequence "TODO" "DONE"))))
+
+(after! ws-butler
+  ;; Undoom. Was this a Vimism?  If this is nil while auto-save-visited-mode is
+  ;; active, it's incredibly annoying.
+  (setopt ws-butler-keep-whitespace-before-point t))
+#+end_src

@@ -175,10 +175,11 @@
 (after! esh-mode
   ;; Automatically narrow/widen to output on point motion.  Damn, it's weird
   ;; and often not what I want, but that's me abusing point motion.
-  (define-key eshell-mode-map [remap next-line] #'my-eshell-next-line)
-  (define-key eshell-mode-map [remap previous-line] #'my-eshell-prev-line)
-  (define-key eshell-mode-map [remap eshell-next-prompt] #'my-eshell-next-prompt)
-  (define-key eshell-mode-map [remap eshell-previous-prompt] #'my-eshell-previous-prompt))
+  ;; (define-key eshell-mode-map [remap next-line] #'my-eshell-next-line)
+  ;; (define-key eshell-mode-map [remap previous-line] #'my-eshell-prev-line)
+  ;; (define-key eshell-mode-map [remap eshell-next-prompt] #'my-eshell-next-prompt)
+  ;; (define-key eshell-mode-map [remap eshell-previous-prompt] #'my-eshell-previous-prompt)
+  )
 
 ;; Encourage idiomatic ways to work with Emacs
 (after! eshell
@@ -218,4 +219,5 @@
   (setopt eshell-input-filter #'eshell-input-filter-default)
   (setopt eshell-scroll-to-bottom-on-input nil)
   (setopt eshell-scroll-to-bottom-on-output nil)
-  (keymap-set eshell-mode-map "C-l" #'recenter-top-bottom))
+  (after! esh-mode
+    (keymap-set eshell-mode-map "C-l" #'recenter-top-bottom)))

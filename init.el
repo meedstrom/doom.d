@@ -48,7 +48,7 @@
        web
        ;; (web +tree-sitter)
        ;; javascript
-       ;; (javascript +tree-sitter)   ;; tsserver freezes Emacs, maybe edit tide-server-max-response-length
+       (javascript +lsp +tree-sitter)   ;; tsserver freezes Emacs, maybe edit tide-server-max-response-length
        rust
        json
        ledger
@@ -69,8 +69,8 @@
        :tools
        biblio
        (magit +forge)
-       ;; (lsp +eglot)
-       lsp
+       (lsp +eglot)
+       ;; lsp
        tree-sitter
        pdf
 

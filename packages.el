@@ -34,8 +34,8 @@
 (package! backup-walker)
 (package! bm)
 (package! calibredb)
-;; (package! cape)
-;; (package! corfu)
+(package! cape)
+(package! corfu)
 (package! embark)
 (package! crux)
 (package! cycle-buffer) ;; last updated 1997, but has more useful commands than iflipb

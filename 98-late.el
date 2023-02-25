@@ -80,7 +80,8 @@
 (setopt mediawiki-site-default "WikEmacs")
 
 (after! ws-butler
-  ;; Undoom. Was this a Vimism?
+  ;; Undoom. Was this a Vimism? If this is nil while auto-save-visited-mode is
+  ;; active, the result is incredibly annoying.
   (setopt ws-butler-keep-whitespace-before-point t)
   ;; fix guix.el
   (add-to-list 'ws-butler-global-exempt-modes #'minibuffer-inactive-mode)
@@ -159,12 +160,21 @@
   :config
   (set-face-attribute 'nameless-face nil :inherit 'unspecified))
 
+;; try to fix JS/TS buffers freezing.  Seems the issue is that prism-mode collides badly with RJSX mode.
+;; (setq tide-server-max-response-length )
+(after! rjsx-mode
+  (remove-hook 'rjsx-mode-hook #'rainbow-delimiters-mode))
+
+(after! typescript-mode
+  ;; NOTE: typescript-tsx-mode is actually defined in ~/doomemacs/modules/lang/javascript/config.el
+  (remove-hook 'typescript-tsx-mode-hook #'rainbow-delimiters-mode))
+
 (use-package! prism
   :init
   (setopt prism-parens t)
   (setopt prism-desaturations '(0 20 60))
   :config
-  ;; Replace rainbow-delimiters (it's on a dozen hooks in Doom).
+  ;; Replace rainbow-delimiters (it's on a dozen hooks in Doom so this is easiest).
   (fset 'rainbow-delimiters-mode #'prism-mode)
   (add-hook 'doom-load-theme-hook #'prism-set-colors))
 
@@ -241,7 +251,9 @@ Suitable on `after-save-hook'."
   (when (and (project-current)
              (member (project-root (project-current)) my-auto-commit-dirs))
     (let ((last-commit-date (my-process-output-to-string
-                             "git" "log" "-n" "1" "--pretty=format:%cs")))
+                             "git" "log" "-n" "1" "--pretty=format:%cs"))
+          (last-commit-msg (my-process-output-to-string
+                             "git" "log" "-n" "1" "--pretty=format:%s")))
       (if (string-search "Fatal" last-commit-date)
           (message "Git failed, probably not a Git repo: %s" default-directory)
         ;; Special case for new Org-Roam nodes: auto-stage them
@@ -251,9 +263,10 @@ Suitable on `after-save-hook'."
           (magit-run-git "add" (buffer-file-name)))
         (if (magit-untracked-files)
             (message "Won't auto-commit.  Stage untracked files or edit .gitignore")
-          (if (equal last-commit-date (format-time-string "%F"))
+          (if (and (equal last-commit-date (format-time-string "%F"))
+                   (equal last-commit-msg "Auto-commit"))
               (magit-commit-amend '("--all" "--reuse-message=HEAD"))
-            ;; New day, new commit
+            ;; New day, new autocommit
             (magit-commit-create '("--all" "--message=Auto-commit"))
             ))))))
 
@@ -273,9 +286,9 @@ wait for that hook.  You may put this on a repeating timer."
                 #'(bookmark-exit-hook-internal
                    savehist-autosave
                    transient-maybe-save-history
-                   org-recent-headings--save-list
-                   ;;org-persist-gc
-                   ;;org-persist-write-all
+                   ;; org-recent-headings--save-list
+                   ;; org-persist-gc
+                   ;; org-persist-write-all
                    org-id-locations-save
                    save-place-kill-emacs-hook
                    recentf-save-list
@@ -284,6 +297,7 @@ wait for that hook.  You may put this on a repeating timer."
                    doom-persist-scratch-buffers-h)
                 kill-emacs-hook)))
     (run-hooks 'hooks)))
+
 
 ;; Run after 3 minutes of idle.
 (setq my-write-data-timer (run-with-idle-timer (* 3 60) t #'my-write-data))

@@ -206,20 +206,20 @@
 
 ;; Civilize GUI Emacs.  It doesn't always work, see https://debbugs.gnu.org/cgi/bugreport.cgi?bug=58808
 ;; TODO: do this in kmonad, but do it only for eamcs, or use exwm simulation keys to turn escape back into a real escape for other apps.
-(keymap-set function-key-map "<escape>" "C-g")
-(keymap-set key-translation-map "<escape>" "C-g")
-(keymap-set input-decode-map "<escape>" "C-g")
-(keymap-set input-decode-map "C-g" "<f35>") ;; to unlearn it
+(define-key function-key-map    (kbd "<escape>") (kbd "C-g"))
+(define-key key-translation-map (kbd "<escape>") (kbd "C-g"))
+(define-key input-decode-map    (kbd "<escape>") (kbd "C-g"))
+(define-key input-decode-map    (kbd "C-g") (kbd "<f35>")) ;; to unlearn it
 
 ;; Make my Lenovo Thinkpad like the Dell Latitude I used to have
-(keymap-set key-translation-map "<XF86Back>" "<prior>")
-(keymap-set key-translation-map "C-<XF86Back>" "C-<prior>")
-(keymap-set key-translation-map "M-<XF86Back>" "M-<prior>")
-(keymap-set key-translation-map "s-<XF86Back>" "s-<prior>")
-(keymap-set key-translation-map "<XF86Forward>" "<next>")
-(keymap-set key-translation-map "C-<XF86Forward>" "C-<next>")
-(keymap-set key-translation-map "M-<XF86Forward>" "M-<next>")
-(keymap-set key-translation-map "s-<XF86Forward>" "s-<next>")
+(define-key key-translation-map (kbd "<XF86Back>"      ) (kbd "<prior>"))
+(define-key key-translation-map (kbd "C-<XF86Back>"    ) (kbd "C-<prior>"))
+(define-key key-translation-map (kbd "M-<XF86Back>"    ) (kbd "M-<prior>"))
+(define-key key-translation-map (kbd "s-<XF86Back>"    ) (kbd "s-<prior>"))
+(define-key key-translation-map (kbd "<XF86Forward>"   ) (kbd "<next>"))
+(define-key key-translation-map (kbd "C-<XF86Forward>" ) (kbd "C-<next>"))
+(define-key key-translation-map (kbd "M-<XF86Forward>" ) (kbd "M-<next>"))
+(define-key key-translation-map (kbd "s-<XF86Forward>" ) (kbd "s-<next>"))
 
 
 ;;; Main
@@ -257,11 +257,12 @@
   (keymap-set eww-bookmark-mode-map "w" #'my-eww-bookmark-copy-url))
 
 (after! vertico
+  (keymap-set global-map "M-<backspace>" (lambda()(interactive)(message "no")))
   (keymap-unset vertico-map "<backspace>" t) ;; undoom
   (keymap-set vertico-map "M-<backspace>" #'vertico-directory-up)
   (keymap-set vertico-map "<next>" #'scroll-up-command)
   (keymap-set vertico-map "<prior>" #'scroll-down-command))
-
+  
 (after! ledger-mode
   (keymap-set ledger-mode-map "M-<return>" #'crux-duplicate-current-line-or-region))
 
@@ -280,7 +281,7 @@
   (keymap-unset eshell-hist-mode-map "<up>")
   (keymap-unset eshell-hist-mode-map "<down>"))
 
-(after! eshell
+(after! esh-mode
   (keymap-set eshell-mode-map "C-S-n" #'my-new-eshell)
   (keymap-set eshell-mode-map "<f4> n" (defrepeater #'my-esh-narrow-dwim)))
 
@@ -502,31 +503,31 @@
 ;; (keymap-set ""                        #'browse-url)
 
 ;; Some Greek letters
-(keymap-set key-translation-map "<f7> a" "α") ;;alpha
-(keymap-set key-translation-map "<f7> b" "β") ;;beta
-(keymap-set key-translation-map "<f7> c" "χ") ;;chi
-(keymap-set key-translation-map "<f7> d" "δ") ;;delta
-(keymap-set key-translation-map "<f7> e" "ε") ;;epsilon
-(keymap-set key-translation-map "<f7> f" "φ") ;;phi
-(keymap-set key-translation-map "<f7> g" "γ") ;;gamma
-(keymap-set key-translation-map "<f7> h" "θ") ;;theta
-(keymap-set key-translation-map "<f7> i" "ι") ;;iota
-;; (keymap-set key-translation-map "<f7> j" "")
-(keymap-set key-translation-map "<f7> k" "κ") ;;kappa
-(keymap-set key-translation-map "<f7> l" "λ") ;;lambda
-(keymap-set key-translation-map "<f7> m" "μ") ;;mu
-(keymap-set key-translation-map "<f7> n" "η") ;;eta
-(keymap-set key-translation-map "<f7> o" "ω") ;;omega
-(keymap-set key-translation-map "<f7> p" "π") ;;pi
-;; (keymap-set key-translation-map "<f7> q" "")
-(keymap-set key-translation-map "<f7> r" "ρ") ;;rho
-(keymap-set key-translation-map "<f7> s" "σ") ;;sigma
-(keymap-set key-translation-map "<f7> t" "τ") ;;tau
-(keymap-set key-translation-map "<f7> u" "υ") ;;upsilon
-(keymap-set key-translation-map "<f7> v" "ν") ;;nu
+(define-key key-translation-map (kbd "<f7> a") (kbd "α")) ;;alpha
+(define-key key-translation-map (kbd "<f7> b") (kbd "β")) ;;beta
+(define-key key-translation-map (kbd "<f7> c") (kbd "χ")) ;;chi
+(define-key key-translation-map (kbd "<f7> d") (kbd "δ")) ;;delta
+(define-key key-translation-map (kbd "<f7> e") (kbd "ε")) ;;epsilon
+(define-key key-translation-map (kbd "<f7> f") (kbd "φ")) ;;phi
+(define-key key-translation-map (kbd "<f7> g") (kbd "γ")) ;;gamma
+(define-key key-translation-map (kbd "<f7> h") (kbd "θ")) ;;theta
+(define-key key-translation-map (kbd "<f7> i") (kbd "ι")) ;;iota
+(define-key key-translation-map (kbd "<f7> k") (kbd "κ")) ;;kappa
+(define-key key-translation-map (kbd "<f7> l") (kbd "λ")) ;;lambda
+(define-key key-translation-map (kbd "<f7> m") (kbd "μ")) ;;mu
+(define-key key-translation-map (kbd "<f7> n") (kbd "η")) ;;eta
+(define-key key-translation-map (kbd "<f7> o") (kbd "ω")) ;;omega
+(define-key key-translation-map (kbd "<f7> p") (kbd "π")) ;;pi
+(define-key key-translation-map (kbd "<f7> r") (kbd "ρ")) ;;rho
+(define-key key-translation-map (kbd "<f7> s") (kbd "σ")) ;;sigma
+(define-key key-translation-map (kbd "<f7> t") (kbd "τ")) ;;tau
+(define-key key-translation-map (kbd "<f7> u") (kbd "υ")) ;;upsilon
+(define-key key-translation-map (kbd "<f7> v") (kbd "ν")) ;;nu
+(define-key key-translation-map (kbd "<f7> x") (kbd "ξ")) ;;xi
+(define-key key-translation-map (kbd "<f7> z") (kbd "ζ")) ;;zeta
 ;; (keymap-set key-translation-map "<f7> w" "")
-(keymap-set key-translation-map "<f7> x" "ξ") ;;xi
 ;; (keymap-set key-translation-map "<f7> y" "")
-(keymap-set key-translation-map "<f7> z" "ζ") ;;zeta
+;; (keymap-set key-translation-map "<f7> j" "")
+;; (keymap-set key-translation-map "<f7> q" "")
 
 (my-normie:abnormalize)

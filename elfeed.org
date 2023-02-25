@@ -120,6 +120,7 @@ deprecated
 *** https://lundaluppen.blogspot.com/feeds/posts/default           :f:swe:1p:
 *** https://bjornbengtsson.blogspot.com/feeds/posts/default        :swe:1p:
 ** Unsorted
+*** ADDitudemag
 *** [[https://forums.sufficientvelocity.com/threads/dungeon-keeper-ami-sailor-moon-dungeon-keeper-story-only-thread.30066/threadmarks.rss?threadmark_category_id=1][Dungeon Keeper Ami]]                                                :fav:
 *** https://feeds.feedburner.com/99pi
 *** https://unenumerated.blogspot.com/feeds/posts/default

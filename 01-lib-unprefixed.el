@@ -27,8 +27,14 @@
   (defmacro keymap-unset (a b &optional _c) ;; drop the extra emacs29 arg
     "Note: silently fails if you pass sexps inside A or B."
     `(general-unbind ,a ,b))
-  (defmacro keymap-set (&rest args)
-    `(general-def ,@args))
+  (defun keymap-set (map key cmd)
+    ;;(map! :map map key cmd)
+    (define-key map (kbd key) cmd)
+    )
+  ;; (keymap-set global-map "M-<backspace>" (lambda()(interactive)(message "yn")))
+   ;; (fset #'keymap-set #'general-def)
+  ;;(defmacro keymap-set (&rest args)
+  ;;  `(general-def ,@args))
   (defalias #'setopt #'general-setq))
 
 (defmacro when-car-fbound (form)

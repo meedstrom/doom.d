@@ -1,0 +1,32 @@
+#+TITLE: Inline Anki 
+
+For years I've daydreamed of writing flashcards as body text, so that the same text could serve multiple purposes. That is, not only writing them in-between paragraphs, but letting them serve /as/ paragraphs in their own right. 
+
+We have many flashcard programs in the Emacs ecosystem (org-fc, org-drill, pamparam, anki-editor, and the predecessor to Anki itself of course)... but for some strange reason, all made the design decision of separating the flashcards from normal text by way of shoving them under a dedicated headline.  I must say I don't understand the point of integrating with Org then.  They are effectively as locked-away as if they lived in a SQL database.  Perhaps not technically, but psychologically, which is just as real a barrier as any technical. 
+
+This shows you how it's empowering to know Emacs Lisp.  Turns out all I had to do was fork anki-editor and make some small changes.  Now I can write this:
+
+As list items:
+
+Or as running paragraphs:
+
+Multiline flashcards can go in drawers:
+
+
+Be aware: this is LESS CAPABLE version of anki-editor. There is only one deck and only one note type (cloze), with only one field.  Tags can't be set on a note by note basis, but they are inherited from the context. 
+
+Config variables:
+
+- inline-anki-default-deck
+- inline-anki-default-tags
+- inline-anki-note-type
+- inline-anki-flag
+- inline-anki-use-base62
+
+** Lighter than air
+
+You know the feeling when you finally have a reasonable way of doing things?
+
+An example some of you will recognize. Before I got into Org-roam, I had a history of leaving notes all over the filesystem and forgetting about them. Time and again I got the sense I need some sort of personal wiki system, but trying to implement it in various ways such as with Org radio target links, never was good enough. Once I got over the hump with Org-roam I built enough critical mass that now it's the only system, and it cuts down on forgetting and duplicating, and I'm never at a loss as to where to write anything. It unlocked a new stage of life. 
+
+I think of inline-anki the same way.  All along, the missing link for me to write and use flashcards to the extent they deserve, was just logistics. Why *shouldn't* it be as easy as typing (anki) next to any sort of paragraph anywhere on your filesystem? No inconvenience is trivial enough to dismiss. 

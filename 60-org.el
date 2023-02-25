@@ -10,6 +10,7 @@
 
 ;; undoom
 (after! org
+  ;; IDK why but I find this doom-docs-mode just gets in my way
   (remove-hook 'read-only-mode-hook 'doom-docs--toggle-read-only-h))
 ;; Crude but guaranteed to work
 (fset 'doom-docs-org-mode #'ignore)
@@ -255,15 +256,22 @@
                       (buffer-substring (point) (line-end-position)))))
            (date (save-excursion
                    (when (search-forward "#+date: " nil t)
-                     (buffer-substring (1+ (point)) (1- (line-end-position))))))
+                     (buffer-substring (1+ (point)) (+ 11 (point))))))
            (wordcount (save-excursion
                         (re-search-forward "^[^#:\n]" nil t)
                         (count-words (point) (point-max))))
+           (tags (org-get-tags))
+           (updated (format-time-string "%F" (f-modification-time filename)))
            (org-html-extension ""))
 
       (org-publish-org-to 'html filename org-html-extension plist pub-dir)
 
       ;; Some modified logic from `org-publish-org-to' that was pasted on 2023-02-02
+      ;;
+      ;; 2023-02-19: Dafuq? There is an `org-publish-after-publishing-hook' that
+      ;; I prolly could've used instead of this defun -- not that it makes much
+      ;; difference, I'm just ticked I didn't discover it just because there's
+      ;; no "export" in the variable name.
       (let* ((org-inhibit-startup t)
              (visiting (find-buffer-visiting filename))
              (work-buffer (or visiting (find-file-noselect filename))))
@@ -279,7 +287,7 @@
                       ;; This file has no body because it met :exclude-tags, idk why it gets created
                       ((= 0 (doom-file-size output))
                        (delete-file output)
-                       (message "File deleted because empty: %s" output))
+                       (message "FILE DELETED BECAUSE EMPTY: %s" output))
                       ((and title date)
                        (when output-buf
                          (setq was-opened t)
@@ -289,19 +297,24 @@
                        ;; `json-encode' doesn't escape quotes enough for
                        ;; javascript's JSON.parse() to understand (the latter
                        ;; seems shitty overall with shitty error messages).
+                       ;;
+                       ;; TODO: Try using json-encode again, think the problem
+                       ;; is fixed somehow
                        (with-temp-file output
                          ;; JSON
                          (insert "  {")
                          (insert "\n    \"slug\": \"" relative-slug "\",")
                          (insert "\n    \"title\": \"" (string-replace "\"" "\\\"" title) "\",")
                          (insert "\n    \"date\": \"" date "\",")
+                         (insert "\n    \"updated\": \"" updated "\",")
+                         (insert "\n    \"tags\": [\"" (string-join tags "\",\"") "\"],")
                          (insert "\n    \"wordcount\": " (number-to-string wordcount) ",")
                          (insert "\n    \"content\": \"")
                          (setq content-start-pos (point))
 
                          ;; Content
                          (insert "<h1>" title "</h1>")
-                         (insert "<p>Planted " date "</p>")
+                         (insert "<p>Planted " date "<br />Updated " updated "</p>")
                          (insert-file-contents output)
 
                          ;; Adjust the result from `my-add-backlinks-if-roam'
@@ -309,7 +322,11 @@
                          (when (search-backward "What links here<" nil t)
                            (goto-char (line-beginning-position))
                            (while (search-forward "h2" (line-end-position) t)
-                             (replace-match "h1" nil t)))
+                             (replace-match "h1" nil t))
+                           (when (search-forward "outline-text-2" nil t)
+                             (replace-match "backlinks-text" t t))
+                           (when (search-backward "outline-2" nil t)
+                             (replace-match "backlinks-div" t t)))
 
                          ;; Logic from `json--print-string'. Thanks!
                          (goto-char content-start-pos)
@@ -338,7 +355,7 @@
                          ;;   (replace-match "\\\\\\\"" nil t))
                          ;; (goto-char (point-max))
 
-                         (insert "\"\n }")
+                         (insert "\"\n  }")
                          )
                        (when was-opened
                          (find-file-noselect output))))))
@@ -358,8 +375,10 @@
            :publishing-directory "/home/kept/blog/baz/baz-backend/posts/"
            :publishing-function my-publish-to-blog
            :recursive t
-           :preparation-function (lambda (_) (setopt org-export-use-babel nil))
-           :completion-function (lambda (_) (setopt org-export-use-babel t))
+           :preparation-function (lambda (_) (setopt org-export-use-babel nil)
+                                   (setopt org-export-with-broken-links t))
+           :completion-function (lambda (_) (setopt org-export-use-babel t)
+                                  (setopt org-export-with-broken-links nil))
            :with-toc nil
            :section-numbers nil
            :body-only t
@@ -413,6 +432,8 @@
 (setopt org-use-speed-commands t)
 (setopt org-clock-x11idle-program-name (or (executable-find "xprintidle") "x11idle"))
 (setopt org-replace-disputed-keys t)
+(setopt org-time-stamp-custom-formats '("<%Y-%b-%d>" . "<%Y-%m-%d %a %H:%M>"))
+(setq-default org-display-custom-times t)
 
 ;; Improve org performance
 (global-auto-composition-mode 0)

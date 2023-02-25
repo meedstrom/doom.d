@@ -6,11 +6,8 @@
 ;; Backups have saved my skin in 2015, 2016, 2018, and 2020.
 ;; So I should not stop using them until 2030 or so, given no more incidents.
 ;; I put them in the unusual path /home/backups/ to prevent cluttered rg output.
-;; NOTE: it looks like now there's `tramp-backup-directory-alist'? don't need
-;; the below exclusion anymore?
 (setq
- backup-directory-alist `((,tramp-file-name-regexp . nil) ;; exclude TRAMP, bad experience
-                          ("." . "/home/backups"))
+ backup-directory-alist `(("." . "/home/backups"))
  delete-old-versions t ;; nil led to Emacs appearing broken for newbie-me
  vc-make-backup-files t ;; I don't commit regularly in every project
  make-backup-files t ;; WHY did Doom disable it
@@ -95,7 +92,7 @@
 
 ;; For Magit, also for email when I get around to that.
 (setq user-full-name "Martin Edström")
-(setq user-mail-address "meedstrom@teknik.io")
+(setq user-mail-address "meedstrom91@gmail.com")
 
 ;; Set up booleans I can use here and there throughout init.
 (defvar debian (executable-find "apt-get"))
@@ -157,6 +154,7 @@
 (setopt display-line-numbers-type nil) ; undoom
 (setopt garbage-collection-messages nil)
 (setopt auto-save-no-message t)
+;; (setopt shift-select-mode nil)
 
 (setopt browse-url-generic-program "firefox")
 (setopt browse-url-handlers
