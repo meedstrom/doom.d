@@ -430,18 +430,6 @@ have been set by `my-eshell-rename' on
 (defun my-eshell-scrollback-file (&optional dir)
   (expand-file-name ".eshell-scrollback" (or dir default-directory)))
 
-(defun my-truncate-buffer-and-move-excess (&optional _string)
-  (save-excursion
-    (goto-char (process-mark (get-buffer-process (current-buffer))))
-    (forward-line (- comint-buffer-maximum-size))
-    (beginning-of-line)
-    (let ((inhibit-read-only t)
-          (beg (point-min))
-          (end (point)))
-      (when (/= beg end)
-        (append-to-buffer (concat "*comint-excess: " (buffer-name) "*") beg end)
-        (delete-region beg end)))))
-
 (defun my-restore-scrollback* ()
   (when (derived-mode-p 'eshell-mode)
     (insert

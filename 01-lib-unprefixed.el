@@ -29,8 +29,7 @@
     `(general-unbind ,a ,b))
   (defun keymap-set (map key cmd)
     ;;(map! :map map key cmd)
-    (define-key map (kbd key) cmd)
-    )
+    (define-key map (kbd key) cmd))
   ;; (keymap-set global-map "M-<backspace>" (lambda()(interactive)(message "yn")))
    ;; (fset #'keymap-set #'general-def)
   ;;(defmacro keymap-set (&rest args)
@@ -78,7 +77,7 @@ indentation.
 
 ;; Preserved because it was a Lisp lesson to me
 (defun ^ (x power)
-  (apply (function *) (make-list power x)))
+  (apply #'* (make-list power x)))
 
 (defun cut-at (CUTOFF STRING)
   "Variant of `substring'.

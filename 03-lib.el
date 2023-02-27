@@ -114,6 +114,21 @@ It skips prompting, and inserts the metadata I want."
       (insert "#+date: [" (format-time-string "%F") "]")
       (save-buffer))))
 
+(defun my-truncate-buffer-and-move-excess (&optional _string)
+  "A substitute for `comint-truncate-buffer'.
+Instead of deleting, move the excess lines to a buffer named
+*comint-excess:..., in case you need to look far back."
+  (save-mark-and-excursion
+    (goto-char (process-mark (get-buffer-process (current-buffer))))
+    (forward-line (- comint-buffer-maximum-size))
+    (goto-char (line-beginning-position))
+    (let ((inhibit-read-only t)
+          (beg (point-min))
+          (end (point)))
+      (when (/= beg end)
+        (append-to-buffer (concat "*comint-excess: " (buffer-name) "*") beg end)
+        (delete-region beg end)))))
+
 (defmacro my-hook-once (hook &rest body)
   "Add temporary actions to HOOK to run only once.
 BODY is wrapped in a function run the next time HOOK is
