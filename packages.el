@@ -76,7 +76,7 @@
 (package! objed) ;; for objed-ipipe
 (package! org-drill)
 (package! org-recent-headings)
-(package! org-roam-bibtex) ;; yes still relevant for org 9.5
+;; (package! org-roam-bibtex) ;; yes still relevant for org 9.5
 (package! org-roam-ui)
 (package! org-transclusion)
 (package! org-tanglesync)

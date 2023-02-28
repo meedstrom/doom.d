@@ -237,6 +237,7 @@
   '("/home/kept/roam/"
     "/home/kept/emacs/conf-doom/"))
 
+;; TODO: Change to hourly commits
 (defun my-auto-commit-maybe ()
   "Create a new commit if the last was on a different day.
 Otherwise just amend today's commit.
