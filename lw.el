@@ -1,211 +1,3 @@
-(setq max-specpdl-size 180000)
-;; original
-(setq max-specpdl-size 1800)
-
-;; (eshell-command "wget --base=https://www.greaterwrong.com  " (string-join my-lw-urls-to-visit " "))
-(eshell-command (concat "aria2c -x 16 " (string-join my-lw-urls-to-visit " ")))
-(setq urls-filenames
-      (cl-loop for url in my-lw-urls-to-visit-extra
-               collect
-               (cons url (replace-regexp-in-string
-                          "https://www.greaterwrong.com/posts/.*?/" "" url))))
-
-;; finally.  then write org dir or analyze the extra links
-(let ((default-directory "/tmp/test/"))
-  (cl-loop for x in urls-filenames
-           do
-           (find-file-literally (cdr x))
-           (shr-render-buffer (current-buffer))
-           (my-lw-gather-crosslinks-from-file (car x))
-           (kill-buffer (find-buffer-visiting (cdr x)))
-           (pop urls-filenames)))
-
-(defun my-lw-gather-crosslinks-from-file (url)
-  (message "Gathering from %s" url)
-  (let* (
-         (title (string-replace
-                 " - LessWrong 2.0 viewer" "" (buffer-substring-no-properties
-                                               (goto-char (point-min))
-                                               (line-end-position))))
-         (skip nil)
-         (end-of-post (progn
-                        (cond ((search-forward "What links here?" nil t)
-                               (forward-line -1))
-                              ((or (re-search-forward "^\* .*?UTC $" nil t)
-                                   (re-search-forward "^No comments" nil t))
-                               (forward-line -11))
-                              (t
-                               (message "Did not find end of post, skipping %s" url)
-                               (setq skip t)))
-                        (point)))
-         (date (progn
-                 (goto-char (point-min))
-                 (if (re-search-forward
-                      (rx digit (?? digit) " " (= 3 word) " " (= 4 digit)) nil t)
-                     (ts-format "%F" (ts-parse (match-string 0)))
-                   (message "Did not find date, skipping %s" url)
-                   (setq skip t))))
-         (crosslinks nil))
-    (goto-char (point-min))
-    (unless (search-forward "Post permalink" nil t)
-      (message "Did not find start of post, skipping %s" url))
-    (forward-line 2)
-    (unless skip
-      ;; Get links in main body
-      (while (< (point) end-of-post)
-        (let ((match (text-property-search-forward 'shr-url nil nil t)))
-          (when match
-            (goto-char (prop-match-beginning match))))
-        (unless (> (point) end-of-post)
-          (let ((link (get-text-property (point) 'shr-url)))
-            (when (string-match-p "^/" link)
-              (setq link (concat "https://www.greaterwrong.com" link)))
-            (cl-pushnew (replace-regexp-in-string "[?#].*$" "" link) crosslinks))))
-      ;; Get previous-in-sequence
-      (while (search-forward "Part of the sequence" nil t)
-        (when (search-forward "Previous: " (line-end-position) t)
-          (let ((link (get-text-property (point) 'shr-url)))
-            (when (string-match-p "^/" link)
-              (setq link (concat "https://www.greaterwrong.com" link)))
-            (cl-pushnew (replace-regexp-in-string "[#?].*$" "" link) crosslinks))))
-      (setq crosslinks (-uniq crosslinks))
-      (dolist (link crosslinks)
-        (when (string-search "greaterwrong.com/posts/" link)
-          (unless (or (assoc link my-lw-urls-analyzed)
-                      (member link my-lw-urls-to-visit)
-                      (member link my-lw-urls-to-visit-extra))
-            (cl-pushnew link my-lw-urls-to-visit-extra))))
-      (push (list url title (org-id-uuid) date crosslinks) my-lw-urls-analyzed))))
-
-(defun my-write-org-dir-from-crosslinks ()
-  (interactive)
-  (delete-directory "/tmp/lesswrong" t)
-  (mkdir "/tmp/lesswrong")
-  (dolist (item my-lw-urls-analyzed)
-    (seq-let (url title id date crosslinks) item
-      (setq crosslinks
-            (-uniq (cl-loop
-                    for link in crosslinks
-                    collect (if (string-search "greaterwrong" link)
-                                (replace-regexp-in-string "#.*?$" "" link)
-                              link))))
-      (with-temp-file (concat "/tmp/lesswrong/" date "-" (my-slugify title) ".org")
-        (insert ":PROPERTIES:")
-        (insert "\n:ID: " (caddr (assoc url my-lw-urls-analyzed)))
-        (insert "\n:END:")
-        (insert "\n#+title: " title)
-        (insert "\n#+filetags: :lw:")
-        (insert "\n#+date: [" date "]")
-        (insert "\nBased on " url)
-        (when crosslinks
-          (insert "\n\n* Dependencies")
-          (let ((pos (point)))
-            (insert "\n\n* See also")
-            (dolist (link crosslinks)
-              (let ((data (assoc link my-lw-urls-analyzed)))
-                (if data
-                    (let ((link-title (cadr data))
-                          (link-id (caddr data)))
-                      (goto-char pos)
-                      (insert "\n- [[id:" link-id "][" link-title "]]" ))
-                  (goto-char (point-max))
-                  (insert "\n- " link))))))))))
-
-
-;; (defun my-lw-gather-crosslinks-from-post ()
-;;   ;; (remove-hook 'eww-after-render-hook #'my-lw-gather-crosslinks-from-post)
-;;   (let* ((url (plist-get eww-data :url))
-;;          (title (string-replace " - LessWrong 2.0 viewer" ""
-;;                                 (plist-get eww-data :title)))
-;;          (skip nil)
-;;          (end-of-post (progn
-;;                         (cond ((search-forward "What links here?" nil t)
-;;                                (forward-line -1))
-;;                               ((or (re-search-forward "^\* .*?UTC $" nil t)
-;;                                    (re-search-forward "^No comments" nil t))
-;;                                (forward-line -11))
-;;                               (t
-;;                                (message "Did not find end of post, skipping %s" url)
-;;                                (setq skip t)))
-;;                         (point)))
-;;          (date (progn
-;;                  (goto-char (point-min))
-;;                  (re-search-forward
-;;                   (rx digit (?? digit) " " (= 3 word) " " (= 4 digit)))
-;;                  (ts-format "%F" (ts-parse (match-string 0)))))
-;;          (crosslinks nil))
-;;     (unless skip
-;;       ;; Start of post
-;;       (goto-char (point-min))
-;;       (unless (search-forward "Post permalink" nil t)
-;;         (error "Did not find start of post"))
-;;       (forward-line 2)
-;;       ;; Get links in main body
-;;       (while (< (point) end-of-post)
-;;         (let ((match (text-property-search-forward 'shr-url nil nil t)))
-;;           (when match
-;;             (goto-char (prop-match-beginning match))))
-;;         (unless (> (point) end-of-post)
-;;           (let ((link (get-text-property (point) 'shr-url)))
-;;             (when (stringp link)
-;;               (cl-pushnew (replace-regexp-in-string "[?#].*$" "" link) crosslinks)))))
-;;       ;; Get previous-in-sequence
-;;       (while (search-forward "Part of the sequence" nil t)
-;;         (when (search-forward "Previous: " (line-end-position) t)
-;;           (let ((link (get-text-property (point) 'shr-url)))
-;;             (if (stringp link)
-;;                 (cl-pushnew (replace-regexp-in-string "[#?].*$" "" link) crosslinks)
-;;               (error "Unexpected that it's not a string: %s" link)))))
-;;       (setq crosslinks (-uniq crosslinks))
-;;       (dolist (link crosslinks)
-;;         (when (string-search "greaterwrong.com/posts/" link)
-;;           (unless (or (assoc link my-lw-urls-analyzed)
-;;                       (member link my-lw-urls-to-visit)
-;;                       (member link my-lw-urls-to-visit-extra))
-;;             (cl-pushnew link my-lw-urls-to-visit-extra))))
-;;       (push (list url title (org-id-uuid) date crosslinks) my-lw-urls-analyzed)))
-;;   (my-lw-gather-next))
-
-;; (defun my-lw-gather-next ()
-;;   (interactive)
-;;   (when my-lw-urls-to-visit
-;;     (unwind-protect
-;;         (eww-browse-url (pop my-lw-urls-to-visit))
-;;       (remove-hook 'eww-after-render-hook #'my-lw-gather-crosslinks-from-post)))
-
-;;   (add-hook 'eww-after-render-hook #'my-lw-gather-crosslinks-from-post))
-
-;; (defun my-write-single-org-file-from-crosslinks ()
-;;   (interactive)
-;;   (with-temp-file "/tmp/lesswrong.org"
-;;     (dolist (item my-lw-urls-analyzed)
-;;       (seq-let (url title crosslinks) item
-;;         (setq crosslinks
-;;               (-uniq (cl-loop
-;;                       for link in crosslinks
-;;                       collect (if (string-search "greaterwrong" link)
-;;                                   (replace-regexp-in-string "#.*?$" "" link)
-;;                                 link))))
-;;         (insert "\n* " title " :lw:")
-;;         (insert "\n:PROPERTIES:")
-;;         (insert "\n:ID: " (caddr (assoc url my-uniques)))
-;;         (insert "\n:END:")
-;;         (insert "\nBased on " url)
-;;         (when crosslinks
-;;           (insert "\n\nDependencies:")
-;;           (let ((pos (point)))
-;;             (insert "\n\nNon-integrated dependencies:")
-;;             (dolist (link crosslinks)
-;;               (if (assoc link my-uniques)
-;;                   (let ((link-title (cadr (assoc link my-uniques)))
-;;                         (link-id (caddr (assoc link my-uniques))))
-;;                     (goto-char pos)
-;;                     (insert "\n- [[id:" link-id "][" link-title "]]" ))
-;;                 (goto-char (point-max))
-;;                 (insert "\n- " link)))))
-;;         (goto-char (point-max))))))
-
-
 (defvar my-lw-urls-analyzed nil)
 (defvar my-lw-urls-to-visit-extra nil)
 (defvar my-lw-urls-to-visit
@@ -1482,3 +1274,224 @@
      "https://www.greaterwrong.com/posts/zRbh2mYgXtDJk8T42/what-intelligence-tests-miss-the-psychology-of-rational"
 
      )))
+
+(defun my-lw-gather-crosslinks-from-file (url)
+  (message "Gathering from %s" url)
+  (let* (
+         (title (string-replace
+                 " - LessWrong 2.0 viewer" "" (buffer-substring-no-properties
+                                               (goto-char (point-min))
+                                               (line-end-position))))
+         (skip nil)
+         (end-of-post (progn
+                        (cond ((search-forward "What links here?" nil t)
+                               (forward-line -1))
+                              ((or (re-search-forward "^\* .*?UTC $" nil t)
+                                   (re-search-forward "^No comments" nil t))
+                               (forward-line -11))
+                              (t
+                               (message "Did not find end of post, skipping %s" url)
+                               (setq skip t)))
+                        (point)))
+         (date (progn
+                 (goto-char (point-min))
+                 (if (re-search-forward
+                      (rx digit (?? digit) " " (= 3 word) " " (= 4 digit)) nil t)
+                     (ts-format "%F" (ts-parse (match-string 0)))
+                   (message "Did not find date, skipping %s" url)
+                   (setq skip t))))
+         (crosslinks nil))
+    (goto-char (point-min))
+    (unless (search-forward "Post permalink" nil t)
+      (message "Did not find start of post, skipping %s" url))
+    (forward-line 2)
+    (unless skip
+      ;; Get links in main body
+      (while (< (point) end-of-post)
+        (let ((match (text-property-search-forward 'shr-url nil nil t)))
+          (when match
+            (goto-char (prop-match-beginning match))))
+        (unless (> (point) end-of-post)
+          (let ((link (get-text-property (point) 'shr-url)))
+            (when (string-match-p "^/" link)
+              (setq link (concat "https://www.greaterwrong.com" link)))
+            (cl-pushnew (replace-regexp-in-string "[?#].*$" "" link) crosslinks))))
+      ;; Get previous-in-sequence
+      (while (search-forward "Part of the sequence" nil t)
+        (when (search-forward "Previous: " (line-end-position) t)
+          (let ((link (get-text-property (point) 'shr-url)))
+            (when (string-match-p "^/" link)
+              (setq link (concat "https://www.greaterwrong.com" link)))
+            (cl-pushnew (replace-regexp-in-string "[#?].*$" "" link) crosslinks))))
+      (setq crosslinks (-uniq crosslinks))
+      (dolist (link crosslinks)
+        (when (string-search "greaterwrong.com/posts/" link)
+          (unless (or (assoc link my-lw-urls-analyzed)
+                      (member link my-lw-urls-to-visit)
+                      (member link my-lw-urls-to-visit-extra))
+            (cl-pushnew link my-lw-urls-to-visit-extra))))
+      (push (list url title (org-id-uuid) date crosslinks) my-lw-urls-analyzed))))
+
+;; ---------------------------------------------------------------------------------------
+
+(setq max-specpdl-size 180000)
+;; original  (setq max-specpdl-size 1800)
+
+(setq urls-filenames
+      (cl-loop for url in my-lw-urls-to-visit
+               collect
+               (cons url (replace-regexp-in-string
+                          "https://www.greaterwrong.com/posts/.*?/" "" url))))
+
+;; SLOW
+(let ((default-directory "/home/lesswrong/"))
+  (eshell-command (concat "aria2c -x 16 " (string-join my-lw-urls-to-visit " "))))
+
+;; SLOW
+(let ((default-directory "/home/lesswrong/"))
+  (cl-loop for x in urls-filenames
+           do
+           (find-file-literally (cdr x))
+           (shr-render-buffer (current-buffer))
+           (my-lw-gather-crosslinks-from-file (car x))
+           (kill-buffer (find-buffer-visiting (cdr x)))
+           (pop urls-filenames)))
+
+;; NOTE: lw-gather-crosslinks-from-file has now populated
+;; lw-urls-to-visit-extra.  eval above again based on that!
+
+
+
+;; NOTE: you should put the resulting dir somewhere that is ignored by
+;; org-roam-db-node-include-function.  Org-id-locations will still know the
+;; location, so links will still work.  Then when you're ready to write about
+;; one post, you pull the note out of that directory.
+(defun my-write-org-dir-from-crosslinks ()
+  (interactive)
+  (delete-directory "/home/lesswrong-org/" t)
+  (mkdir "/home/lesswrong-org")
+  (dolist (item my-lw-urls-analyzed)
+    (seq-let (url title id date crosslinks) item
+      (setq crosslinks
+            (-uniq (cl-loop
+                    for link in crosslinks
+                    collect (if (string-search "greaterwrong" link)
+                                (replace-regexp-in-string "#.*?$" "" link)
+                              link))))
+      (with-temp-file (concat "/home/lesswrong-org/" date "-" (my-slugify title) ".org")
+        (insert ":PROPERTIES:")
+        (insert "\n:ID: " (caddr (assoc url my-lw-urls-analyzed)))
+        (insert "\n:END:")
+        (insert "\n#+title: " title)
+        (insert "\n#+filetags: :lw:")
+        (insert "\n#+date: [" date "]")
+        (insert "\nBased on " url)
+        (when crosslinks
+          (insert "\n\n* Dependencies")
+          (let ((pos (point)))
+            (insert "\n\n* See also")
+            (dolist (link crosslinks)
+              (let ((data (assoc link my-lw-urls-analyzed)))
+                (if data
+                    (let ((link-title (cadr data))
+                          (link-id (caddr data)))
+                      (goto-char pos)
+                      (insert "\n- [[id:" link-id "][" link-title "]]" ))
+                  (goto-char (point-max))
+                  (insert "\n- " link))))))))))
+
+
+;; (defun my-lw-gather-crosslinks-from-post ()
+;;   ;; (remove-hook 'eww-after-render-hook #'my-lw-gather-crosslinks-from-post)
+;;   (let* ((url (plist-get eww-data :url))
+;;          (title (string-replace " - LessWrong 2.0 viewer" ""
+;;                                 (plist-get eww-data :title)))
+;;          (skip nil)
+;;          (end-of-post (progn
+;;                         (cond ((search-forward "What links here?" nil t)
+;;                                (forward-line -1))
+;;                               ((or (re-search-forward "^\* .*?UTC $" nil t)
+;;                                    (re-search-forward "^No comments" nil t))
+;;                                (forward-line -11))
+;;                               (t
+;;                                (message "Did not find end of post, skipping %s" url)
+;;                                (setq skip t)))
+;;                         (point)))
+;;          (date (progn
+;;                  (goto-char (point-min))
+;;                  (re-search-forward
+;;                   (rx digit (?? digit) " " (= 3 word) " " (= 4 digit)))
+;;                  (ts-format "%F" (ts-parse (match-string 0)))))
+;;          (crosslinks nil))
+;;     (unless skip
+;;       ;; Start of post
+;;       (goto-char (point-min))
+;;       (unless (search-forward "Post permalink" nil t)
+;;         (error "Did not find start of post"))
+;;       (forward-line 2)
+;;       ;; Get links in main body
+;;       (while (< (point) end-of-post)
+;;         (let ((match (text-property-search-forward 'shr-url nil nil t)))
+;;           (when match
+;;             (goto-char (prop-match-beginning match))))
+;;         (unless (> (point) end-of-post)
+;;           (let ((link (get-text-property (point) 'shr-url)))
+;;             (when (stringp link)
+;;               (cl-pushnew (replace-regexp-in-string "[?#].*$" "" link) crosslinks)))))
+;;       ;; Get previous-in-sequence
+;;       (while (search-forward "Part of the sequence" nil t)
+;;         (when (search-forward "Previous: " (line-end-position) t)
+;;           (let ((link (get-text-property (point) 'shr-url)))
+;;             (if (stringp link)
+;;                 (cl-pushnew (replace-regexp-in-string "[#?].*$" "" link) crosslinks)
+;;               (error "Unexpected that it's not a string: %s" link)))))
+;;       (setq crosslinks (-uniq crosslinks))
+;;       (dolist (link crosslinks)
+;;         (when (string-search "greaterwrong.com/posts/" link)
+;;           (unless (or (assoc link my-lw-urls-analyzed)
+;;                       (member link my-lw-urls-to-visit)
+;;                       (member link my-lw-urls-to-visit-extra))
+;;             (cl-pushnew link my-lw-urls-to-visit-extra))))
+;;       (push (list url title (org-id-uuid) date crosslinks) my-lw-urls-analyzed)))
+;;   (my-lw-gather-next))
+
+;; (defun my-lw-gather-next ()
+;;   (interactive)
+;;   (when my-lw-urls-to-visit
+;;     (unwind-protect
+;;         (eww-browse-url (pop my-lw-urls-to-visit))
+;;       (remove-hook 'eww-after-render-hook #'my-lw-gather-crosslinks-from-post)))
+
+;;   (add-hook 'eww-after-render-hook #'my-lw-gather-crosslinks-from-post))
+
+;; (defun my-write-single-org-file-from-crosslinks ()
+;;   (interactive)
+;;   (with-temp-file "/tmp/lesswrong.org"
+;;     (dolist (item my-lw-urls-analyzed)
+;;       (seq-let (url title crosslinks) item
+;;         (setq crosslinks
+;;               (-uniq (cl-loop
+;;                       for link in crosslinks
+;;                       collect (if (string-search "greaterwrong" link)
+;;                                   (replace-regexp-in-string "#.*?$" "" link)
+;;                                 link))))
+;;         (insert "\n* " title " :lw:")
+;;         (insert "\n:PROPERTIES:")
+;;         (insert "\n:ID: " (caddr (assoc url my-uniques)))
+;;         (insert "\n:END:")
+;;         (insert "\nBased on " url)
+;;         (when crosslinks
+;;           (insert "\n\nDependencies:")
+;;           (let ((pos (point)))
+;;             (insert "\n\nNon-integrated dependencies:")
+;;             (dolist (link crosslinks)
+;;               (if (assoc link my-uniques)
+;;                   (let ((link-title (cadr (assoc link my-uniques)))
+;;                         (link-id (caddr (assoc link my-uniques))))
+;;                     (goto-char pos)
+;;                     (insert "\n- [[id:" link-id "][" link-title "]]" ))
+;;                 (goto-char (point-max))
+;;                 (insert "\n- " link)))))
+;;         (goto-char (point-max))))))
+
+

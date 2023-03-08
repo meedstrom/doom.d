@@ -561,9 +561,9 @@ until the program finishes."
 
 (defun my-prev-file-in-dir ()
   (interactive)
-  (let* ((files (directory-files default-directory))
+  (let* ((files (directory-files default-directory t))
          (remainder (reverse (seq-difference files
-                                             (member (buffer-name) files))))
+                                             (member (buffer-file-name) files))))
          (first-relevant-file
           (cl-loop for x in remainder
                    until (not (or (file-directory-p x)
@@ -571,12 +571,14 @@ until the program finishes."
                                    (rx "." (or "elc" "pdf" "o" "pyc" "so" (seq "so." num)) eol)
                                    x)))
                    finally return x)))
-    (find-file first-relevant-file)))
+    (if first-relevant-file
+        (find-file first-relevant-file)
+      (message "No more files in directory"))))
 
 (defun my-next-file-in-dir (&optional override)
   (interactive)
-  (let* ((remainder (cdr (member (buffer-name)
-                                 (directory-files default-directory))))
+  (let* ((remainder (cdr (member (buffer-file-name)
+                                 (directory-files default-directory t))))
          (first-relevant-file
           (cl-loop for x in remainder
                    until (not (or (null x)
@@ -591,7 +593,9 @@ until the program finishes."
                                        eol) x)
                                   (file-directory-p x)))
                    finally return x)))
-    (find-file first-relevant-file)))
+    (if first-relevant-file
+        (find-file first-relevant-file)
+      (message "No more files in directory"))))
 
 (defun my-compile-and-drop ()
   "Compile buffer to check for errors, but don't write an .elc.

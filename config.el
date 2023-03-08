@@ -5,6 +5,6 @@
 ;; print the full path to the broken file and I can `ffap' my way to it.
 (let ((load-prefer-newer t))
   (dolist (module (directory-files (getenv "DOOMDIR") t "^[0-9].+el$"))
-    ;; Syncthing sometimes produces sync-conflict backups, don't load them
+    ;; Syncthing sometimes produces .sync-conflict backups, don't load them
     (unless (string-search ".sync-conflict" module)
       (load module))))

@@ -28,6 +28,17 @@
     "Return the slug of NODE."
     (my-slugify (org-roam-node-title node))))
 
+(after! org
+  (dolist (x '(org-level-1
+               org-level-2
+               org-level-3
+               org-level-4
+               org-level-5
+               org-level-6
+               org-level-7
+               org-level-8))
+    (set-face-bold x nil)))
+
 (add-hook 'org-roam-buffer-postrender-functions #'magit-section-show-level-2)
 (setopt org-roam-directory "/home/kept/roam/")
 (setopt org-roam-dailies-capture-templates
@@ -38,6 +49,10 @@
 
 ;; See also C-h d m :tools biblio
 (setopt citar-bibliography '("/home/kept/roam/refs/library_biblatex.bib"))
+
+(setopt org-roam-db-node-include-function
+        (lambda ()
+          (not (string-search "lw" default-directory))))
 
 (add-hook 'org-noter-notes-mode-hook #'abbrev-mode)
 (add-hook 'org-noter-notes-mode-hook (l'rainbow-delimiters-mode 0))
@@ -85,26 +100,34 @@
                                                      (seq-remove #'nonspacing-mark-p
                                                                  (string-glyph-decompose s)))))
                  (cl-replace (title pair) (replace-regexp-in-string (car pair) (cdr pair) title)))
-        (let* ((pairs `(
-                        ("[[:space:]]+" . "-")
-                        ("[^[:alnum:][:digit:]+=-]" . "")
-                        ("--*" . "-")                  
-                        ("^-" . "")
-                        ("-$" . "")
-                        ;; ("-a-" . "-")
-                        ;; ("-the-" . "-")
-                        ;; ("-i-" . "-")
-                        ;; ("-in-" . "-")
-                        ;; ("-of-" . "-")
-                        ;; ("-is-" . "-")
-                        ;; ("-to-" . "-")
-                        ;; ("-as-" . "-")
-                        ;; ("-that-" . "-")
-                        ;; ("-are-" . "-")
-                        ;; ("-you-" . "-")
-                        ("-\\+-" . "+")
-                        ("-=-" . "=")
-                        ))
+        (let* ((pairs `(("[^[:alnum:][:digit:]]" . "-") ;; convert anything not alphanumeric
+                      ("--*" . "-")                   ;; remove sequential underscores
+                      ("^-" . "")                     ;; remove starting underscore
+                      ("-$" . "")))
+
+               ;; (pairs `(
+               ;;          ("[[:space:]]+" . "-")
+               ;;          ("[^[:alnum:][:digit:]+=-]" . "")
+               ;;          ;; ("-/-" . "-")
+               ;;          ("--*" . "-")
+               ;;          ("^-" . "")
+               ;;          ("-$" . "")
+               ;;          ;; ("-a-" . "-")
+               ;;          ;; ("-the-" . "-")
+               ;;          ;; ("-i-" . "-")
+               ;;          ;; ("-in-" . "-")
+               ;;          ;; ("-of-" . "-")
+               ;;          ;; ("-is-" . "-")
+               ;;          ;; ("-to-" . "-")
+               ;;          ;; ("-as-" . "-")
+               ;;          ;; ("-that-" . "-")
+               ;;          ;; ("-are-" . "-")
+               ;;          ;; ("-you-" . "-")
+               ;;          ("-\\+-" . "+")
+               ;;          ("-=-" . "=")
+               ;;          ))
+
+               )
                (slug (-reduce-from #'cl-replace (strip-nonspacing-marks title) pairs)))
           (downcase slug)))))
 
@@ -117,7 +140,7 @@
 ;; (my-slugify "C. S. Peirce")
 ;; (my-slugify "Do one thing at a time")
 ;; (my-slugify "Are you losing items in recentf, bookmarks, org-id-locations? Solution: Run kill-emacs-hook periodically.")
-
+;; (my-slugify "Slimline/\"pizza box\" computer chassis")
 (defun my-rename-roam-file-by-title (&optional path title)
   (interactive)
   (unless path

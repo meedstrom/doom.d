@@ -119,6 +119,8 @@
 (use-package! nov
   :mode ("\\.epub\\'" . nov-mode))
 
+(which-key-mode 0)
+
 (use-package! deianira-mass-remap
   :config
   (general-auto-unbind-keys 'undo) ;; ensure it works with and without general
@@ -192,12 +194,12 @@
   ;; (ignore-errors (elfeed-org)) ;; does not work
   )
 
-;; It sounds like Hyperbole is a sort of greybeard's Embark, and it packs a
-;; lot more "batteries included".  A drawback is that Hyperbole uses different
-;; UI metaphors than does Embark, metaphors that could feel natural to an
-;; Ido/icomplete user, but not to us Helm/Vertico users.  Anyway, that shouldn't
-;; be too hard to get over.  A feature that caught my interest: lots of premade
-;; "buttons" that Embark lacks.
+;; It sounds like Hyperbole is a sort of greybeard's Embark, and it packs a lot
+;; more "batteries included".  A drawback is that Hyperbole uses different UI
+;; metaphors than does Embark, metaphors that could feel natural to an
+;; Ido/icomplete user, but not so much to Vertico/Ivy/Helm users.  That
+;; shouldn't be too hard to get over though.  A feature that caught my interest:
+;; lots of premade "buttons" that Embark lacks.
 ;;
 ;; I haven't even used Embark much, as I also struggle with its UI metaphor.
 ;; Could be worth trying Hyperbole.  While it has a hand-rolled UI, that also
@@ -210,19 +212,20 @@
 ;; less discoverable so I must put in more effort to discover what does what
 ;; (names like "hyrolo" certainly tell me nothing).
 ;;
-;; To be clear, I don't believe it's useful to regard Embark and Hyperbole as
+;; To be clear where I'm coming from, I don't regard Embark and Hyperbole as
 ;; competing for popularity. (I'm the kind of user who uses Vertico for some
 ;; things and Helm for other things.)  It may well be that when one gets more
-;; popular, so does the other.  Not zero-sum.  But I observe that people seem
-;; much more ready to adopt Embark than they ever were ready to adopt Hyperbole,
-;; so there could be a risk it goes the way of Icicles where there's a handful
-;; of faithful users who don't publish anything about their workflows and the
-;; rest of us have no idea if it contains any lessons to carry over to the wider
-;; ecosystem and will not bother learning it in order to see, because it's too
-;; strange.  I don't know the full scope of Hyperbole so stop me if I'm wrong
-;; but would it be possible to reimplement Hyperbole to be a large collection of
-;; commands together with recommendations for where to bind them and how to
-;; configure Embark and maybe some other packages?
+;; popular, so does the other.  Not zero-sum.  But I observe that people on the
+;; subreddit seem much more ready to adopt Embark than they ever were ready to
+;; adopt Hyperbole, so there could be a risk it goes the way of Icicles where
+;; there's a handful of faithful users who don't publish anything about their
+;; workflows and the rest of us have no idea if it contains any lessons to carry
+;; over to the wider ecosystem and will not bother learning it in order to see,
+;; because it's too strange.  I don't know the full scope of Hyperbole so stop
+;; me if I'm wrong but would it be possible to reimplement Hyperbole to be only
+;; a large collection of commands that only use completing-read as UI, together
+;; with recommendations for where to bind them and how to configure Embark and
+;; maybe some other packages?
 (use-package! hyperbole
   :commands hkey-either)
 
@@ -237,17 +240,18 @@
   '("/home/kept/roam/"
     "/home/kept/emacs/conf-doom/"))
 
-;; TODO: Change to hourly commits
+;; TODO: Change to hourly commits?
 (defun my-auto-commit-maybe ()
   "Create a new commit if the last was on a different day.
 Otherwise just amend today's commit.
 
-Do nothing if
-- there are untracked files
-- the repo root directory is not one of those in `my-auto-commit-dirs'
+Only operate if the repo root directory is a member of
+`my-auto-commit-dirs'.
+
+If there are untracked files, do nothing and print a message.
 
 Suitable on `after-save-hook'."
-  (require 'ts)
+  (require 'magit)
   (require 'project)
   (when (and (project-current)
              (member (project-root (project-current)) my-auto-commit-dirs))
@@ -257,39 +261,39 @@ Suitable on `after-save-hook'."
                              "git" "log" "-n" "1" "--pretty=format:%s")))
       (if (string-search "Fatal" last-commit-date)
           (message "Git failed, probably not a Git repo: %s" default-directory)
-        ;; Special case for new Org-Roam nodes: auto-stage them
+        ;; Special case for Org-Roam: auto-stage new notes, bc it happens often
         (and (equal "org" (file-name-extension (buffer-file-name)))
-             (or (string-search "/home/kept/roam" default-directory)
-                 (string-search "/home/sync-phone/beorg" default-directory))
-          (magit-run-git "add" (buffer-file-name)))
+             (string-search org-roam-directory default-directory)
+             (magit-run-git "add" (buffer-file-name)))
+
         (if (magit-untracked-files)
             (message "Won't auto-commit.  Stage untracked files or edit .gitignore")
           (if (and (equal last-commit-date (format-time-string "%F"))
                    (equal last-commit-msg "Auto-commit"))
+              ;; Same day, so amend today's autocommit
               (magit-commit-amend '("--all" "--reuse-message=HEAD"))
             ;; New day, new autocommit
-            (magit-commit-create '("--all" "--message=Auto-commit"))
-            ))))))
+            (magit-commit-create '("--all" "--message=Auto-commit"))))))))
 
 (add-hook 'after-save-hook #'my-auto-commit-maybe)
 
+;; often it's a binary file, so prevent accidental edits
+(add-hook 'so-long-mode-hook #'read-only-mode)
+
 ;; It's insane to put data-syncs on kill-emacs-hook.  Most of the time my emacs
 ;; goes down, it happens in a non-clean way -- why would I intentionally shut
-;; off Emacs if everything is fine?  The result is that lots of data is gone
+;; off Emacs if everything is fine?  As a result, I'm missing some data
 ;; every time I start Emacs: I can't find org notes by org-id, recentf
 ;; suffers partial amnesia, and so on.  This has been annoying me for years.
 (defun my-write-data ()
   "Write histories and caches to disk.
 This runs many members of `kill-emacs-hook' so we don't have to
-wait for that hook.  You may put this on a repeating timer."
+rely on that hook.  You may put this on a repeating timer."
   (let ((hooks (seq-intersection
                 ;; any more items of interest in your `kill-emacs-hook', add them here
                 #'(bookmark-exit-hook-internal
                    savehist-autosave
                    transient-maybe-save-history
-                   ;; org-recent-headings--save-list
-                   ;; org-persist-gc
-                   ;; org-persist-write-all
                    org-id-locations-save
                    save-place-kill-emacs-hook
                    recentf-save-list
@@ -299,6 +303,5 @@ wait for that hook.  You may put this on a repeating timer."
                 kill-emacs-hook)))
     (run-hooks 'hooks)))
 
-
-;; Run after 3 minutes of idle.
+;; THIS is how you do data sync.  You can't rely on takedown logic.
 (setq my-write-data-timer (run-with-idle-timer (* 3 60) t #'my-write-data))
