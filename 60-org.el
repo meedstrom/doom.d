@@ -100,34 +100,36 @@
                                                      (seq-remove #'nonspacing-mark-p
                                                                  (string-glyph-decompose s)))))
                  (cl-replace (title pair) (replace-regexp-in-string (car pair) (cdr pair) title)))
-        (let* ((pairs `(("[^[:alnum:][:digit:]]" . "-") ;; convert anything not alphanumeric
-                      ("--*" . "-")                   ;; remove sequential underscores
-                      ("^-" . "")                     ;; remove starting underscore
-                      ("-$" . "")))
+        (let* (
 
-               ;; (pairs `(
-               ;;          ("[[:space:]]+" . "-")
-               ;;          ("[^[:alnum:][:digit:]+=-]" . "")
-               ;;          ;; ("-/-" . "-")
-               ;;          ("--*" . "-")
-               ;;          ("^-" . "")
-               ;;          ("-$" . "")
-               ;;          ;; ("-a-" . "-")
-               ;;          ;; ("-the-" . "-")
-               ;;          ;; ("-i-" . "-")
-               ;;          ;; ("-in-" . "-")
-               ;;          ;; ("-of-" . "-")
-               ;;          ;; ("-is-" . "-")
-               ;;          ;; ("-to-" . "-")
-               ;;          ;; ("-as-" . "-")
-               ;;          ;; ("-that-" . "-")
-               ;;          ;; ("-are-" . "-")
-               ;;          ;; ("-you-" . "-")
-               ;;          ("-\\+-" . "+")
-               ;;          ("-=-" . "=")
-               ;;          ))
+               ;; (pairs `(("[^[:alnum:][:digit:]]" . "-") ;; convert anything not alphanumeric
+               ;;        ("--*" . "-")                   ;; remove sequential underscores
+               ;;        ("^-" . "")                     ;; remove starting underscore
+               ;;        ("-$" . "")))
 
-               )
+               (pairs `(
+                        ("[[:space:]]+" . "-")
+                        ("[^[:alnum:][:digit:]\\/+=-]" . "")
+                        ("\\/" . "-")
+                        ("--*" . "-")
+                        ("^-" . "")
+                        ("-$" . "")
+                        ;; ("-a-" . "-")
+                        ;; ("-the-" . "-")
+                        ;; ("-i-" . "-")
+                        ;; ("-in-" . "-")
+                        ;; ("-of-" . "-")
+                        ;; ("-is-" . "-")
+                        ;; ("-to-" . "-")
+                        ;; ("-as-" . "-")
+                        ;; ("-that-" . "-")
+                        ;; ("-are-" . "-")
+                        ;; ("-you-" . "-")
+                        ("-\\+-" . "+")
+                        ("-=-" . "=")
+                        ))
+
+
                (slug (-reduce-from #'cl-replace (strip-nonspacing-marks title) pairs)))
           (downcase slug)))))
 
@@ -141,6 +143,7 @@
 ;; (my-slugify "Do one thing at a time")
 ;; (my-slugify "Are you losing items in recentf, bookmarks, org-id-locations? Solution: Run kill-emacs-hook periodically.")
 ;; (my-slugify "Slimline/\"pizza box\" computer chassis")
+
 (defun my-rename-roam-file-by-title (&optional path title)
   (interactive)
   (unless path

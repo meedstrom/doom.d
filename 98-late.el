@@ -119,8 +119,6 @@
 (use-package! nov
   :mode ("\\.epub\\'" . nov-mode))
 
-(which-key-mode 0)
-
 (use-package! deianira-mass-remap
   :config
   (general-auto-unbind-keys 'undo) ;; ensure it works with and without general
