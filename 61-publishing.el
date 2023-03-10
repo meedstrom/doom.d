@@ -144,7 +144,8 @@
                                    (substring (file-name-nondirectory (car pair)) 11))
                            (cdr pair))
              else collect pair))
-  ;; Bonus: Add in the Beorg files (they're outside roam dir to minimize potential Syncthing issues)
+  ;; Bonus: Add in the Beorg files (they're outside roam dir to minimize
+  ;; potential Syncthing issues)
   (setq new (cl-loop
              for pair in new
              collect  (cons (replace-regexp-in-string
@@ -161,24 +162,24 @@
   ;; (delete-directory "/tmp/roam/" t)
   (shell-command "rm -rf /tmp/roam")
   (copy-directory "/home/kept/roam/" "/tmp/" t)
-  ;; Bonus: merge Beorg contents.  But I'll prolly stop using Beorg for anything but agenda, so it matters less.
+  ;; Bonus: merge Beorg contents.  But I'll prolly stop using Beorg for anything
+  ;; but agenda, so it matters less.
   (delete-file "/tmp/roam/beorg") ;; rm the symlink
   (copy-directory "/home/sync-phone/beorg/" "/tmp/roam/" t)
 
-  (cl-loop for file in (directory-files-recursively
-                        "/tmp/roam"
-                        (rx bol (= 4 digit) "-" (= 2 digit) "-" (= 2 digit) "-" (+ nonl) ".org" eol)
-                        nil
-                        (lambda (x)
-                          (unless (string-search "daily" x)
-                              t))
-                        )
-           do (rename-file file
-                           (concat (file-name-directory file)
-                                   (substring (file-name-nondirectory file) 11))))
+  (cl-loop
+   for file in (directory-files-recursively
+                "/tmp/roam"
+                (rx bol (= 4 digit) "-" (= 2 digit) "-" (= 2 digit) "-" (+ nonl) ".org" eol)
+                nil
+                (lambda (x)
+                  (unless (string-search "daily" x)
+                    t)))
+   do (rename-file file
+                   (concat (file-name-directory file)
+                           (substring (file-name-nondirectory file) 11))))
 
-  )
-;; (my-prep-fn 1)
+  (fset 'org-id-update-id-locations #'ignore))
 
 ;; Struggled so long looking for a hook that would work like the old
 ;; before-export-hook.  Let this be a lesson.  We never actually need there to
@@ -186,87 +187,76 @@
 ;; add-function or write a wrapper like this.  The hook system exists to let you
 ;; subtly modify a function IN THE MIDDLE of its body.
 (defun my-publish-to-blog (plist filename pub-dir)
-  ;; (my-rename-roam-file-by-title filename)
-  (with-temp-buffer
-    (insert-file-contents filename)
-    (let* ((case-fold-search t)
-           (title (save-excursion
-                    (when (search-forward "#+title: " nil t)
-                      (buffer-substring (point) (line-end-position)))))
-           (date (save-excursion
-                   (when (search-forward "#+date: " nil t)
-                     (buffer-substring (1+ (point)) (+ 11 (point))))))
-           (wordcount (save-excursion
-                        (re-search-forward "^[^#:\n]" nil t)
-                        (count-words (point) (point-max))))
-           (tags (org-get-tags))
-           (updated (format-time-string "%F" (f-modification-time filename)))
-           (org-html-extension ""))
+  (let* ((org-inhibit-startup t)
+         (visiting (find-buffer-visiting filename))
+         (work-buffer (or visiting (find-file-noselect filename))))
+    (unwind-protect
+        (with-current-buffer work-buffer
+          (let* ((case-fold-search t)
+                 (title (save-excursion
+                          (when (search-forward "#+title: " nil t)
+                            (buffer-substring (point) (line-end-position)))))
+                 (date (save-excursion
+                         (when (search-forward "#+date: " nil t)
+                           (buffer-substring (1+ (point)) (+ 11 (point))))))
+                 (wordcount (save-excursion
+                              (re-search-forward "^[^#:\n]" nil t)
+                              (count-words (point) (point-max))))
+                 (tags (org-get-tags))
+                 (updated (format-time-string "%F" (f-modification-time filename)))
+                 (org-html-extension ""))
 
-      (unwind-protect
-          (progn
-            (fset 'org-id-update-id-locations #'ignore)
-            ;; (setopt org-export-use-babel nil)
-            ;; (setopt org-export-with-broken-links t)
-            (setq org-id-locations my-fake-orgids)
-            (org-publish-org-to 'html filename org-html-extension plist pub-dir))
-        ;; In an ideal world I'd put this cleanup in the project's
-        ;; :completion-function, but it never runs if the publishing errors out.
-        ;; (setopt org-export-use-babel t)
-        ;; (setopt org-export-with-broken-links nil)
-        (fset 'org-id-update-id-locations #'my-org-id-update-id-locations-original)
-        (setq org-id-locations my-real-orgids))
+            (unwind-protect
+                (progn
+                  (setq org-id-locations my-fake-orgids)
+                  (org-publish-org-to 'html filename org-html-extension plist pub-dir))
+              ;; I'd put this cleanup in the project's :completion-function, but it's
+              ;; not guaranteed to run when we trip an error.
+              (setq org-id-locations my-real-orgids))
 
-      ;; Some modified logic from `org-publish-org-to' that was pasted on 2023-02-02
-      ;;
-      ;; 2023-02-19: Dafuq? There is an `org-publish-after-publishing-hook' that
-      ;; I prolly could've used instead of this defun -- not that it makes much
-      ;; difference, I'm just ticked I didn't discover it just because there's
-      ;; no "export" in the variable name.
-      (let* ((org-inhibit-startup t)
-             (visiting (find-buffer-visiting filename))
-             (work-buffer (or visiting (find-file-noselect filename))))
-        (unwind-protect
-            (with-current-buffer work-buffer
-              (let* ((output (org-export-output-file-name org-html-extension nil pub-dir))
-                     (output-buf (find-buffer-visiting output))
-                     (was-opened nil)
-                     (relative-slug (replace-regexp-in-string "^.*/posts/" "" output)))
-                (cond ((not (and title date))
-                       (delete-file output)
-                       (message "FILE LACKING TITLE OR DATE: %s" output))
-                      ;; This file has no body because it met :exclude-tags, idk why it gets created
-                      ((= 0 (doom-file-size output))
-                       (delete-file output)
-                       (message "FILE DELETED BECAUSE EMPTY: %s" output))
-                      ((and title date)
-                       (when output-buf
-                         (setq was-opened t)
-                         (unless (buffer-modified-p output-buf)
-                           (kill-buffer output-buf)))
-                       ;; Hand-craft a JSON object.  Apparently, Elisp's
-                       ;; `json-encode' doesn't escape quotes enough for
-                       ;; javascript's JSON.parse() to understand (the latter
-                       ;; seems shitty overall with shitty error messages).
-                       ;;
-                       ;; TODO: Try using json-encode again, think the problem
-                       ;; is fixed somehow
-                       (with-temp-file output
-                         ;; JSON
-                         (insert "  {")
-                         (insert "\n    \"slug\": \"" relative-slug "\",")
-                         (insert "\n    \"title\": \"" (string-replace "\"" "\\\"" title) "\",")
-                         (insert "\n    \"date\": \"" date "\",")
-                         (insert "\n    \"updated\": \"" updated "\",")
-                         (insert "\n    \"tags\": [\"" (string-join tags "\",\"") "\"],")
-                         (insert "\n    \"wordcount\": " (number-to-string wordcount) ",")
-                         (insert "\n    \"content\": \"")
-                         (setq content-start-pos (point))
+            ;; 2023-02-19: Dafuq? There is an `org-publish-after-publishing-hook' that
+            ;; I prolly could've used instead of this defun -- not that it makes much
+            ;; difference, I'm just ticked I didn't discover it just because there's
+            ;; no "export" in the variable name.
+            (let* ((output-path (org-export-output-file-name org-html-extension nil pub-dir))
+                   (output-buf (find-buffer-visiting output-path))
+                   (was-opened nil)
+                   (relative-slug (replace-regexp-in-string "^.*/posts/" "" output-path)))
+              (cond ((not (and title date))
+                     (delete-file output-path)
+                     (message "FILE LACKING TITLE OR DATE: %s" output-path))
+                    ;; This file has no body because it met :exclude-tags, idk why it gets created
+                    ((= 0 (doom-file-size output-path))
+                     (delete-file output-path)
+                     (message "FILE DELETED BECAUSE EMPTY: %s" output-path))
+                    ((and title date)
+                     (when output-buf
+                       (setq was-opened t)
+                       (unless (buffer-modified-p output-buf)
+                         (kill-buffer output-buf)))
+                     ;; Hand-craft a JSON object.  Apparently, Elisp's
+                     ;; `json-encode' doesn't escape quotes enough for
+                     ;; javascript's JSON.parse() to understand (the latter
+                     ;; seems shitty overall with shitty error messages).
+                     ;;
+                     ;; TODO: Try using json-encode again, think the problem
+                     ;; is fixed somehow
+                     (with-temp-file output-path
+                       ;; JSON
+                       (insert "  {")
+                       (insert "\n    \"slug\": \"" relative-slug "\",")
+                       (insert "\n    \"title\": \"" (string-replace "\"" "\\\"" title) "\",")
+                       (insert "\n    \"date\": \"" date "\",")
+                       (insert "\n    \"updated\": \"" updated "\",")
+                       (insert "\n    \"tags\": [\"" (string-join tags "\",\"") "\"],")
+                       (insert "\n    \"wordcount\": " (number-to-string wordcount) ",")
+                       (insert "\n    \"content\": \"")
+                       (setq content-start-pos (point))
 
                          ;; Content
                          (insert "<h1>" title "</h1>")
                          (insert "<p>Planted " date "<br />Updated " updated "</p>")
-                         (insert-file-contents output)
+                         (insert-file-contents output-path)
 
                          ;; Adjust the result from `my-add-backlinks-if-roam'
                          (goto-char (point-max))
@@ -285,10 +275,10 @@
                            (let ((char (preceding-char)))
                              (delete-char -1)
                              (insert "\\" (or
-                                          ;; Special JSON character (\n, \r, etc.).
-                                          (car (rassq char json-special-chars))
-                                          ;; Fallback: UCS code point in \uNNNN form.
-                                          (format "u%04x" char)))))
+                                           ;; Special JSON character (\n, \r, etc.).
+                                           (car (rassq char json-special-chars))
+                                           ;; Fallback: UCS code point in \uNNNN form.
+                                           (format "u%04x" char)))))
 
                          ;;                          ;; JSON again
                          ;;                          (goto-char content-start-pos)
@@ -309,8 +299,8 @@
                          (insert "\"\n  }")
                          )
                        (when was-opened
-                         (find-file-noselect output))))))
-          (unless visiting (kill-buffer work-buffer)))))))
+                         (find-file-noselect output-path)))))))
+          (unless visiting (kill-buffer work-buffer)))))
 
 (setopt org-html-checkbox-type 'html)
 
@@ -321,11 +311,11 @@
 (setopt org-export-use-babel nil)
 (setopt org-export-with-broken-links t)
 (setopt org-publish-project-alist
-        '(("blag"
+        '(("blag" ;; old one
            :base-directory "/home/kept/roam/blog/"
            :publishing-directory "/home/kept/blog/meedstrom.github.io/_posts/"
-           :publishing-function org-md-publish-to-md
-           )
+           :publishing-function org-md-publish-to-md)
+
           ("react-blog"
            :base-directory "/tmp/roam/"
            :publishing-directory "/home/kept/blog/posts/"
@@ -337,5 +327,4 @@
            :body-only t
            :exclude "daily/"
            ;; this does not work! because filetag?
-           :exclude-tags ("noexport" "private" "personal" "censor" "drill" "fc")
-           )))
+           :exclude-tags ("noexport" "private" "personal" "censor" "drill" "fc"))))
