@@ -1,4 +1,5 @@
 
+
 ;; Modified version of `org-roam-node-slug'
 (defun my-slugify (title)
     (let ((slug-trim-chars '(;; Combining Diacritical Marks https://www.unicode.org/charts/PDF/U0300.pdf
@@ -129,79 +130,61 @@
           (newline)
           (insert "- [[id:" (car backlink) "][" (cdr backlink) "]]"))))))
 
+;; I'd like the URLs not to include date.  So when publishing, I'll have to work
+;; from a /tmp/roam/ copy, with the dates stripped from filenames, and
+;; org-id-locations modified accordingly.  This sets that up.
+(defun my-prep-fn (_)
+  (setq my-real-orgids (copy-hash-table org-id-locations))
+  (setq new (org-id-hash-to-alist org-id-locations))
+  (setq new (cl-loop
+             for pair in new
+             if (string-match-p (rx bol (= 4 digit) "-" (= 2 digit) "-" (= 2 digit) "-")
+                                (file-name-nondirectory (car pair)))
+             collect (cons (concat (file-name-directory (car pair))
+                                   (substring (file-name-nondirectory (car pair)) 11))
+                           (cdr pair))
+             else collect pair))
+  ;; Bonus: Add in the Beorg files (they're outside roam dir to minimize potential Syncthing issues)
+  (setq new (cl-loop
+             for pair in new
+             collect  (cons (replace-regexp-in-string
+                             "^/home/sync-phone/beorg/" "/home/kept/roam/beorg/" (car pair))
+                            (cdr pair))))
+  ;; Rename directory to /tmp/roam since we'll work from there
+  (setq new (cl-loop
+             for pair in new
+             collect (cons (replace-regexp-in-string
+                            "^/home/kept/roam/" "/tmp/roam/" (car pair))
+                           (cdr pair))))
+  (setq my-fake-orgids (org-id-alist-to-hash new))
 
-(defun my-publish-to-blog2 (plist filename pub-dir)
-  ;; (my-rename-roam-file-by-title filename)
-  (with-temp-buffer
-    (insert-file-contents filename)
-    (let* ((case-fold-search t)
-           (title (save-excursion
-                    (goto-char (point-min))
-                    (when (search-forward "#+title: " nil t)
-                      (buffer-substring (point) (line-end-position)))))
-           (planted-date (save-excursion
-                   (goto-char (point-min))
-                   (when (search-forward "#+date: " nil t)
-                     (buffer-substring (1+ (point)) (1- (line-end-position))))))
-           (org-html-extension ""))
+  ;; (delete-directory "/tmp/roam/" t)
+  (shell-command "rm -rf /tmp/roam")
+  (copy-directory "/home/kept/roam/" "/tmp/" t)
+  ;; Bonus: merge Beorg contents.  But I'll prolly stop using Beorg for anything but agenda, so it matters less.
+  (delete-file "/tmp/roam/beorg") ;; rm the symlink
+  (copy-directory "/home/sync-phone/beorg/" "/tmp/roam/" t)
 
-      ;; Black box
-      (org-publish-org-to 'html filename org-html-extension plist pub-dir)
+  (cl-loop for file in (directory-files-recursively
+                        "/tmp/roam"
+                        (rx bol (= 4 digit) "-" (= 2 digit) "-" (= 2 digit) "-" (+ nonl) ".org" eol)
+                        nil
+                        (lambda (x)
+                          (unless (string-search "daily" x)
+                              t))
+                        )
+           do (rename-file file
+                           (concat (file-name-directory file)
+                                   (substring (file-name-nondirectory file) 11))))
 
-      ;; Some logic borrowed from `org-publish-org-to' 2023-02-02
-      (let* ((org-inhibit-startup t)
-             (visiting (find-buffer-visiting filename))
-             (work-buffer (or visiting (find-file-noselect filename))))
-        (unwind-protect
-            (with-current-buffer work-buffer
-              (let* ((output (org-export-output-file-name org-html-extension nil pub-dir))
-                     (output-buf (find-buffer-visiting output))
-                     (was-opened nil)
-                     (relative-slug (replace-regexp-in-string "^.*/posts/" "" output))
-                     (data `((slug . ,relative-slug)
-                             (title . ,title)
-                             (date . ,planted-date)
-                             (content . nil))))
-                (unless (and title planted-date)
-                  (delete-file output)
-                  (message "FILE LACKING TITLE OR DATE: %s" output))
-                ;; This file has no body because it met :exclude-tags, idk why it gets created
-                (if (= 0 (doom-file-size output))
-                    (progn
-                      (delete-file output)
-                      (message "File deleted because empty: %s" output))
-                  (when (and title planted-date)
-                    (when output-buf
-                      (setq was-opened t)
-                      (unless (buffer-modified-p output-buf)
-                        (kill-buffer output-buf)))
-                    (with-temp-file output
-                      (insert
-                       (with-temp-buffer
-                         (insert "\n<h1>" title "</h1>")
-                         (insert "\n<p>Planted " planted-date "</p>")
-                         (insert-file-contents output)
-
-                         ;; Adjust the result from `my-add-backlinks-if-roam'
-                         (goto-char (point-max))
-                         (when (search-backward "What links here<" nil t)
-                           (goto-char (line-beginning-position))
-                           (while (search-forward "h2" (line-end-position) t)
-                             (replace-match "h1" nil t)))
-
-                         (setf (alist-get 'content data) (buffer-string))
-                         (json-encode data))))
-                    (when was-opened
-                      (find-file-noselect output))))))
-          (unless visiting (kill-buffer work-buffer))))
-      )))
-
+  )
+;; (my-prep-fn 1)
 
 ;; Struggled so long looking for a hook that would work like the old
 ;; before-export-hook.  Let this be a lesson.  We never actually need there to
-;; exist before-hooks or after-hooks, since it is always possible to use
+;; exist a before-hook, since in such a simple case it is always possible to use
 ;; add-function or write a wrapper like this.  The hook system exists to let you
-;; subtly modify a function in the middle of its body.
+;; subtly modify a function IN THE MIDDLE of its body.
 (defun my-publish-to-blog (plist filename pub-dir)
   ;; (my-rename-roam-file-by-title filename)
   (with-temp-buffer
@@ -220,7 +203,19 @@
            (updated (format-time-string "%F" (f-modification-time filename)))
            (org-html-extension ""))
 
-      (org-publish-org-to 'html filename org-html-extension plist pub-dir)
+      (unwind-protect
+          (progn
+            (fset 'org-id-update-id-locations #'ignore)
+            ;; (setopt org-export-use-babel nil)
+            ;; (setopt org-export-with-broken-links t)
+            (setq org-id-locations my-fake-orgids)
+            (org-publish-org-to 'html filename org-html-extension plist pub-dir))
+        ;; In an ideal world I'd put this cleanup in the project's
+        ;; :completion-function, but it never runs if the publishing errors out.
+        ;; (setopt org-export-use-babel t)
+        ;; (setopt org-export-with-broken-links nil)
+        (fset 'org-id-update-id-locations #'my-org-id-update-id-locations-original)
+        (setq org-id-locations my-real-orgids))
 
       ;; Some modified logic from `org-publish-org-to' that was pasted on 2023-02-02
       ;;
@@ -318,23 +313,25 @@
           (unless visiting (kill-buffer work-buffer)))))))
 
 (setopt org-html-checkbox-type 'html)
+
+(defvar my-real-orgids (copy-hash-table org-id-locations))
+(defvar my-fake-orgids nil)
+(fset 'my-org-id-update-id-locations-original #'org-id-update-id-locations)
+(fset 'org-id-update-id-locations #'ignore)
+(setopt org-export-use-babel nil)
+(setopt org-export-with-broken-links t)
 (setopt org-publish-project-alist
-        ;; TODO: Rename the exported file as a Jekyll-compatible slug, so I don't need
-        ;; the original filename to be any particular way.
         '(("blag"
            :base-directory "/home/kept/roam/blog/"
            :publishing-directory "/home/kept/blog/meedstrom.github.io/_posts/"
            :publishing-function org-md-publish-to-md
            )
           ("react-blog"
-           :base-directory "/home/kept/roam/"
-           :publishing-directory "/home/kept/blog/baz/baz-backend/posts/"
+           :base-directory "/tmp/roam/"
+           :publishing-directory "/home/kept/blog/posts/"
            :publishing-function my-publish-to-blog
            :recursive t
-           :preparation-function (lambda (_) (setopt org-export-use-babel nil)
-                                   (setopt org-export-with-broken-links t))
-           :completion-function (lambda (_) (setopt org-export-use-babel t)
-                                  (setopt org-export-with-broken-links nil))
+           :preparation-function my-prep-fn
            :with-toc nil
            :section-numbers nil
            :body-only t
