@@ -161,7 +161,8 @@
 
   ;; (delete-directory "/tmp/roam/" t)
   (shell-command "rm -rf /tmp/roam")
-  (copy-directory "/home/kept/roam/" "/tmp/" t)
+  ;; (copy-directory "/home/kept/roam/" "/tmp/" t)
+  (copy-directory "/home/kept/roam/" "/tmp/")
   ;; Bonus: merge Beorg contents.  But I'll prolly stop using Beorg for anything
   ;; but agenda, so it matters less.
   (delete-file "/tmp/roam/beorg") ;; rm the symlink
@@ -196,7 +197,7 @@
                  (title (save-excursion
                           (when (search-forward "#+title: " nil t)
                             (buffer-substring (point) (line-end-position)))))
-                 (date (save-excursion
+                 (created (save-excursion
                          (when (search-forward "#+date: " nil t)
                            (buffer-substring (1+ (point)) (+ 11 (point))))))
                  (wordcount (save-excursion
@@ -221,86 +222,49 @@
             (let* ((output-path (org-export-output-file-name org-html-extension nil pub-dir))
                    (output-buf (find-buffer-visiting output-path))
                    (was-opened nil)
-                   (relative-slug (replace-regexp-in-string "^.*/posts/" "" output-path)))
-              (cond ((not (and title date))
+                   (relative-slug (replace-regexp-in-string "^.*/posts/" "" output-path))
+                   (data `((slug . ,relative-slug)
+                           (title . ,title)
+                           (created . ,created)
+                           (updated . ,updated)
+                           (wordcount . ,wordcount)
+                           (tags . ,tags)
+                           (content . nil))))
+              (cond ((not (and title created))
                      (delete-file output-path)
                      (message "FILE LACKING TITLE OR DATE: %s" output-path))
                     ;; This file has no body because it met :exclude-tags, idk why it gets created
                     ((= 0 (doom-file-size output-path))
                      (delete-file output-path)
                      (message "FILE DELETED BECAUSE EMPTY: %s" output-path))
-                    ((and title date)
+                    (t
                      (when output-buf
                        (setq was-opened t)
                        (unless (buffer-modified-p output-buf)
                          (kill-buffer output-buf)))
-                     ;; Hand-craft a JSON object.  Apparently, Elisp's
-                     ;; `json-encode' doesn't escape quotes enough for
-                     ;; javascript's JSON.parse() to understand (the latter
-                     ;; seems shitty overall with shitty error messages).
-                     ;;
-                     ;; TODO: Try using json-encode again, think the problem
-                     ;; is fixed somehow
+                     (with-temp-buffer
+                       (goto-char (point-min))
+                       (insert "<h1>" title "</h1>")
+                       (insert "<p>Planted " created "<br />Updated " updated "</p>")
+                       (insert-file-contents output-path)
+
+                       ;; Adjust the result from `my-add-backlinks-if-roam'
+                       (goto-char (point-max))
+                       (when (search-backward "What links here<" nil t)
+                         (goto-char (line-beginning-position))
+                         (while (search-forward "h2" (line-end-position) t)
+                           (replace-match "h1" nil t))
+                         (when (search-forward "outline-text-2" nil t)
+                           (replace-match "backlinks-text" t t))
+                         (when (search-backward "outline-2" nil t)
+                           (replace-match "backlinks-div" t t)))
+
+                       (setf (alist-get 'content data) (buffer-string)))
                      (with-temp-file output-path
-                       ;; JSON
-                       (insert "  {")
-                       (insert "\n    \"slug\": \"" relative-slug "\",")
-                       (insert "\n    \"title\": \"" (string-replace "\"" "\\\"" title) "\",")
-                       (insert "\n    \"date\": \"" date "\",")
-                       (insert "\n    \"updated\": \"" updated "\",")
-                       (insert "\n    \"tags\": [\"" (string-join tags "\",\"") "\"],")
-                       (insert "\n    \"wordcount\": " (number-to-string wordcount) ",")
-                       (insert "\n    \"content\": \"")
-                       (setq content-start-pos (point))
-
-                         ;; Content
-                         (insert "<h1>" title "</h1>")
-                         (insert "<p>Planted " date "<br />Updated " updated "</p>")
-                         (insert-file-contents output-path)
-
-                         ;; Adjust the result from `my-add-backlinks-if-roam'
-                         (goto-char (point-max))
-                         (when (search-backward "What links here<" nil t)
-                           (goto-char (line-beginning-position))
-                           (while (search-forward "h2" (line-end-position) t)
-                             (replace-match "h1" nil t))
-                           (when (search-forward "outline-text-2" nil t)
-                             (replace-match "backlinks-text" t t))
-                           (when (search-backward "outline-2" nil t)
-                             (replace-match "backlinks-div" t t)))
-
-                         ;; Logic from `json--print-string'. Thanks!
-                         (goto-char content-start-pos)
-                         (while (re-search-forward (rx (in "\"" "\\" cntrl)) nil t)
-                           (let ((char (preceding-char)))
-                             (delete-char -1)
-                             (insert "\\" (or
-                                           ;; Special JSON character (\n, \r, etc.).
-                                           (car (rassq char json-special-chars))
-                                           ;; Fallback: UCS code point in \uNNNN form.
-                                           (format "u%04x" char)))))
-
-                         ;;                          ;; JSON again
-                         ;;                          (goto-char content-start-pos)
-                         ;;                          (while (search-forward "\\" nil t)
-                         ;;                            (replace-match "\\\\" nil t))
-                         ;;                          (goto-char content-start-pos)
-                         ;;                          (while (search-forward "
-                         ;; " nil t)
-                         ;;                            (replace-match "\\n" nil t))
-
-                         ;; ;; For some reason, I need triple-escaped quotes for
-                         ;; ;; where I call JSON.parse() in my Javascript.
-                         ;; (goto-char content-start-pos)
-                         ;; (while (search-forward "\\\"" nil t)
-                         ;;   (replace-match "\\\\\\\"" nil t))
-                         ;; (goto-char (point-max))
-
-                         (insert "\"\n  }")
-                         )
-                       (when was-opened
-                         (find-file-noselect output-path)))))))
-          (unless visiting (kill-buffer work-buffer)))))
+                       (insert (json-encode data)))
+                     (when was-opened
+                       (find-file-noselect output-path)))))))
+      (unless visiting (kill-buffer work-buffer)))))
 
 (setopt org-html-checkbox-type 'html)
 
