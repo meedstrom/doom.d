@@ -1275,8 +1275,8 @@
 
      )))
 
-(defun my-lw-gather-crosslinks-from-file (url)
-  (message "Gathering from %s" url)
+(defun my-lw-gather-crosslinks-from-file (url fname)
+  (message "Gathering from %s" fname)
   (let* (
          (title (string-replace
                  " - LessWrong 2.0 viewer" "" (buffer-substring-no-properties
@@ -1290,7 +1290,7 @@
                                    (re-search-forward "^No comments" nil t))
                                (forward-line -11))
                               (t
-                               (message "Did not find end of post, skipping %s" url)
+                               (message "Did not find end of post, skipping %s" fname)
                                (setq skip t)))
                         (point)))
          (date (progn
@@ -1298,12 +1298,12 @@
                  (if (re-search-forward
                       (rx digit (?? digit) " " (= 3 word) " " (= 4 digit)) nil t)
                      (ts-format "%F" (ts-parse (match-string 0)))
-                   (message "Did not find date, skipping %s" url)
+                   (message "Did not find date, skipping %s" fname)
                    (setq skip t))))
          (crosslinks nil))
     (goto-char (point-min))
     (unless (search-forward "Post permalink" nil t)
-      (message "Did not find start of post, skipping %s" url))
+      (message "Did not find start of post, skipping %s" fname))
     (forward-line 2)
     (unless skip
       ;; Get links in main body
@@ -1333,6 +1333,32 @@
       (push (list url title (org-id-uuid) date crosslinks) my-lw-urls-analyzed))))
 
 ;; ---------------------------------------------------------------------------------------
+;; 2023-03-10 It occurs to me I'm only doing this for LessWrong.com now, but I
+;; could end up doing the same with many other sites.  So it's interesting to
+;; get the workflow right.  Now basically I output a directory of skeletal Org
+;; files for each post, in order to pre-fill them with "See also" sections
+;; (causing the proper amount of backlinks without manual labor on my part).  I
+;; also don't want to add all these skeletons to my org-roam cache, only one at
+;; a time as I take the time to write my own thoughts into each. So I make sure
+;; the org-roam-db-node-include-function ignores this subdirectory, and I'll
+;; pull a file out of there when I write into it.
+;;
+;; Problem #1 is that upon export to HTML, many links will be broken.
+;;
+;; Problem #2 is that I cannot use the command `org-roam-node-insert' to link to a
+;; skeleton if I haven't pulled that one out of the subdir.
+;;
+;; To solve both, I'm thinking of using roam refs.  Then export to HTML will
+;; just work.  And to link to a given post, regardless of whether or not I've
+;; written about it, I'll find an insertion command that consults a
+;; list of links, perhaps eww-bookmarks directly.
+
+;; SLOW  -- hopefully only need to run once
+(let ((default-directory "/home/lesswrong/"))
+  (mkdir default-directory t)
+  (f-write (string-join my-lw-urls-to-visit "\n") 'utf-8 "/tmp/download-urls")
+  (async-shell-command "aria2c -x 16 -i /tmp/download-urls"))
+
 
 (setq max-specpdl-size 180000)
 ;; original  (setq max-specpdl-size 1800)
@@ -1345,27 +1371,23 @@
 
 ;; SLOW
 (let ((default-directory "/home/lesswrong/"))
-  (eshell-command (concat "aria2c -x 16 " (string-join my-lw-urls-to-visit " "))))
-
-;; SLOW
-(let ((default-directory "/home/lesswrong/"))
-  (cl-loop for x in urls-filenames
+  (cl-loop for pair in urls-filenames
            do
-           (find-file-literally (cdr x))
+           (find-file-literally (cdr pair))
            (shr-render-buffer (current-buffer))
-           (my-lw-gather-crosslinks-from-file (car x))
-           (kill-buffer (find-buffer-visiting (cdr x)))
+           (my-lw-gather-crosslinks-from-file (car pair) (cdr pair))
+           (kill-buffer (find-buffer-visiting (cdr pair)))
            (pop urls-filenames)))
 
 ;; NOTE: lw-gather-crosslinks-from-file has now populated
-;; lw-urls-to-visit-extra.  eval above again based on that!
+;; lw-urls-to-visit-extra.  eval above again based on that instead of lw-urls-to-visit!
 
 
 
-;; NOTE: you should put the resulting dir somewhere that is ignored by
+;; NOTE: i suggest putting the output dir somewhere that is ignored by
 ;; org-roam-db-node-include-function.  Org-id-locations will still know the
-;; location, so links will still work.  Then when you're ready to write about
-;; one post, you pull the note out of that directory.
+;; location, so clicking links will still work.  Then when you're ready to take
+;; your own notes about one post, you pull the skeleton note out of that directory.
 (defun my-write-org-dir-from-crosslinks ()
   (interactive)
   (delete-directory "/home/lesswrong-org/" t)

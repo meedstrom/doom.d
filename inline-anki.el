@@ -3,11 +3,12 @@
 
 ;; REQUIREMENTS
 
-;; - org-fontify-emphasized-text should be t in all relevant buffers, and none
-;; of the buffers are visited literally (with find-file-literally).  That is to
-;; say, when we scan for flashcards, we need that text wrapped in asterisks are
-;; in fact given the 'bold text property in your Org buffers.  Org is already
-;; good at rooting out false matches via org-do-emphasis-faces, so
+;; - org-fontify-emphasized-text should be t in all relevant buffers (don't
+;; worry, this is a very uncommon default to disable), AND none of those buffers
+;; are visited literally (with find-file-literally).  That is to say, when we
+;; scan for flashcards, we need that those text bits wrapped in asterisks are in
+;; fact given the 'bold text property in your Org buffers.  Org is already good
+;; at rooting out false matches via org-do-emphasis-faces, so
 ;; inline-anki-convert-implicit-clozes follows in its tracks and look only at
 ;; the substrings Org already bolded.
 ;;

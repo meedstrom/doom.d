@@ -275,8 +275,6 @@ Suitable on `after-save-hook'."
 
 (add-hook 'after-save-hook #'my-auto-commit-maybe)
 
-;; often it's a binary file, so prevent accidental edits
-(add-hook 'so-long-mode-hook #'read-only-mode)
 
 ;; It's insane to put data-syncs on kill-emacs-hook.  Most of the time my emacs
 ;; goes down, it happens in a non-clean way -- why would I intentionally shut

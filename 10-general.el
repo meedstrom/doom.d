@@ -231,3 +231,6 @@
 (remove-hook 'term-mode-hook #'hide-mode-line-mode)
 
 ;; (add-hook 'after-save-hook #'my-fix-invalid-backup-settings)
+
+;; often it's a binary file, so prevent accidental edits
+(add-hook 'so-long-mode-hook #'read-only-mode)
