@@ -1337,28 +1337,31 @@
 ;; could end up doing the same with many other sites.  So it's interesting to
 ;; get the workflow right.  Now basically I output a directory of skeletal Org
 ;; files for each post, in order to pre-fill them with "See also" sections
-;; (causing the proper amount of backlinks without manual labor on my part).  I
-;; also don't want to add all these skeletons to my org-roam cache, only one at
-;; a time as I take the time to write my own thoughts into each. So I make sure
-;; the org-roam-db-node-include-function ignores this subdirectory, and I'll
-;; pull a file out of there when I write into it.
+;; (causing the proper amount of backlinks without manual labor on my part).  At
+;; the same time, I don't want to add all these skeletons to my org-roam cache,
+;; only one at a time as I take the time to write my own thoughts into each. So
+;; I make sure the org-roam-db-node-include-function ignores this subdirectory,
+;; and I'll pull a file out of there when I write into it.
 ;;
 ;; Problem #1 is that upon export to HTML, many links will be broken.
 ;;
 ;; Problem #2 is that I cannot use the command `org-roam-node-insert' to link to a
 ;; skeleton if I haven't pulled that one out of the subdir.
 ;;
-;; To solve both, I'm thinking of using roam refs.  Then export to HTML will
-;; just work.  And to link to a given post, regardless of whether or not I've
-;; written about it, I'll find an insertion command that consults a
-;; list of links, perhaps eww-bookmarks directly.
+;; To solve both, I'm thinking of using roam refs.  Then export to HTML will not
+;; have broken links.  And to link to a given post, regardless of whether or not
+;; I've written about it, I'll find an insertion command that consults a list of
+;; links, perhaps eww-bookmarks directly.
+;;
+;; I could really use a hack though such that when I click a URL that has a ref
+;; somewhere, I'll instead jump to that note.  And similar behavior for the
+;; exported links ... although then we're back at square one.
 
 ;; SLOW  -- hopefully only need to run once
 (let ((default-directory "/home/lesswrong/"))
   (mkdir default-directory t)
   (f-write (string-join my-lw-urls-to-visit "\n") 'utf-8 "/tmp/download-urls")
   (async-shell-command "aria2c -x 16 -i /tmp/download-urls"))
-
 
 (setq max-specpdl-size 180000)
 ;; original  (setq max-specpdl-size 1800)
@@ -1403,11 +1406,12 @@
       (with-temp-file (concat "/home/lesswrong-org/" date "-" (my-slugify title) ".org")
         (insert ":PROPERTIES:")
         (insert "\n:ID: " (caddr (assoc url my-lw-urls-analyzed)))
+        (insert "\n:ROAM_REFS: " url)
         (insert "\n:END:")
         (insert "\n#+title: " title)
         (insert "\n#+filetags: :lw:")
         (insert "\n#+date: [" date "]")
-        (insert "\nBased on " url)
+        ;; (insert "\nBased on " url)
         (when crosslinks
           (insert "\n\n* Dependencies")
           (let ((pos (point)))

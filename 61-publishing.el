@@ -1,68 +1,46 @@
 
-
 ;; Modified version of `org-roam-node-slug'
 (defun my-slugify (title)
-    (let ((slug-trim-chars '(;; Combining Diacritical Marks https://www.unicode.org/charts/PDF/U0300.pdf
-                             768 ; U+0300 COMBINING GRAVE ACCENT
-                             769 ; U+0301 COMBINING ACUTE ACCENT
-                             770 ; U+0302 COMBINING CIRCUMFLEX ACCENT
-                             771 ; U+0303 COMBINING TILDE
-                             772 ; U+0304 COMBINING MACRON
-                             774 ; U+0306 COMBINING BREVE
-                             775 ; U+0307 COMBINING DOT ABOVE
-                             776 ; U+0308 COMBINING DIAERESIS
-                             777 ; U+0309 COMBINING HOOK ABOVE
-                             778 ; U+030A COMBINING RING ABOVE
-                             779 ; U+030B COMBINING DOUBLE ACUTE ACCENT
-                             780 ; U+030C COMBINING CARON
-                             795 ; U+031B COMBINING HORN
-                             803 ; U+0323 COMBINING DOT BELOW
-                             804 ; U+0324 COMBINING DIAERESIS BELOW
-                             805 ; U+0325 COMBINING RING BELOW
-                             807 ; U+0327 COMBINING CEDILLA
-                             813 ; U+032D COMBINING CIRCUMFLEX ACCENT BELOW
-                             814 ; U+032E COMBINING BREVE BELOW
-                             816 ; U+0330 COMBINING TILDE BELOW
-                             817 ; U+0331 COMBINING MACRON BELOW
-                             )))
-      (cl-flet* ((nonspacing-mark-p (char) (memq char slug-trim-chars))
-                 (strip-nonspacing-marks (s) (string-glyph-compose
-                                              (apply #'string
-                                                     (seq-remove #'nonspacing-mark-p
-                                                                 (string-glyph-decompose s)))))
-                 (cl-replace (title pair) (replace-regexp-in-string (car pair) (cdr pair) title)))
-        (let* (
-
-               ;; (pairs `(("[^[:alnum:][:digit:]]" . "-") ;; convert anything not alphanumeric
-               ;;        ("--*" . "-")                   ;; remove sequential underscores
-               ;;        ("^-" . "")                     ;; remove starting underscore
-               ;;        ("-$" . "")))
-
-               (pairs `(
-                        ("[[:space:]]+" . "-")
-                        ("[^[:alnum:][:digit:]\\/+=-]" . "")
-                        ("\\/" . "-")
-                        ("--*" . "-")
-                        ("^-" . "")
-                        ("-$" . "")
-                        ;; ("-a-" . "-")
-                        ;; ("-the-" . "-")
-                        ;; ("-i-" . "-")
-                        ;; ("-in-" . "-")
-                        ;; ("-of-" . "-")
-                        ;; ("-is-" . "-")
-                        ;; ("-to-" . "-")
-                        ;; ("-as-" . "-")
-                        ;; ("-that-" . "-")
-                        ;; ("-are-" . "-")
-                        ;; ("-you-" . "-")
-                        ("-\\+-" . "+")
-                        ("-=-" . "=")
-                        ))
-
-
-               (slug (-reduce-from #'cl-replace (strip-nonspacing-marks title) pairs)))
-          (downcase slug)))))
+  (let ((slug-trim-chars '(;; Combining Diacritical Marks https://www.unicode.org/charts/PDF/U0300.pdf
+                           768 ; U+0300 COMBINING GRAVE ACCENT
+                           769 ; U+0301 COMBINING ACUTE ACCENT
+                           770 ; U+0302 COMBINING CIRCUMFLEX ACCENT
+                           771 ; U+0303 COMBINING TILDE
+                           772 ; U+0304 COMBINING MACRON
+                           774 ; U+0306 COMBINING BREVE
+                           775 ; U+0307 COMBINING DOT ABOVE
+                           776 ; U+0308 COMBINING DIAERESIS
+                           777 ; U+0309 COMBINING HOOK ABOVE
+                           778 ; U+030A COMBINING RING ABOVE
+                           779 ; U+030B COMBINING DOUBLE ACUTE ACCENT
+                           780 ; U+030C COMBINING CARON
+                           795 ; U+031B COMBINING HORN
+                           803 ; U+0323 COMBINING DOT BELOW
+                           804 ; U+0324 COMBINING DIAERESIS BELOW
+                           805 ; U+0325 COMBINING RING BELOW
+                           807 ; U+0327 COMBINING CEDILLA
+                           813 ; U+032D COMBINING CIRCUMFLEX ACCENT BELOW
+                           814 ; U+032E COMBINING BREVE BELOW
+                           816 ; U+0330 COMBINING TILDE BELOW
+                           817 ; U+0331 COMBINING MACRON BELOW
+                           )))
+    (cl-flet* ((nonspacing-mark-p (char) (memq char slug-trim-chars))
+               (strip-nonspacing-marks (s) (string-glyph-compose
+                                            (apply #'string
+                                                   (seq-remove #'nonspacing-mark-p
+                                                               (string-glyph-decompose s)))))
+               (cl-replace (title pair) (replace-regexp-in-string (car pair) (cdr pair) title)))
+      (let* ((pairs `(("[[:space:]]+" . "-")
+                      ("[^[:alnum:][:digit:]\\/+=-]" . "")
+                      ("\\/" . "-")
+                      ("--*" . "-")
+                      ("^-" . "")
+                      ("-$" . "")
+                      ("-\\+-" . "+")
+                      ("-=-" . "=")
+                      ))
+             (slug (-reduce-from #'cl-replace (strip-nonspacing-marks title) pairs)))
+        (downcase slug)))))
 
 ;; (my-slugify "A/B testing")
 ;; (my-slugify "Someday/Maybe whale carcass")
@@ -151,7 +129,7 @@
              collect  (cons (replace-regexp-in-string
                              "^/home/sync-phone/beorg/" "/home/kept/roam/beorg/" (car pair))
                             (cdr pair))))
-  ;; Rename directory to /tmp/roam since we'll work from there
+  ;; Rename base directory to /tmp/roam since we'll work from there
   (setq new (cl-loop
              for pair in new
              collect (cons (replace-regexp-in-string
@@ -173,8 +151,8 @@
                 "/tmp/roam"
                 (rx bol (= 4 digit) "-" (= 2 digit) "-" (= 2 digit) "-" (+ nonl) ".org" eol)
                 nil
-                (lambda (x)
-                  (unless (string-search "daily" x)
+                (lambda (dir)
+                  (unless (string-search "daily" dir)
                     t)))
    do (rename-file file
                    (concat (file-name-directory file)
@@ -183,92 +161,90 @@
   (fset 'org-id-update-id-locations #'ignore))
 
 ;; Struggled so long looking for a hook that would work like the old
-;; before-export-hook.  Let this be a lesson.  We never actually need there to
-;; exist a before-hook, since in such a simple case it is always possible to use
-;; add-function or write a wrapper like this.  The hook system exists to let you
-;; subtly modify a function IN THE MIDDLE of its body.
+;; before-export-hook.  Let this be a lesson.  The hook system exists to let you
+;; subtly modify a function IN THE MIDDLE of its body. We never actually need
+;; there to exist a before-hook, since in such a simple case it is always
+;; possible to use add-function or write a wrapper like this.
 (defun my-publish-to-blog (plist filename pub-dir)
   (let* ((org-inhibit-startup t)
          (visiting (find-buffer-visiting filename))
-         (work-buffer (or visiting (find-file-noselect filename))))
+         (work-buffer (or visiting (find-file-noselect filename)))
+         (org-html-extension ""))
+    (unwind-protect
+        (progn
+          (setq org-id-locations my-fake-orgids)
+          (org-publish-org-to 'html filename org-html-extension plist pub-dir))
+      ;; I'd put this cleanup in the project's :completion-function, but it's
+      ;; not guaranteed to run when we trip an error.
+      (setq org-id-locations my-real-orgids))
+
     (unwind-protect
         (with-current-buffer work-buffer
-          (let* ((case-fold-search t)
+          (let* ((output-path (org-export-output-file-name org-html-extension nil pub-dir))
+                 (output-buf (find-buffer-visiting output-path))
+                 (was-opened nil)
+                 (case-fold-search t)
+                 (slug (replace-regexp-in-string "^.*/posts/" "" output-path))
                  (title (save-excursion
                           (when (search-forward "#+title: " nil t)
                             (buffer-substring (point) (line-end-position)))))
                  (created (save-excursion
-                         (when (search-forward "#+date: " nil t)
-                           (buffer-substring (1+ (point)) (+ 11 (point))))))
+                            (when (search-forward "#+date: " nil t)
+                              (buffer-substring (1+ (point)) (+ 11 (point))))))
+                 (updated (format-time-string "%F" (f-modification-time filename)))
+                 (tags (or (org-get-tags) '("")))
                  (wordcount (save-excursion
                               (re-search-forward "^[^#:\n]" nil t)
                               (count-words (point) (point-max))))
-                 (tags (org-get-tags))
-                 (updated (format-time-string "%F" (f-modification-time filename)))
-                 (org-html-extension ""))
+                 (data `((slug . ,slug)
+                         (title . ,title)
+                         (created . ,created)
+                         (updated . ,updated)
+                         (wordcount . ,wordcount)
+                         (tags . ,tags)
+                         (content . nil))))
+            (cond ((not (and title created))
+                   (delete-file output-path)
+                   (message "FILE LACKING TITLE OR DATE: %s" output-path))
+                  ;; This file has no body because it met :exclude-tags, idk why it gets created
+                  ((= 0 (doom-file-size output-path))
+                   (delete-file output-path)
+                   (message "FILE DELETED BECAUSE EMPTY: %s" output-path))
+                  ((seq-intersection tags '("noexport" "private" "personal" "censor" "drill" "fc"))
+                   (delete-file output-path)
+                   (message "FILE DELETED BECAUSE EXCLUDED TAG FOUND: %s" output-path))
+                  (t
+                   (when output-buf
+                     (setq was-opened t)
+                     (unless (buffer-modified-p output-buf)
+                       (kill-buffer output-buf)))
+                   (with-temp-buffer
+                     (goto-char (point-min))
+                     (insert "<h1>" title "</h1>")
+                     (insert "<p>Planted " created "<br />Updated " updated "</p>")
+                     (insert-file-contents output-path)
 
-            (unwind-protect
-                (progn
-                  (setq org-id-locations my-fake-orgids)
-                  (org-publish-org-to 'html filename org-html-extension plist pub-dir))
-              ;; I'd put this cleanup in the project's :completion-function, but it's
-              ;; not guaranteed to run when we trip an error.
-              (setq org-id-locations my-real-orgids))
+                     ;; Adjust the result from `my-add-backlinks-if-roam'
+                     (goto-char (point-max))
+                     (when (search-backward "What links here<" nil t)
+                       (goto-char (line-beginning-position))
+                       (while (search-forward "h2" (line-end-position) t)
+                         (replace-match "h1" nil t))
+                       (when (search-forward "outline-text-2" nil t)
+                         (replace-match "backlinks-text" t t))
+                       (when (search-backward "outline-2" nil t)
+                         (replace-match "backlinks-div" t t)))
 
-            ;; 2023-02-19: Dafuq? There is an `org-publish-after-publishing-hook' that
-            ;; I prolly could've used instead of this defun -- not that it makes much
-            ;; difference, I'm just ticked I didn't discover it just because there's
-            ;; no "export" in the variable name.
-            (let* ((output-path (org-export-output-file-name org-html-extension nil pub-dir))
-                   (output-buf (find-buffer-visiting output-path))
-                   (was-opened nil)
-                   (relative-slug (replace-regexp-in-string "^.*/posts/" "" output-path))
-                   (data `((slug . ,relative-slug)
-                           (title . ,title)
-                           (created . ,created)
-                           (updated . ,updated)
-                           (wordcount . ,wordcount)
-                           (tags . ,tags)
-                           (content . nil))))
-              (cond ((not (and title created))
-                     (delete-file output-path)
-                     (message "FILE LACKING TITLE OR DATE: %s" output-path))
-                    ;; This file has no body because it met :exclude-tags, idk why it gets created
-                    ((= 0 (doom-file-size output-path))
-                     (delete-file output-path)
-                     (message "FILE DELETED BECAUSE EMPTY: %s" output-path))
-                    (t
-                     (when output-buf
-                       (setq was-opened t)
-                       (unless (buffer-modified-p output-buf)
-                         (kill-buffer output-buf)))
-                     (with-temp-buffer
-                       (goto-char (point-min))
-                       (insert "<h1>" title "</h1>")
-                       (insert "<p>Planted " created "<br />Updated " updated "</p>")
-                       (insert-file-contents output-path)
-
-                       ;; Adjust the result from `my-add-backlinks-if-roam'
-                       (goto-char (point-max))
-                       (when (search-backward "What links here<" nil t)
-                         (goto-char (line-beginning-position))
-                         (while (search-forward "h2" (line-end-position) t)
-                           (replace-match "h1" nil t))
-                         (when (search-forward "outline-text-2" nil t)
-                           (replace-match "backlinks-text" t t))
-                         (when (search-backward "outline-2" nil t)
-                           (replace-match "backlinks-div" t t)))
-
-                       (setf (alist-get 'content data) (buffer-string)))
-                     (with-temp-file output-path
-                       (insert (json-encode data)))
-                     (when was-opened
-                       (find-file-noselect output-path)))))))
+                     (setf (alist-get 'content data) (buffer-string)))
+                   (with-temp-file output-path
+                     (insert (json-encode data)))
+                   (when was-opened
+                     (find-file-noselect output-path))))))
       (unless visiting (kill-buffer work-buffer)))))
 
 (setopt org-html-checkbox-type 'html)
 
-(defvar my-real-orgids (copy-hash-table org-id-locations))
+(defvar my-real-orgids nil)
 (defvar my-fake-orgids nil)
 (fset 'my-org-id-update-id-locations-original #'org-id-update-id-locations)
 (fset 'org-id-update-id-locations #'ignore)
@@ -290,5 +266,5 @@
            :section-numbers nil
            :body-only t
            :exclude "daily/"
-           ;; this does not work! because filetag?
+           ;; this does not work! because of filetag?
            :exclude-tags ("noexport" "private" "personal" "censor" "drill" "fc"))))
