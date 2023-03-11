@@ -1332,30 +1332,8 @@
             (cl-pushnew link my-lw-urls-to-visit-extra))))
       (push (list url title (org-id-uuid) date crosslinks) my-lw-urls-analyzed))))
 
-;; ---------------------------------------------------------------------------------------
-;; 2023-03-10 It occurs to me I'm only doing this for LessWrong.com now, but I
-;; could end up doing the same with many other sites.  So it's interesting to
-;; get the workflow right.  Now basically I output a directory of skeletal Org
-;; files for each post, in order to pre-fill them with "See also" sections
-;; (causing the proper amount of backlinks without manual labor on my part).  At
-;; the same time, I don't want to add all these skeletons to my org-roam cache,
-;; only one at a time as I take the time to write my own thoughts into each. So
-;; I make sure the org-roam-db-node-include-function ignores this subdirectory,
-;; and I'll pull a file out of there when I write into it.
-;;
-;; Problem #1 is that upon export to HTML, many links will be broken.
-;;
-;; Problem #2 is that I cannot use the command `org-roam-node-insert' to link to a
-;; skeleton if I haven't pulled that one out of the subdir.
-;;
-;; To solve both, I'm thinking of using roam refs.  Then export to HTML will not
-;; have broken links.  And to link to a given post, regardless of whether or not
-;; I've written about it, I'll find an insertion command that consults a list of
-;; links, perhaps eww-bookmarks directly.
-;;
-;; I could really use a hack though such that when I click a URL that has a ref
-;; somewhere, I'll instead jump to that note.  And similar behavior for the
-;; exported links ... although then we're back at square one.
+;; -----------------------------------------------------------------------------
+
 
 ;; SLOW  -- hopefully only need to run once
 (let ((default-directory "/home/lesswrong/"))
@@ -1393,7 +1371,7 @@
 ;; your own notes about one post, you pull the skeleton note out of that directory.
 (defun my-write-org-dir-from-crosslinks ()
   (interactive)
-  (delete-directory "/home/lesswrong-org/" t)
+  (shell-command "rm -rf /home/lesswrong-org/")
   (mkdir "/home/lesswrong-org")
   (dolist (item my-lw-urls-analyzed)
     (seq-let (url title id date crosslinks) item

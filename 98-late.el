@@ -275,6 +275,7 @@ Suitable on `after-save-hook'."
 
 (add-hook 'after-save-hook #'my-auto-commit-maybe)
 
+(setq counsel-ffdata-database-path "/home/me/.mozilla/firefox/wrki7yvc.dev-edition-default/places.sqlite")
 
 ;; It's insane to put data-syncs on kill-emacs-hook.  Most of the time my emacs
 ;; goes down, it happens in a non-clean way -- why would I intentionally shut
