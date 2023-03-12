@@ -1351,6 +1351,7 @@
                           "https://www.greaterwrong.com/posts/.*?/" "" url))))
 
 ;; SLOW
+(require 'ts)
 (let ((default-directory "/home/lesswrong/"))
   (cl-loop for pair in urls-filenames
            do
@@ -1359,7 +1360,6 @@
            (my-lw-gather-crosslinks-from-file (car pair) (cdr pair))
            (kill-buffer (find-buffer-visiting (cdr pair)))
            (pop urls-filenames)))
-
 ;; NOTE: lw-gather-crosslinks-from-file has now populated
 ;; lw-urls-to-visit-extra.  eval above again based on that instead of lw-urls-to-visit!
 
@@ -1375,34 +1375,38 @@
   (mkdir "/home/lesswrong-org")
   (dolist (item my-lw-urls-analyzed)
     (seq-let (url title id date crosslinks) item
+      ;; clean&fix
       (setq crosslinks
             (-uniq (cl-loop
                     for link in crosslinks
                     collect (if (string-search "greaterwrong" link)
                                 (replace-regexp-in-string "#.*?$" "" link)
                               link))))
-      (with-temp-file (concat "/home/lesswrong-org/" date "-" (my-slugify title) ".org")
-        (insert ":PROPERTIES:")
-        (insert "\n:ID: " (caddr (assoc url my-lw-urls-analyzed)))
-        (insert "\n:ROAM_REFS: " url)
-        (insert "\n:END:")
-        (insert "\n#+title: " title)
-        (insert "\n#+filetags: :lw:")
-        (insert "\n#+date: [" date "]")
-        ;; (insert "\nBased on " url)
-        (when crosslinks
-          (insert "\n\n* Dependencies")
-          (let ((pos (point)))
-            (insert "\n\n* See also")
-            (dolist (link crosslinks)
-              (let ((data (assoc link my-lw-urls-analyzed)))
-                (if data
-                    (let ((link-title (cadr data))
-                          (link-id (caddr data)))
-                      (goto-char pos)
-                      (insert "\n- [[id:" link-id "][" link-title "]]" ))
-                  (goto-char (point-max))
-                  (insert "\n- " link))))))))))
+      (let (deps
+            others)
+        (dolist (link crosslinks)
+          (if (assoc link my-lw-urls-analyzed)
+              (push link deps)
+            (push link others)))
+        (let ((dir (concat "/home/lesswrong-org/" (number-to-string (length deps)) "/")))
+          (mkdir dir t)
+          (with-temp-file (concat dir (my-slugify title) ".org")
+            (insert ":PROPERTIES:")
+            (insert "\n:ID: " id)
+            (insert "\n:ROAM_REFS: " url)
+            (insert "\n:END:")
+            (insert "\n#+title: " title)
+            (insert "\n#+filetags: :lw:")
+            (insert "\n#+date: [" date "]")
+            (when crosslinks
+              (insert "\n\n* Related"))
+            (dolist (link deps)
+              (let* ((data (assoc link my-lw-urls-analyzed))
+                     (link-title (cadr data))
+                     (link-id (caddr data)))
+                (insert "\n- [[id:" link-id "][" link-title "]]" )))
+            (dolist (link others)
+              (insert "\n- " link))))))))
 
 
 ;; (defun my-lw-gather-crosslinks-from-post ()

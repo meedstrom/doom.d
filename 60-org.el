@@ -28,6 +28,11 @@
     "Return the slug of NODE."
     (my-slugify (org-roam-node-title node))))
 
+(defun my-last-daily-file ()
+  (interactive)
+  (require 'org-roam-dailies)
+  (find-file (car (last (org-roam-dailies--list-files)))))
+
 (after! org
   (dolist (x '(org-level-1
                org-level-2

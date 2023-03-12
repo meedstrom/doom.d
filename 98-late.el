@@ -275,8 +275,6 @@ Suitable on `after-save-hook'."
 
 (add-hook 'after-save-hook #'my-auto-commit-maybe)
 
-(setq counsel-ffdata-database-path "/home/me/.mozilla/firefox/wrki7yvc.dev-edition-default/places.sqlite")
-
 ;; It's insane to put data-syncs on kill-emacs-hook.  Most of the time my emacs
 ;; goes down, it happens in a non-clean way -- why would I intentionally shut
 ;; off Emacs if everything is fine?  As a result, I'm missing some data
@@ -302,3 +300,20 @@ rely on that hook.  You may put this on a repeating timer."
 
 ;; THIS is how you do data sync.  You can't rely on takedown logic.
 (setq my-write-data-timer (run-with-idle-timer (* 3 60) t #'my-write-data))
+
+;; (setq counsel-ffdata-database-path "/home/me/.mozilla/firefox/wrki7yvc.dev-edition-default/places.sqlite")
+;; (setq helm-firefox-bookmark-user-directory "/home/me/.mozilla/firefox/wrki7yvc.dev-edition-default/")
+
+;; ;; Fix
+;; (defun helm-get-firefox-user-init-dir (directory)
+;;   "Guess the default Firefox user directory name."
+;;   (with-temp-buffer
+;;     (insert-file-contents
+;;      (expand-file-name "profiles.ini" directory))
+;;     (goto-char (point-min))
+;;     (search-forward "Default=1")
+;;     (search-backward "Path=")
+;;     (file-name-as-directory (expand-file-name
+;;                              (buffer-substring-no-properties
+;;                               (match-end 0) (point-at-eol))
+;;                              directory))))
