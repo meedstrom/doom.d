@@ -79,7 +79,7 @@
 (package! objed) ;; for objed-ipipe
 (package! org-drill)
 (package! org-recent-headings)
-;; (package! org-roam-bibtex) ;; yes still relevant for org 9.5
+(package! org-roam-bibtex) ;; yes still relevant for org 9.5
 (package! org-roam-ui)
 (package! org-transclusion)
 (package! org-tanglesync)
@@ -96,6 +96,10 @@
 (package! xr)
 (package! ctrlf :recipe (:host github :repo "radian-software/ctrlf"))
 (package! dired-hist :recipe (:host github :repo "karthink/dired-hist"))
+
+(package! which-key :ignore t)
+(package! github-review :ignore t) ;; causes errors
+
 ;; (package! popper)
 ;; (package! beancount :recipe (:host github :repo "cnsunyour/beancount.el"))
 ;; (package! feebleline)
@@ -116,7 +120,6 @@
 ;; (package! docker-tramp)
 ;; (package! emms)
 ;; (package! fullframe)
-(package! github-review :ignore t) ;; causes errors
 ;; (package! good-scroll)
 ;; (package! helm-bibtex)
 ;; (package! helm-navi)

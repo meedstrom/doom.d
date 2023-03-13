@@ -1368,7 +1368,7 @@
 ;; NOTE: i suggest putting the output dir somewhere that is ignored by
 ;; org-roam-db-node-include-function.  Org-id-locations will still know the
 ;; location, so clicking links will still work.  Then when you're ready to take
-;; your own notes about one post, you pull the skeleton note out of that directory.
+;; your own notes about one post, you pull its file out of that directory.
 (defun my-write-org-dir-from-crosslinks ()
   (interactive)
   (shell-command "rm -rf /home/lesswrong-org/")

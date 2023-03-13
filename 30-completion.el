@@ -40,9 +40,9 @@
 ;; Partial fix: only the first component should match on initialisms.  Then I
 ;; only need to append a = on the first search term, and the rest will anyway
 ;; not be analyzed for initialisms.
-(defun my-orderless-first-piece-may-be-initialism (pattern index _total)
+(defun my-orderless-first-piece-may-be-initialism (pattern index total)
   (if (= index 0)
-      (or (+vertico-orderless-dispatch pattern index _total) ;; so the usual `=@! still work
+      (or (+vertico-orderless-dispatch pattern index total) ;; so the usual `=@! still work
           '(orderless-initialism orderless-literal orderless-regexp))
     nil))
 
@@ -78,7 +78,7 @@
 ;; RET -> corfu-insert
 ;; M-g -> corfu-show-location
 ;; M-h -> corfu-show-documentation
-(use-package! corfu :disabled
+(use-package! corfu
   :init
   (setopt corfu-auto t)
   (setopt corfu-auto-delay 0.35)

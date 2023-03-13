@@ -90,14 +90,24 @@
 
 (add-hook 'org-export-before-parsing-functions #'my-add-backlinks-if-roam)
 
+;; TODO: also add reflinks
 (defun my-add-backlinks-if-roam (&rest _)
-  (when (ignore-errors (org-roam-node-at-point))
-    (let ((backlinks nil))
-      (dolist (obj (org-roam-backlinks-get (org-roam-node-at-point)
-                                           :unique t))
+  (let (this-node
+        backlinks
+        reflinks)
+    (when (ignore-errors (setq this-node (org-roam-node-at-point)))
+      (dolist (obj (org-roam-backlinks-get this-node :unique t))
         (let ((node (org-roam-backlink-source-node obj)))
-          (cl-pushnew (cons (org-roam-node-id node) (org-roam-node-title node)) backlinks)))
-      (when backlinks
+          (cl-pushnew (cons (org-roam-node-id node)
+                            (org-roam-node-title node))
+                      backlinks)))
+      (dolist (obj (org-roam-reflinks-get this-node))
+        (let* ((ref-node (org-roam-reflink-source-node obj)))
+          (unless (equal ref-node this-node)
+            (cl-pushnew (cons (org-roam-node-id ref-node)
+                              (org-roam-node-title ref-node))
+                        reflinks))))
+      (when (or backlinks reflinks)
         (if (bobp)
             (progn
               (goto-char (point-max))
@@ -106,11 +116,30 @@
           (insert "What links here"))
         (dolist (backlink backlinks)
           (newline)
-          (insert "- [[id:" (car backlink) "][" (cdr backlink) "]]"))))))
+          (insert "- [[id:" (car backlink) "][" (cdr backlink) "]]"))
+        (dolist (reflink reflinks)
+          (newline)
+          (insert "- [[id:" (car reflink) "][" (cdr reflink) "]]"))))))
 
-;; I'd like the URLs not to include date.  So when publishing, I'll have to work
-;; from a /tmp/roam/ copy, with the dates stripped from filenames, and
-;; org-id-locations modified accordingly.  This sets that up.
+
+;; WIP
+(defun my-replace-web-links-with-note-links-if-ref-exists (&rest _)
+  (when (ignore-errors (org-roam-node-at-point))
+    (let ((all-refs (org-roam-db-query
+                     [:select [ref id title]
+                      :from refs
+                      :left-join nodes
+                      :on (= refs:node-id nodes:id)])))
+      (while (not (equal "No further link found" (org-next-link)))
+        (let* ((link (org-element-property :path (org-element-context)))
+               (ref (assoc link all-refs)))
+          (when ref
+            (message "%s%s" (cadr ref) (caddr ref))))))))
+
+;; I'd like the final URLs on my website not to include date.  So when
+;; publishing, I'll have to work from a /tmp/roam/ copy, with the dates stripped
+;; from filenames, and the org-id-locations table modified likewise, so id links
+;; will still resolve correctly.  This sets that up.
 (defun my-prep-fn (_)
   (setq my-real-orgids (copy-hash-table org-id-locations))
   (setq new (org-id-hash-to-alist org-id-locations))
@@ -122,8 +151,8 @@
                                    (substring (file-name-nondirectory (car pair)) 11))
                            (cdr pair))
              else collect pair))
-  ;; Bonus: Add in the Beorg files (they're outside roam dir to minimize
-  ;; potential Syncthing issues)
+  ;; Bonus: Include my Beorg files (they're outside roam dir to prevent
+  ;; potential issues w/ nesting Syncthing folders)
   (setq new (cl-loop
              for pair in new
              collect  (cons (replace-regexp-in-string
@@ -141,8 +170,7 @@
   (shell-command "rm -rf /tmp/roam")
   ;; (copy-directory "/home/kept/roam/" "/tmp/" t)
   (copy-directory "/home/kept/roam/" "/tmp/")
-  ;; Bonus: merge Beorg contents.  But I'll prolly stop using Beorg for anything
-  ;; but agenda, so it matters less.
+  ;; Bonus: include my Beorg files.
   (delete-file "/tmp/roam/beorg") ;; rm the symlink
   (copy-directory "/home/sync-phone/beorg/" "/tmp/roam/" t)
 
@@ -193,6 +221,10 @@
                               (buffer-substring (1+ (point)) (+ 11 (point))))))
                  (updated (format-time-string "%F" (f-modification-time filename)))
                  (tags (or (org-get-tags) '("")))
+                 (refs (save-excursion
+                         (when (search-forward ":ROAM_REFS: " nil t)
+                           (unless (search-backward "\n*" nil t)
+                             (buffer-substring (point) (line-end-position))))))
                  (wordcount (save-excursion
                               (re-search-forward "^[^#:\n]" nil t)
                               (count-words (point) (point-max))))
@@ -221,7 +253,11 @@
                    (with-temp-buffer
                      (goto-char (point-min))
                      (insert "<h1>" title "</h1>")
-                     (insert "<p>Planted " created "<br />Updated " updated "</p>")
+                     (when refs
+                       (insert "<br>Reference: " refs))
+                     (insert "<br>Planted " created
+                             "<br>Updated " updated
+                             "<br>")
                      (insert-file-contents output-path)
 
                      ;; Adjust the result from `my-add-backlinks-if-roam'
