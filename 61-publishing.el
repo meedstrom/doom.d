@@ -89,8 +89,8 @@
           (find-file slugified-path))))))
 
 (add-hook 'org-export-before-parsing-functions #'my-add-backlinks-if-roam)
+(add-hook 'org-export-before-parsing-functions #'my-replace-web-links-with-note-links-if-ref-exists)
 
-;; TODO: also add reflinks
 (defun my-add-backlinks-if-roam (&rest _)
   (let (this-node
         backlinks
@@ -108,21 +108,20 @@
                               (org-roam-node-title ref-node))
                         reflinks))))
       (when (or backlinks reflinks)
-        (if (bobp)
-            (progn
-              (goto-char (point-max))
-              (insert "* What links here"))
-          (org-insert-subheading nil)
-          (insert "What links here"))
-        (dolist (backlink backlinks)
-          (newline)
-          (insert "- [[id:" (car backlink) "][" (cdr backlink) "]]"))
-        (dolist (reflink reflinks)
-          (newline)
-          (insert "- [[id:" (car reflink) "][" (cdr reflink) "]]"))))))
+        (save-excursion 
+          (if (bobp)
+              (progn
+                (goto-char (point-max))
+                (insert "* What links here"))
+            (org-insert-subheading nil)
+            (insert "What links here"))
+          (dolist (backlink backlinks)
+            (newline)
+            (insert "- [[id:" (car backlink) "][" (cdr backlink) "]]"))
+          (dolist (reflink reflinks)
+            (newline)
+            (insert "- [[id:" (car reflink) "][" (cdr reflink) "]]")))))))
 
-
-;; WIP
 (defun my-replace-web-links-with-note-links-if-ref-exists (&rest _)
   (when (ignore-errors (org-roam-node-at-point))
     (let ((all-refs (org-roam-db-query
@@ -130,16 +129,21 @@
                       :from refs
                       :left-join nodes
                       :on (= refs:node-id nodes:id)])))
-      (while (not (equal "No further link found" (org-next-link)))
-        (let* ((link (org-element-property :path (org-element-context)))
-               (ref (assoc link all-refs)))
-          (when ref
-            (message "%s%s" (cadr ref) (caddr ref))))))))
+      (save-excursion
+        (while (not (equal "No further link found" (org-next-link)))
+          (let* ((elem (org-element-context))
+                 (link (org-element-property :path elem))
+                 (ref (assoc link all-refs)))
+            (when (and ref
+                       ;; ignore if same page
+                       (not (equal (caddr ref) (org-get-title))))
+              (delete-region (point) (org-element-property :end elem))
+              (insert "[[id:" (cadr ref) "][" (caddr ref) "]]"))))))))
 
-;; I'd like the final URLs on my website not to include date.  So when
-;; publishing, I'll have to work from a /tmp/roam/ copy, with the dates stripped
-;; from filenames, and the org-id-locations table modified likewise, so id links
-;; will still resolve correctly.  This sets that up.
+;; I'd like the final URLs on my website to exclude date.  So when publishing,
+;; I'll have to work from a /tmp/roam/ copy of the roam dir, with the dates
+;; stripped from filenames, and the org-id-locations table modified likewise, so
+;; id links will still resolve correctly.  This sets that up.
 (defun my-prep-fn (_)
   (setq my-real-orgids (copy-hash-table org-id-locations))
   (setq new (org-id-hash-to-alist org-id-locations))
@@ -152,13 +156,13 @@
                            (cdr pair))
              else collect pair))
   ;; Bonus: Include my Beorg files (they're outside roam dir to prevent
-  ;; potential issues w/ nesting Syncthing folders)
+  ;; potential issues from nesting Syncthing folders)
   (setq new (cl-loop
              for pair in new
              collect  (cons (replace-regexp-in-string
                              "^/home/sync-phone/beorg/" "/home/kept/roam/beorg/" (car pair))
                             (cdr pair))))
-  ;; Rename base directory to /tmp/roam since we'll work from there
+  ;; Pretend roam directory is /tmp/roam since we'll work from there
   (setq new (cl-loop
              for pair in new
              collect (cons (replace-regexp-in-string
@@ -166,14 +170,13 @@
                            (cdr pair))))
   (setq my-fake-orgids (org-id-alist-to-hash new))
 
-  ;; (delete-directory "/tmp/roam/" t)
   (shell-command "rm -rf /tmp/roam")
-  ;; (copy-directory "/home/kept/roam/" "/tmp/" t)
-  (copy-directory "/home/kept/roam/" "/tmp/")
+  (copy-directory "/home/kept/roam/" "/tmp/" t)
   ;; Bonus: include my Beorg files.
-  (delete-file "/tmp/roam/beorg") ;; rm the symlink
+  (shell-command "rm /tmp/roam/beorg") ;; rm the symlink
   (copy-directory "/home/sync-phone/beorg/" "/tmp/roam/" t)
 
+  ;; Strip dates from filenames
   (cl-loop
    for file in (directory-files-recursively
                 "/tmp/roam"
@@ -212,7 +215,8 @@
                  (output-buf (find-buffer-visiting output-path))
                  (was-opened nil)
                  (case-fold-search t)
-                 (slug (replace-regexp-in-string "^.*/posts/" "" output-path))
+                 (slug (string-replace pub-dir "" output-path) ;; (replace-regexp-in-string "^.*/posts/" "" output-path)
+                       )
                  (title (save-excursion
                           (when (search-forward "#+title: " nil t)
                             (buffer-substring (point) (line-end-position)))))
@@ -222,7 +226,7 @@
                  (updated (format-time-string "%F" (f-modification-time filename)))
                  (tags (or (org-get-tags) '("")))
                  (refs (save-excursion
-                         (when (search-forward ":ROAM_REFS: " nil t)
+                         (when (search-forward ":roam_refs: " nil t)
                            (unless (search-backward "\n*" nil t)
                              (buffer-substring (point) (line-end-position))))))
                  (wordcount (save-excursion
@@ -237,7 +241,7 @@
                          (content . nil))))
             (cond ((not (and title created))
                    (delete-file output-path)
-                   (message "FILE LACKING TITLE OR DATE: %s" output-path))
+                   (message "FILE LACKING TITLE OR LACKING DATE: %s" output-path))
                   ;; This file has no body because it met :exclude-tags, idk why it gets created
                   ((= 0 (doom-file-size output-path))
                    (delete-file output-path)
@@ -253,14 +257,19 @@
                    (with-temp-buffer
                      (goto-char (point-min))
                      (insert "<h1>" title "</h1>")
+                     (insert "<p>")
                      (when refs
-                       (insert "<br>Reference: " refs))
-                     (insert "<br>Planted " created
-                             "<br>Updated " updated
-                             "<br>")
+                       (insert "Reference: "  )
+                       (dolist (ref (split-string refs))
+                         (insert "<a href='" ref "'>" ref "</a> "))
+                       (insert "<br>"))
+                     (insert "Planted " created)
+                     (insert "<br>Updated " updated)
+                     (insert "</p>")
                      (insert-file-contents output-path)
 
                      ;; Adjust the result from `my-add-backlinks-if-roam'
+                     ;; TODO: Maybe just omit this, h2 is fine?
                      (goto-char (point-max))
                      (when (search-backward "What links here<" nil t)
                        (goto-char (line-beginning-position))
@@ -282,8 +291,8 @@
 
 (defvar my-real-orgids nil)
 (defvar my-fake-orgids nil)
-(fset 'my-org-id-update-id-locations-original #'org-id-update-id-locations)
-(fset 'org-id-update-id-locations #'ignore)
+;; (fset 'my-org-id-update-id-locations-original #'org-id-update-id-locations)
+;; (fset 'org-id-update-id-locations #'ignore)
 (setopt org-export-use-babel nil)
 (setopt org-export-with-broken-links t)
 (setopt org-publish-project-alist
@@ -301,6 +310,6 @@
            :with-toc nil
            :section-numbers nil
            :body-only t
-           :exclude "daily/"
+           :exclude "daily/\\|logseq/"
            ;; this does not work! because of filetag?
            :exclude-tags ("noexport" "private" "personal" "censor" "drill" "fc"))))
