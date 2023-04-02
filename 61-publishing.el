@@ -147,6 +147,8 @@
 (defun my-prep-fn (_)
   (setq my-real-orgids (copy-hash-table org-id-locations))
   (setq new (org-id-hash-to-alist org-id-locations))
+
+  ;; Strip dates
   (setq new (cl-loop
              for pair in new
              if (string-match-p (rx bol (= 4 digit) "-" (= 2 digit) "-" (= 2 digit) "-")
@@ -155,19 +157,44 @@
                                    (substring (file-name-nondirectory (car pair)) 11))
                            (cdr pair))
              else collect pair))
-  ;; Bonus: Include my Beorg files (they're outside roam dir to prevent
-  ;; potential issues from nesting Syncthing folders)
-  (setq new (cl-loop
-             for pair in new
-             collect  (cons (replace-regexp-in-string
-                             "^/home/sync-phone/beorg/" "/home/kept/roam/beorg/" (car pair))
-                            (cdr pair))))
-  ;; Pretend roam directory is /tmp/roam since we'll work from there
+
   (setq new (cl-loop
              for pair in new
              collect (cons (replace-regexp-in-string
-                            "^/home/kept/roam/" "/tmp/roam/" (car pair))
+                            ;; Flatten directory structure (put all posts into top dir)
+                            (rx (group bol "/tmp/roam/") (* nonl) "/" )
+                            "\\1"
+                            (replace-regexp-in-string
+                             ;; Pretend roam directory is /tmp/roam since we'll work from there
+                             "^/home/kept/roam/"
+                             "/tmp/roam/"
+                             (replace-regexp-in-string
+                              ;; Bonus: Include my Beorg files (they're outside roam dir to prevent
+                              ;; potential issues from nesting Syncthing folders)
+                              "^/home/sync-phone/beorg/"
+                              "/home/kept/roam/beorg/"
+                              (car pair))))
                            (cdr pair))))
+
+  ;; ;; Bonus: Include my Beorg files (they're outside roam dir to prevent
+  ;; ;; potential issues from nesting Syncthing folders)
+  ;; (setq new (cl-loop
+  ;;            for pair in new
+  ;;            collect  (cons (replace-regexp-in-string
+  ;;                            "^/home/sync-phone/beorg/" "/home/kept/roam/beorg/" (car pair))
+  ;;                           (cdr pair))))
+  ;; ;; Pretend roam directory is /tmp/roam since we'll work from there
+  ;; (setq new (cl-loop
+  ;;            for pair in new
+  ;;            collect (cons (replace-regexp-in-string
+  ;;                           "^/home/kept/roam/" "/tmp/roam/" (car pair))
+  ;;                          (cdr pair))))
+  ;; ;; Flatten directory structure (put all posts into top dir)
+  ;; (setq new (cl-loop
+  ;;            for pair in new
+  ;;            collect (cons (replace-regexp-in-string
+  ;;                           (rx (group bol "/tmp/roam/") (* nonl) "/" ) "\\1" (car pair))
+  ;;                          (cdr pair))))
   (setq my-fake-orgids (org-id-alist-to-hash new))
 
   (shell-command "rm -rf /tmp/roam")
@@ -188,6 +215,19 @@
    do (rename-file file
                    (concat (file-name-directory file)
                            (substring (file-name-nondirectory file) 11))))
+  ;; Move from subdirs into top level
+  (cl-loop
+   for file in (directory-files-recursively
+                "/tmp/roam" "\\.org$"
+                nil
+                (lambda (dir)
+                  (if (or (string-search "daily" dir)
+                          (string-search "version-files" dir)
+                          (string-search "bak" dir))
+                      nil
+                    t)))
+   unless (equal (file-name-directory file) "/tmp/roam/")
+   do (rename-file file "/tmp/roam/"))
 
   (fset 'org-id-update-id-locations #'ignore))
 
@@ -205,8 +245,9 @@
         (progn
           (setq org-id-locations my-fake-orgids)
           (org-publish-org-to 'html filename org-html-extension plist pub-dir))
-      ;; I'd put this cleanup in the project's :completion-function, but it's
-      ;; not guaranteed to run when we trip an error.
+      ;; I'd have put this cleanup in the project's :completion-function, but
+      ;; it's not guaranteed to run when we trip an error.
+      ;; Still, we could just spawn a subordinate Emacs for publishing, and do no cleanup at all.
       (setq org-id-locations my-real-orgids))
 
     (unwind-protect
@@ -227,28 +268,38 @@
                  (tags (or (org-get-tags) '("")))
                  (refs (save-excursion
                          (when (search-forward ":roam_refs: " nil t)
-                           (unless (search-backward "\n*" nil t)
+                           (unless (search-backward "\n*" nil t)                             
                              (buffer-substring (point) (line-end-position))))))
                  (wordcount (save-excursion
                               (re-search-forward "^[^#:\n]" nil t)
                               (count-words (point) (point-max))))
+                 (backlinks (save-excursion
+                             (goto-char (point-max))
+                             (when (search-backward "* What links here" nil t)
+                               (cl-loop while (re-search-forward "^- " nil t)
+                                        count it))) )
                  (data `((slug . ,slug)
                          (title . ,title)
                          (created . ,created)
                          (updated . ,updated)
                          (wordcount . ,wordcount)
+                         (backlinks . ,backlinks)
+                         (refs . ,refs)
                          (tags . ,tags)
                          (content . nil))))
             (cond ((not (and title created))
                    (delete-file output-path)
-                   (message "FILE LACKING TITLE OR LACKING DATE: %s" output-path))
+                   (message "FILE DELETED: LACKING TITLE OR LACKING DATE: %s" output-path))
                   ;; This file has no body because it met :exclude-tags, idk why it gets created
                   ((= 0 (doom-file-size output-path))
                    (delete-file output-path)
                    (message "FILE DELETED BECAUSE EMPTY: %s" output-path))
-                  ((seq-intersection tags '("noexport" "private" "personal" "censor" "drill" "fc"))
+                  ((not (org-id-get))
                    (delete-file output-path)
-                   (message "FILE DELETED BECAUSE EXCLUDED TAG FOUND: %s" output-path))
+                   (message "FILE DELETED BECAUSE NO ID: %s" output-path))
+                  ((seq-intersection tags '("noexport" "private" "personal" "censor" "drill" "fc" "anki"))
+                   (delete-file output-path)
+                   (message "FILE DELETED BECAUSE FOUND EXCLUDED-TAG: %s" output-path))
                   (t
                    (when output-buf
                      (setq was-opened t)
@@ -256,35 +307,31 @@
                        (kill-buffer output-buf)))
                    (with-temp-buffer
                      (goto-char (point-min))
-                     (insert "<h1>" title "</h1>")
-                     (insert "<p>")
+                     (insert "<h1 id='title'>" title "</h1>")
                      (when refs
                        (insert "Reference: "  )
                        (dolist (ref (split-string refs))
-                         (insert "<a href='" ref "'>" ref "</a> "))
+                         (setq ref (string-replace "\"" "" ref))
+                         (insert "<a href=\"" ref "\">" (replace-regexp-in-string "http.?://" "" ref) "</a> "))
                        (insert "<br>"))
-                     (insert "Planted " created)
-                     (insert "<br>Updated " updated)
-                     (insert "</p>")
                      (insert-file-contents output-path)
 
-                     ;; Adjust the result from `my-add-backlinks-if-roam'
-                     ;; TODO: Maybe just omit this, h2 is fine?
-                     (goto-char (point-max))
-                     (when (search-backward "What links here<" nil t)
-                       (goto-char (line-beginning-position))
-                       (while (search-forward "h2" (line-end-position) t)
-                         (replace-match "h1" nil t))
-                       (when (search-forward "outline-text-2" nil t)
-                         (replace-match "backlinks-text" t t))
-                       (when (search-backward "outline-2" nil t)
-                         (replace-match "backlinks-div" t t)))
+                     ;; Remove divs since they mess up the look of Bulma CSS.
+                     ;; As an alternative, we could probably keep the divs
+                     ;; classed .outline-[123456] and manually fix the slight
+                     ;; misalignment of headlines (or add to the divs the Bulma
+                     ;; class .section).  These divs would be a handy CSS target
+                     ;; if we want to emulate the look of org-indent-mode.
+                     ;; Maybe it'd work better if they were spans, not divs?
+                     (goto-char (point-min))
+                     (while (re-search-forward "</?div.*?>" nil t)
+                       (replace-match ""))
 
                      (setf (alist-get 'content data) (buffer-string)))
                    (with-temp-file output-path
-                     (insert (json-encode data)))
-                   (when was-opened
-                     (find-file-noselect output-path))))))
+                     (insert (json-encode data))
+                     (when was-opened
+                       (find-file-noselect output-path)))))))
       (unless visiting (kill-buffer work-buffer)))))
 
 (setopt org-html-checkbox-type 'html)
@@ -312,4 +359,4 @@
            :body-only t
            :exclude "daily/\\|logseq/"
            ;; this does not work! because of filetag?
-           :exclude-tags ("noexport" "private" "personal" "censor" "drill" "fc"))))
+           :exclude-tags ("noexport" "private" "personal" "censor" "drill" "fc" "anki"))))

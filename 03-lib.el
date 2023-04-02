@@ -90,7 +90,12 @@ It skips prompting, and inserts the metadata I want."
                                 (plist-put template-info ksym r)
                                 r)))))))
            (file-path
-            (expand-file-name template org-roam-directory)))
+            (expand-file-name template org-roam-directory))
+           (created-date (save-excursion
+                           (org-back-to-heading)
+                           (when (search-forward ":created: " (org-entry-end-position) t)
+                             (prog1 (buffer-substring (point) (line-end-position))
+                               (delete-line))))))
       (when (file-exists-p file-path)
         (user-error "%s exists. Aborting" file-path))
       (org-cut-subtree)
@@ -111,7 +116,9 @@ It skips prompting, and inserts the metadata I want."
       (delete-char -1)
       (forward-line 1)
       (open-line 2)
-      (insert "#+date: [" (format-time-string "%F") "]")
+      (if created-date
+          (insert "#+date: " created-date)
+        (insert "#+date: [" (format-time-string "%F") "]"))
       (save-buffer))))
 
 (defun my-truncate-buffer-and-move-excess (&optional _string)

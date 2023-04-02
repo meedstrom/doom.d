@@ -93,6 +93,7 @@
 
 ;; (setopt org-archive-location "/home/kept/archive/journal/diary.org::datetree/")
 (setopt org-archive-save-context-info '(time file itags olpath))
+(setopt org-attach-id-dir "attachments/") ;; doom prolly overrides
 (setopt org-pomodoro-play-sounds nil)
 (setopt org-clock-out-remove-zero-time-clocks t)
 (setopt org-clock-persist t)
@@ -151,6 +152,7 @@
   (require 'named-timer) ;; an indispensable 70-line library
   (named-timer-run :my-clock-reminder nil 600
                    (defun my-clock-remind ()
+
                      (when (org-clock-is-active)
                        (message (concat "Currently working on: "
                                         org-clock-current-task))))))
@@ -197,6 +199,21 @@ to the new note in the \"timeline\" note."
                       "#+title: ${title}\n#+filetags: :stub:\n#+date: \[%<%Y-%m-%d>\]\n")
            :unnarrowed t
            :immediate-finish t)
+          ("a" "acquaintance" plain "%?" :if-new
+           (file+head "%<%Y-%m-%d>-${slug}.org"
+                      ,(lines "#+title: ${title}\n#+filetags: :stub:partner:therapist:acquaintance:\n#+date: \[%<%Y-%m-%d>\]\n"
+                              ":noexport:"
+                               "- Email :: "
+                               "- Phone :: "
+                               "- Address :: "
+                               ":end:"
+                               "- Location :: "
+                               "- Birthday :: "
+                               "- Interests :: "
+                               "- How we met :: "))
+           :unnarrowed t
+           :immediate-finish t
+           :jump-to-captured t)
           )))
 
 (defun my-insert-heading-with-id ()

@@ -75,6 +75,7 @@
 (package! keyfreq)
 (package! mediawiki)
 (package! mw-thesaurus)
+(package! ox-rss)
 (package! nov)
 (package! objed) ;; for objed-ipipe
 (package! org-drill)
