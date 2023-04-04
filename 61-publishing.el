@@ -176,25 +176,6 @@
                               (car pair))))
                            (cdr pair))))
 
-  ;; ;; Bonus: Include my Beorg files (they're outside roam dir to prevent
-  ;; ;; potential issues from nesting Syncthing folders)
-  ;; (setq new (cl-loop
-  ;;            for pair in new
-  ;;            collect  (cons (replace-regexp-in-string
-  ;;                            "^/home/sync-phone/beorg/" "/home/kept/roam/beorg/" (car pair))
-  ;;                           (cdr pair))))
-  ;; ;; Pretend roam directory is /tmp/roam since we'll work from there
-  ;; (setq new (cl-loop
-  ;;            for pair in new
-  ;;            collect (cons (replace-regexp-in-string
-  ;;                           "^/home/kept/roam/" "/tmp/roam/" (car pair))
-  ;;                          (cdr pair))))
-  ;; ;; Flatten directory structure (put all posts into top dir)
-  ;; (setq new (cl-loop
-  ;;            for pair in new
-  ;;            collect (cons (replace-regexp-in-string
-  ;;                           (rx (group bol "/tmp/roam/") (* nonl) "/" ) "\\1" (car pair))
-  ;;                          (cdr pair))))
   (setq my-fake-orgids (org-id-alist-to-hash new))
 
   (shell-command "rm -rf /tmp/roam")
@@ -333,6 +314,13 @@
                        (find-file-noselect output-path)))))))
       (unless visiting (kill-buffer work-buffer)))))
 
+(after! ox
+  (add-to-list 'org-export-exclude-tags "censor")
+  (add-to-list 'org-export-exclude-tags "drill")
+  (add-to-list 'org-export-exclude-tags "fc")
+  (add-to-list 'org-export-exclude-tags "anki")
+  (add-to-list 'org-export-exclude-tags "private"))
+
 (setopt org-html-checkbox-type 'html)
 
 ;; Give headings their org-ids, so that hash links such as
@@ -347,12 +335,7 @@
 (setopt org-export-use-babel nil)
 (setopt org-export-with-broken-links t)
 (setopt org-publish-project-alist
-        '(("blag" ;; old one
-           :base-directory "/home/kept/roam/blog/"
-           :publishing-directory "/home/kept/blog/meedstrom.github.io/_posts/"
-           :publishing-function org-md-publish-to-md)
-
-          ("react-blog"
+        '(("react-blog"
            :base-directory "/tmp/roam/"
            :publishing-directory "/home/kept/blog/posts/"
            :publishing-function my-publish-to-blog
