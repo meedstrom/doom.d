@@ -252,12 +252,15 @@
 
     (unwind-protect
         (with-current-buffer work-buffer
-          (let* ((output-path (org-export-output-file-name org-html-extension nil pub-dir))
+          (let* ((tags (or (sort (org-get-tags) #'string-lessp) '("")))
+                 (std-path (org-export-output-file-name org-html-extension nil pub-dir))
+                 (output-path (if (seq-intersection tags '("personal" "friend" "therapist" "partner"))
+                                  (concat pub-dir "hidden/" (file-name-nondirectory std-path))
+                                std-path))
                  (output-buf (find-buffer-visiting output-path))
                  (was-opened nil)
                  (case-fold-search t)
-                 (slug (string-replace pub-dir "" output-path) ;; (replace-regexp-in-string "^.*/posts/" "" output-path)
-                       )
+                 (slug (string-replace pub-dir "" std-path))
                  (title (save-excursion
                           (when (search-forward "#+title: " nil t)
                             (buffer-substring (point) (line-end-position)))))
@@ -265,7 +268,6 @@
                             (when (search-forward "#+date: " nil t)
                               (buffer-substring (1+ (point)) (+ 11 (point))))))
                  (updated (format-time-string "%F" (f-modification-time filename)))
-                 (tags (or (sort (org-get-tags) #'string-lessp) '("")))
                  (refs (save-excursion
                          (when (search-forward ":roam_refs: " nil t)
                            (unless (search-backward "\n*" nil t)                             
@@ -297,7 +299,7 @@
                   ((not (org-id-get))
                    (delete-file output-path)
                    (message "FILE DELETED BECAUSE NO ID: %s" output-path))
-                  ((seq-intersection tags '("noexport" "private" "personal" "censor" "drill" "fc" "anki"))
+                  ((seq-intersection tags '("noexport" "private" "censor" "drill" "fc" "anki"))
                    (delete-file output-path)
                    (message "FILE DELETED BECAUSE FOUND EXCLUDED-TAG: %s" output-path))
                   (t
@@ -338,7 +340,8 @@
 
 ;; Give headings their org-ids, so that hash links such as
 ;; #ID-e10bbdfe-1ffb-4c54-9228-2818afdfc5ba will make the browser jump to that heading.
-(require 'org-roam-export)
+;; (after! org
+;;   (require 'org-roam-export))
 
 (defvar my-real-orgids nil)
 (defvar my-fake-orgids nil)
@@ -363,7 +366,7 @@
            :body-only t
            :exclude "daily/\\|logseq/"
            ;; this does not work! because of filetag?
-           :exclude-tags ("noexport" "private" "personal" "censor" "drill" "fc" "anki"))))
+           :exclude-tags ("noexport" "private" "censor" "drill" "fc" "anki"))))
 
 
 ;; WIP
