@@ -252,15 +252,11 @@
 
     (unwind-protect
         (with-current-buffer work-buffer
-          (let* ((tags (or (sort (org-get-tags) #'string-lessp) '("")))
-                 (std-path (org-export-output-file-name org-html-extension nil pub-dir))
-                 (output-path (if (seq-intersection tags '("personal" "friend" "therapist" "partner"))
-                                  (concat pub-dir "hidden/" (file-name-nondirectory std-path))
-                                std-path))
+          (let* ((output-path (org-export-output-file-name org-html-extension nil pub-dir))
                  (output-buf (find-buffer-visiting output-path))
                  (was-opened nil)
                  (case-fold-search t)
-                 (slug (string-replace pub-dir "" std-path))
+                 (slug (string-replace pub-dir "" output-path))
                  (title (save-excursion
                           (when (search-forward "#+title: " nil t)
                             (buffer-substring (point) (line-end-position)))))
@@ -268,6 +264,7 @@
                             (when (search-forward "#+date: " nil t)
                               (buffer-substring (1+ (point)) (+ 11 (point))))))
                  (updated (format-time-string "%F" (f-modification-time filename)))
+                 (tags (or (sort (org-get-tags) #'string-lessp) '("")))
                  (refs (save-excursion
                          (when (search-forward ":roam_refs: " nil t)
                            (unless (search-backward "\n*" nil t)                             
