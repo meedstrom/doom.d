@@ -29,6 +29,98 @@
 (autoload #'objed-ipipe "objed")
 (autoload #'piper "piper")
 
+
+;; Modified version of `org-roam-node-slug'
+(defun my-slugify (title)
+  (let ((slug-trim-chars '(;; Combining Diacritical Marks https://www.unicode.org/charts/PDF/U0300.pdf
+                           768 ; U+0300 COMBINING GRAVE ACCENT
+                           769 ; U+0301 COMBINING ACUTE ACCENT
+                           770 ; U+0302 COMBINING CIRCUMFLEX ACCENT
+                           771 ; U+0303 COMBINING TILDE
+                           772 ; U+0304 COMBINING MACRON
+                           774 ; U+0306 COMBINING BREVE
+                           775 ; U+0307 COMBINING DOT ABOVE
+                           776 ; U+0308 COMBINING DIAERESIS
+                           777 ; U+0309 COMBINING HOOK ABOVE
+                           778 ; U+030A COMBINING RING ABOVE
+                           779 ; U+030B COMBINING DOUBLE ACUTE ACCENT
+                           780 ; U+030C COMBINING CARON
+                           795 ; U+031B COMBINING HORN
+                           803 ; U+0323 COMBINING DOT BELOW
+                           804 ; U+0324 COMBINING DIAERESIS BELOW
+                           805 ; U+0325 COMBINING RING BELOW
+                           807 ; U+0327 COMBINING CEDILLA
+                           813 ; U+032D COMBINING CIRCUMFLEX ACCENT BELOW
+                           814 ; U+032E COMBINING BREVE BELOW
+                           816 ; U+0330 COMBINING TILDE BELOW
+                           817 ; U+0331 COMBINING MACRON BELOW
+                           )))
+    (cl-flet* ((nonspacing-mark-p (char) (memq char slug-trim-chars))
+               (strip-nonspacing-marks (s) (string-glyph-compose
+                                            (apply #'string
+                                                   (seq-remove #'nonspacing-mark-p
+                                                               (string-glyph-decompose s)))))
+               (cl-replace (title pair) (replace-regexp-in-string (car pair) (cdr pair) title)))
+      (let* ((pairs `(("[[:space:]]+" . "-")
+                      ("[^[:alnum:][:digit:]\\/+=-]" . "")
+                      ("\\/" . "-")
+                      ("--*" . "-")
+                      ("^-" . "")
+                      ("-$" . "")
+                      ("-\\+-" . "+")
+                      ("-=-" . "=")
+                      ))
+             (slug (-reduce-from #'cl-replace (strip-nonspacing-marks title) pairs)))
+        (downcase slug)))))
+
+;; (my-slugify "A/B testing")
+;; (my-slugify "Someday/Maybe whale carcass")
+;; (my-slugify "No one can feel a probability that small")
+;; (my-slugify "\"But there's still a chance, right?\"")
+;; (my-slugify "Löb's Theorem")
+;; (my-slugify "How to convince me that 2 + 2 = 3")
+;; (my-slugify "C. S. Peirce")
+;; (my-slugify "Do one thing at a time")
+;; (my-slugify "Are you losing items in recentf, bookmarks, org-id-locations? Solution: Run kill-emacs-hook periodically.")
+;; (my-slugify "Slimline/\"pizza box\" computer chassis")
+
+;; NOTE: not used during my publishing process right now, I just run it manually sometimes
+(defun my-rename-roam-file-by-title (&optional path title)
+  (interactive)
+  (unless path
+    (setq path (buffer-file-name)))
+  (unless (equal "org" (file-name-extension path))
+    (error "Unexpected that file doesn't end in .org, halting on: %s" path))
+  (unless title
+    (with-temp-buffer
+      (insert-file-contents path)
+      (let ((case-fold-search t))
+        (setq title (save-excursion
+                      (goto-char (point-min))
+                      (when (search-forward "#+title: " nil t)
+                        (buffer-substring (point) (line-end-position))))))))
+  (let* ((filename-preamble
+          (when (string-match-p (rx (= 4 digit) "-" (= 2 digit) "-" (= 2 digit))
+                                (file-name-nondirectory path))
+            (substring (file-name-nondirectory path) 0 10)))
+         (slugified-path (concat (file-name-directory path)
+                                 filename-preamble
+                                 "-"
+                                 (my-slugify title)
+                                 ".org"))
+         (visiting (find-buffer-visiting path)))
+    (unless (equal slugified-path path)
+      (if (and visiting (buffer-modified-p visiting))
+          (message "Unsaved file, letting it be: %s" path)
+        (when visiting
+          (kill-buffer visiting))
+        (and (file-writable-p path)
+             (file-writable-p slugified-path)
+             (rename-file path slugified-path))
+        (when visiting
+          (find-file slugified-path))))))
+
+
 (defun my-eww-bookmark-copy-url ()
   "Kill the current bookmark."
   (interactive nil eww-bookmark-mode)

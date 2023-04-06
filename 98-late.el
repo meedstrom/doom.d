@@ -171,14 +171,14 @@
   ;; NOTE: typescript-tsx-mode is actually defined in ~/doomemacs/modules/lang/javascript/config.el
   (remove-hook 'typescript-tsx-mode-hook #'rainbow-delimiters-mode))
 
-(use-package! prism
-  :init
-  (setopt prism-parens t)
-  (setopt prism-desaturations '(0 20 60))
-  :config
-  ;; Replace rainbow-delimiters (it's on a dozen hooks in Doom so this is easiest).
-  (fset 'rainbow-delimiters-mode #'prism-mode)
-  (add-hook 'doom-load-theme-hook #'prism-set-colors))
+;; (use-package! prism
+;;   :init
+;;   (setopt prism-parens t)
+;;   (setopt prism-desaturations '(0 20 60))
+;;   :config
+;;   ;; Replace rainbow-delimiters (it's on a dozen hooks in Doom so this is easiest).
+;;   (fset 'rainbow-delimiters-mode #'prism-mode)
+;;   (add-hook 'doom-load-theme-hook #'prism-set-colors))
 
 (use-package! elfeed
   :defer
