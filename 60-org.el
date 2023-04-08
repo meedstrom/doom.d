@@ -91,7 +91,7 @@
                            "/home/kept/roam/"
                            "/home/sync-phone/beorg/"))
 
-;; (setopt org-archive-location "/home/kept/archive/journal/diary.org::datetree/")
+(setopt org-archive-location "/home/kept/archive/2021-journal/diary.org::datetree/")
 (setopt org-archive-save-context-info '(time file itags olpath))
 (setopt org-attach-id-dir "attachments/") ;; doom prolly overrides
 (setopt org-pomodoro-play-sounds nil)
