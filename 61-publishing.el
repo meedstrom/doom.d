@@ -14,10 +14,41 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+(setq my-tags-to-avoid-uploading '("noexport" "private" "censor" "drill" "fc" "anki"))
+
+(setopt org-publish-project-alist
+        `(("react-blog"
+           :base-directory "/tmp/roam/"
+           :publishing-directory "/home/kept/blog/posts/"
+           :publishing-function my-publish-to-blog
+           :preparation-function my-prep-fn
+           :recursive t
+           :body-only t
+           :with-toc nil
+           :section-numbers nil
+           :exclude "daily/\\|logseq/"
+           ;; NOTE: this does not seem to work for filetags, only subtrees, but
+           ;; we fix that in `my-publish-to-blog'.
+           :exclude-tags ,my-tags-to-avoid-uploading)))
+
+;; REVIEW: Does this do anything?
+(after! ox
+  (setq org-export-exclude-tags
+        (seq-union org-export-exclude-tags my-tags-to-avoid-uploading)))
+
+;; TODO
+;; Give h1...h6 headings an ID from the source org-ids instead of "org953031",
+;; so that hash-links such as #ID-e10bbdfe-1ffb-4c54-9228-2818afdfc5ba will make
+;; the web browser jump to that heading.
+;; (after! ox (require 'org-roam-export))
+
 (add-hook 'org-export-before-parsing-functions #'my-add-backlinks-if-roam)
 (add-hook 'org-export-before-parsing-functions #'my-replace-web-links-with-note-links-if-ref-exists)
 
 (defun my-add-backlinks-if-roam (&rest _)
+  "Add a \"What links here\" subtree at the end.
+Meant to run on `org-export-before-parsing-functions', and if it
+does, it will not modify the source file."
   (let (this-node
         backlinks
         reflinks)
@@ -49,6 +80,12 @@
             (insert "- [[id:" (car reflink) "][" (cdr reflink) "]]")))))))
 
 (defun my-replace-web-links-with-note-links-if-ref-exists (&rest _)
+  "Anywhere there's a link to an URL, if there exists an Org note
+with the same link in its :ROAM_REFS: property, then replace that
+web-link with a link to the roam note.
+
+Meant to run on `org-export-before-parsing-functions', and if it
+does, it will not modify the source file."
   (when (ignore-errors (org-roam-node-at-point))
     (let ((all-refs (org-roam-db-query
                      [:select [ref id title]
@@ -69,7 +106,7 @@
 (defun my-prep-fn (_)
   "Prepare Emacs for publishing my website.
 Since I intend to run `org-publish' in a subordinate Emacs, this
-function is where I can make destructive changes that I don't
+function is where I can make destructive env changes that I don't
 want in my main Emacs.
 
 A biggie: I'd like the final URLs on my website to exclude the
@@ -77,17 +114,22 @@ date slug in the org-roam filenames.  So prepare to work from a
 /tmp/roam/ copy of the org-roam dir, with the dates stripped from
 filenames, and the `org-id-locations' table modified likewise, so
 that org-id links will resolve correctly."
+  (org-id-update-id-locations)
+  (org-roam-db-sync)
+  (org-roam-update-org-id-locations)
   (fset 'org-id-update-id-locations #'ignore) ;; stop it autotriggering
-  (setopt org-export-use-babel nil)
-  (setopt org-export-with-broken-links t)
   ;; Don't save the changes to `org-id-locations'
-  (cancel-timer my-write-data-timer)
+  (cancel-timer my-state-sync-timer)
   (remove-hook 'kill-emacs-hook #'org-id-locations-save)
+  (remove-hook 'kill-emacs-hook #'save-place-kill-emacs-hook)
 
-  ;;; Hack the `org-id-locations' table
+  (setopt org-export-use-babel nil)
+  ;; (setopt org-export-with-broken-links t)
+
+  ;; Hack the `org-id-locations' table
 
   (setq new (org-id-hash-to-alist org-id-locations))
-  ;; Strip dates from filename references
+  ;; Strip dates from filename references (my files have YYYY-MM-DD)
   (setq new (cl-loop
              for pair in new
              if (string-match-p (rx bol (= 4 digit) "-" (= 2 digit) "-" (= 2 digit) "-")
@@ -99,9 +141,6 @@ that org-id links will resolve correctly."
   (setq new (cl-loop
              for pair in new
              collect (cons (->> (car pair)
-                                ;; Bonus: Include my Beorg files
-                                (s-replace "^/home/sync-phone/beorg/"
-                                           "/home/kept/roam/beorg/")
                                 ;; Pretend roam directory is /tmp/roam since we'll work from there
                                 (s-replace "^/home/kept/roam/"  
                                            "/tmp/roam/")
@@ -111,16 +150,15 @@ that org-id links will resolve correctly."
                            (cdr pair))))
   (setq org-id-locations (org-id-alist-to-hash new))
 
-  ;;; Do changes on-disk mirroring what we did to `org-id-locations'
+  ;; Do changes on-disk mirroring what we did to the `org-id-locations' table
 
   ;; Duplicate the files to /tmp so we can work from there
   (shell-command "rm -rf /tmp/roam")
   (copy-directory "/home/kept/roam/" "/tmp/" t)
-  ;; Bonus: include my Beorg files.
-  (shell-command "rm /tmp/roam/beorg") ;; rm the symlink that came along for the ride
-  (copy-directory "/home/sync-phone/beorg/" "/tmp/roam/" t)
+  (shell-command "rm -rf /tmp/roam/daily") ;; TODO: Include it
+  (shell-command "rm -rf /tmp/roam/{martin,grismartin}/logseq")
 
-  ;; Strip dates from filenames
+  ;; Strip dates from filenames (my files have YYYY-MM-DD)
   (cl-loop
    for file in (directory-files-recursively
                 "/tmp/roam"
@@ -132,151 +170,132 @@ that org-id links will resolve correctly."
    do (rename-file file
                    (concat (file-name-directory file)
                            (substring (file-name-nondirectory file) 11))))
-  ;; Flatten the directory tree (no subdirs)
+
+  ;; Flatten the directory tree, no more subdirs except for daily/
   (cl-loop
-   for file in (directory-files-recursively
-                "/tmp/roam" "\\.org$"
-                nil
-                (lambda (dir)
-                  (if (or (string-search "daily" dir)
-                          (string-search "version-files" dir)
-                          (string-search "bak" dir))
-                      nil
-                    t)))
+   for file in (directory-files-recursively "/tmp/roam" "\\.org$" nil
+                                            (lambda (dir)
+                                              (if (string-search "daily" dir)
+                                                  nil
+                                                t)))
    unless (equal (file-name-directory file) "/tmp/roam/")
    do (rename-file file "/tmp/roam/")))
 
 ;; Struggled so long looking for a hook that would work like the old
-;; before-export-hook.  Let this be a lesson:  the hook system exists to let you
-;; subtly modify a function IN THE MIDDLE of its body. We never actually need
-;; there to exist a before-hook, since in such a simple case it is always
-;; possible to use add-function or replace the function with a wrapper like this.
+;; before-export-hook.  Let this be a lesson: the emacs hook system exists to
+;; let you subtly modify a function IN THE MIDDLE of its body. We never actually
+;; need before-hooks (or after-hooks), since in such a simple case it is always
+;; possible to use `add-function' or call a wrapper such as this.
 (defun my-publish-to-blog (plist filename pub-dir)
   (let* ((org-inhibit-startup t)
          (visiting (find-buffer-visiting filename))
          (work-buffer (or visiting (find-file-noselect filename)))
          (org-html-extension ""))
 
-    ;; The original publish function
-    (org-publish-org-to 'html filename org-html-extension plist pub-dir)
-
-    (unwind-protect
-        (with-current-buffer work-buffer
-          (let* ((output-path (org-export-output-file-name org-html-extension nil pub-dir))
-                 (output-buf (find-buffer-visiting output-path))
-                 (was-opened nil)
-                 (case-fold-search t)
-                 (slug (string-replace pub-dir "" output-path))
-                 (title (save-excursion
-                          (when (search-forward "#+title: " nil t)
-                            (buffer-substring (point) (line-end-position)))))
-                 (created (save-excursion
-                            (when (search-forward "#+date: " nil t)
-                              (buffer-substring (1+ (point)) (+ 11 (point))))))
-                 (updated (format-time-string "%F" (f-modification-time filename)))
-                 (tags (or (sort (org-get-tags) #'string-lessp) '("")))
-                 (refs (save-excursion
-                         (when (search-forward ":roam_refs: " nil t)
-                           (unless (search-backward "\n*" nil t)                             
-                             (buffer-substring (point) (line-end-position))))))
-                 (wordcount (save-excursion
-                              (re-search-forward "^[^#:\n]" nil t)
-                              (count-words (point) (point-max))))
-                 (backlinks (save-excursion
-                              (goto-char (point-max))
-                              (when (search-backward "* What links here" nil t)
-                                (cl-loop while (re-search-forward "^- " nil t)
-                                         count t))))
-                 (data `((slug . ,slug)
-                         (title . ,title)
-                         (created . ,created)
-                         (updated . ,updated)
-                         (wordcount . ,wordcount)
-                         (backlinks . ,backlinks)
-                         (refs . ,refs)
-                         (tags . ,tags)
-                         (content . nil))))
-            (cond
-             ((not (and title created))
-              (delete-file output-path)
-              (warn "FILE DELETED: LACKING TITLE OR LACKING DATE: %s" output-path))
-             ;; This file is empty because it met :exclude-tags, seems
-             ;; org-publish is not smart enough to just skip the export.
-             ;; Though I don't understand why the next clause sometimes
-             ;; succeeds?
-             ((= 0 (doom-file-size output-path))
-              (delete-file output-path)
-              (message "File deleted because empty: %s" output-path))
-             ((seq-intersection tags my-tags-to-avoid-uploading)
-              (delete-file output-path)
-              (message "File deleted because found excluded-tag: %s" output-path))
-             ;; ((not (org-id-get))
-             ;;  (delete-file output-path)
-             ;;  (message "FILE DELETED BECAUSE NO ID: %s" output-path))
-             (t
-              (when output-buf
-                (setq was-opened t)
-                (unless (buffer-modified-p output-buf)
-                  (kill-buffer output-buf)))
-              (with-temp-buffer
+    ;; Save time by not even calling `org-publish-org-to'.
+    ;; Now I expect to never trigger the excluded-tags clause in the cond further below.
+    (unless (with-current-buffer work-buffer
+              (save-excursion
                 (goto-char (point-min))
-                (insert "<h1 id='title'>" title "</h1>")
-                (when refs
-                  (insert "Reference(s): "  )
-                  (dolist (ref (split-string refs))
-                    (setq ref (string-replace "\"" "" ref))
-                    (insert " <a href=\"" ref "\">" (replace-regexp-in-string "http.?://" "" ref) "</a> "))
-                  (insert "<br />"))
-                (insert-file-contents output-path)
+                (seq-intersection (org-get-tags) my-tags-to-avoid-uploading)))
 
-                ;; Remove divs since they mess up the look of Bulma CSS.
-                ;; As an alternative, if I want to emulate the look of
-                ;; org-indent-mode. I could probably keep the divs classed
-                ;; .outline-[123456] and manually fix the slight
-                ;; misalignment of headlines that results (or give the divs
-                ;; the Bulma class .section).  Or maybe the alignment would
-                ;; work normally if they were spans, not divs.
-                (goto-char (point-min))
-                (while (re-search-forward "</?div.*?>" nil t)
-                  (replace-match ""))
+      ;; The original publish function
+      (org-publish-org-to 'html filename org-html-extension plist pub-dir)
 
-                (setf (alist-get 'content data) (buffer-string)))
-              (with-temp-file output-path
-                (insert (json-encode data))
-                (when was-opened
-                  (find-file-noselect output-path)))))))
-      (unless visiting (kill-buffer work-buffer)))))
+      (unwind-protect
+          (with-current-buffer work-buffer
+            (goto-char (point-min))
+            (let* ((output-path (org-export-output-file-name org-html-extension nil pub-dir))
+                   (output-buf (find-buffer-visiting output-path))
+                   (was-opened nil)
+                   (case-fold-search t)
+                   (slug (string-replace pub-dir "" output-path))
+                   (title (save-excursion
+                            (when (search-forward "#+title: " nil t)
+                              (buffer-substring (point) (line-end-position)))))
+                   (created (save-excursion
+                              (when (search-forward "#+date: " nil t)
+                                (buffer-substring (1+ (point)) (+ 11 (point))))))
+                   (updated (format-time-string "%F" (f-modification-time filename)))
+                   (tags (save-excursion
+                           (or (sort (org-get-tags) #'string-lessp) '(""))))
+                   (refs (save-excursion
+                           (when (search-forward ":roam_refs: " nil t)
+                             (unless (search-backward "\n*" nil t)
+                               (buffer-substring (point) (line-end-position))))))
+                   (wordcount (save-excursion
+                                (re-search-forward "^[^#:\n]" nil t)
+                                (count-words (point) (point-max))))
+                   (backlinks (save-excursion
+                                (goto-char (point-max))
+                                (when (search-backward "* What links here" nil t)
+                                  (cl-loop while (re-search-forward "^- " nil t)
+                                           count t))))
+                   (data `((slug . ,slug)
+                           (title . ,title)
+                           (created . ,created)
+                           (updated . ,updated)
+                           (wordcount . ,wordcount)
+                           (backlinks . ,backlinks)
+                           (refs . ,refs)
+                           (tags . ,tags)
+                           (content . nil))))
+              (cond
+               ((not (and title created))
+                (delete-file output-path)
+                (warn "FILE DELETED: LACKING TITLE OR LACKING DATE: %s" output-path))
+               ;; This file is empty because it met :exclude-tags, seems
+               ;; org-publish is not smart enough to just skip the export.
+               ;; Though I don't understand why the next clause sometimes
+               ;; succeeds?
+               ((= 0 (doom-file-size output-path))
+                (delete-file output-path)
+                (message "File deleted because empty: %s" output-path))
+               ((seq-intersection tags my-tags-to-avoid-uploading)
+                (delete-file output-path)
+                (message "File deleted because found excluded-tag: %s" output-path))
+               ;; ((not (org-id-get))
+               ;;  (delete-file output-path)
+               ;;  (message "FILE DELETED BECAUSE NO ID: %s" output-path))
+               (t
+                (when output-buf
+                  (setq was-opened t)
+                  (unless (buffer-modified-p output-buf)
+                    (kill-buffer output-buf)))
+                (with-temp-buffer
+                  (goto-char (point-min))
+                  (insert "<h1 id='title'>" title "</h1>")
+                  (when refs
+                    (insert "Reference(s): "  )
+                    (dolist (ref (split-string refs))
+                      (setq ref (string-replace "\"" "" ref))
+                      (insert " <a href=\"" ref "\">" (replace-regexp-in-string "http.?://" "" ref) "</a> "))
+                    (insert "<br />"))
+                  (insert-file-contents output-path)
 
+                  ;; Remove divs since they mess up the look of Bulma CSS.
+                  ;; As an alternative, if I want to emulate the look of
+                  ;; org-indent-mode. I could probably keep the divs classed
+                  ;; .outline-[123456] and manually fix the slight
+                  ;; misalignment of headlines that results (or give the divs
+                  ;; the Bulma class .section).  Or the alignment might
+                  ;; work normally if they were spans, not divs.
+                  (goto-char (point-min))
+                  (while (re-search-forward "</?div.*?>" nil t)
+                    (replace-match ""))
 
-(setq my-tags-to-avoid-uploading '("noexport" "private" "censor" "drill" "fc" "anki"))
+                  (setf (alist-get 'content data) (buffer-string)))
+                (with-temp-file output-path
+                  (insert (json-encode data))
+                  (when was-opened
+                    (find-file-noselect output-path)))))))
+        (unless visiting (kill-buffer work-buffer))))))
 
-(after! ox
-  (setq org-export-exclude-tags
-        (seq-union org-export-exclude-tags my-tags-to-avoid-uploading)))
+;; That's all we need!  Below this line is a construction site only.
 
-;; Identify h1...h6 headings by their org-ids instead of "org953031", so that hash-links such as
-;; #ID-e10bbdfe-1ffb-4c54-9228-2818afdfc5ba will make the browser jump to that heading.
-;; (after! ox (require 'org-roam-export))
+
+;;; WIP: Make an Atom/RSS feed
 
-;; idk about the merits
-;; (setopt org-html-checkbox-type 'html)
-
-(setopt org-publish-project-alist
-        `(("react-blog"
-           :base-directory "/tmp/roam/"
-           :publishing-directory "/home/kept/blog/posts/"
-           :publishing-function my-publish-to-blog
-           :recursive t
-           :preparation-function my-prep-fn
-           :with-toc nil
-           :section-numbers nil
-           :body-only t
-           :exclude "daily/\\|logseq/"
-           ;; this does not seem to work for filetags, only subtrees!
-           :exclude-tags ,my-tags-to-avoid-uploading)))
-
-
-;; WIP
 ;; see syntax on https://validator.w3.org/feed/docs/atom.html
 (defun my-make-atom-feed ()
   (with-temp-file "/tmp/atom.xml"
@@ -295,7 +314,7 @@ that org-id links will resolve correctly."
     (let ((title "Changelog March 2023")
           (updated "2023-04-01")
           (month-post-link "https://edstrom.dev/posts/changelog-2023-03")
-          (month-post-org-id "60a76c80-d399-11d9-b93C-0003939e0af6")
+          (month-post-org-id "61a76c80-d399-11d9-b93C-0003939e0af6")
           (content "this string should be the entire content of the news post"))
       (insert "
   <entry>
@@ -318,30 +337,36 @@ that org-id links will resolve correctly."
 ;; I have a preexisting roam node named Changelog, and I write into it headings
 ;; for each month.  That way, this function would just plug in during
 ;; org-publish for this one file to expand each (preexisting) heading with lots
-;; of info for that month.  the heading must be titled precisely YYYY-MM.
+;; of info for that month.  the headings must be titled YYYY-MM.
 ;;
-;; TODO: takes very long to run; better do an initial git log run to show which
-;; files have in fact changed for each month and then do the --follow command on
-;; only those files.
+;; As an alternative, make a separate changelog note for every month.  I think
+;; this works better for me: they could be named "Summary March 2022" which
+;; sounds nicer than changelog, and there can still be a Changelog page that
+;; links AND transcludes them all.  (i.e. each heading is a link and their body
+;; is a transclusion)
 (defun my-coalesce-git-log-by-month ()
   (require 'ts)
   (let ((default-directory org-roam-directory)
         (files (directory-files-recursively org-roam-directory "\\.org$" t))
-        (renames ;; wip
+        ;; WIP: make a renames table I can look up to know a file's current name
+        (renames
          (let (renames)
            (with-temp-buffer
              (insert (my-process-output-to-string
-                      "git" "log" "-M" "--diff-filter=R" "" "--summary" "--format=commit%ai%n%B" "--date" "default"))
+                      "git" "log" "-M" "--diff-filter=R" "" "--summary"
+                      "--format=commit%ai%n%B" "--date" "default"))
              (goto-char (point-min))
              (while (re-search-forward "^commit" nil t)
                (let ((date (ts-parse (buffer-substring (point) (line-end-position))))
-                     (end (save-excursion (re-search-forward "^commit" nil t))))
+                     (end (save-excursion (or (re-search-forward "^commit" nil t)
+                                              (point-max)))))
                  (forward-line 3) ;; just in case
                  (while (re-search-forward "^ rename " end t)
                    (if (search-forward "{" (line-end-position) t)
                        ;; Some log lines print curly braces, as in this line:
                        ;;  rename {People => attachments}/laplace.jpg (100%)
-                       (progn ;; Deal with them specially.
+                       (progn ;; TODO: Deal with them specially.
+
                          )
                      ;; Plain log lines look like this:
                      ;;  rename index.org => 2022-10-19-index.org (56%)
@@ -354,6 +379,10 @@ that org-id links will resolve correctly."
                  )
                )
              )
+           ;; TODO: Now that we have a list of renames, how do we get the
+           ;; current name of any given file from a given month?  What if we
+           ;; restructure the table so the key is month+filename, and the value
+           ;; is the current filename?
            renames)))
     (with-temp-file "/tmp/test"
       (cl-loop
@@ -361,7 +390,7 @@ that org-id links will resolve correctly."
        ;; - Git-init on 2021-Aug-31, but little real use until 2022
        ;; - The first half of 2022 was dense with refactoring
        ;; - 2023 is when I started with auto-commits
-       for year from 2023 to (decoded-time-year (decode-time))
+       for year from 2022 to (decoded-time-year (decode-time))
        do (cl-loop
            for month from 1 to 12
            as this-month = (concat (int-to-string year)
@@ -374,22 +403,6 @@ that org-id links will resolve correctly."
                                      "-"
                                      (string-pad (int-to-string (1+ month)) 2 ?0 t)
                                      "-01"))
-           ;; NOTE: We follow the histories of only the files that exist now.
-           ;; That means if I delete a file, it's GONE even from changelogs of
-           ;; the past.  Since changelogs are fundamentally a timeful sort of
-           ;; text, that shouldn't really matter.  On the off chance someone
-           ;; wants to read all my feed items, I expect they're more interested
-           ;; in the summaries I may have manually written than in the "pages
-           ;; edited" list.
-           ;; TODO: Ok, now it's different.  Now... urgh
-           ;; I should have an alist mapping current filenames to all the
-           ;; filenames they've had.  Then, after generating the changelog, do
-           ;; search-replaces across the whole changelog to update old filenames
-           ;; to new.
-           ;;
-           ;; Small possibility of conflict, because of the date slug inside the
-           ;; Org-Roam filenames.  I suspect they'll amount to 1-2 files, and I
-           ;; can just let those misreports be.
            do (let ((files-changed-this-month
                      (-uniq (split-string (my-process-output-to-string
                                            "git" "log" "--format=" "--name-only"

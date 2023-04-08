@@ -253,32 +253,6 @@
 ;;   (circadian-setup))
 
 
-;; It's insane to put data-syncs on kill-emacs-hook.  Most of the time my emacs
-;; goes down, it happens in a non-clean way -- why would I intentionally shut
-;; off Emacs if everything is fine?  As a result, I'm missing some data
-;; every time I start Emacs: I can't find org notes by org-id, recentf
-;; suffers partial amnesia, and so on.  This has been annoying me for years.
-(defun my-write-data ()
-  "Write histories and caches to disk.
-This runs many members of `kill-emacs-hook' so we don't have to
-rely on that hook.  You may put this on a repeating timer."
-  (let ((hooks (seq-intersection
-                ;; NOTE: Check your `kill-emacs-hook' in case there's more you
-                ;; want to add here.
-                #'(bookmark-exit-hook-internal
-                   savehist-autosave
-                   transient-maybe-save-history
-                   org-id-locations-save
-                   save-place-kill-emacs-hook
-                   recentf-save-list
-                   recentf-cleanup
-                   doom-cleanup-project-cache-h
-                   doom-persist-scratch-buffers-h)
-                kill-emacs-hook)))
-    (run-hooks hooks)))
-
-;; THIS is how you do data sync.  You can't rely on takedown logic.
-(setq my-write-data-timer (run-with-idle-timer (* 3 60) t #'my-write-data))
 
 ;; (setq counsel-ffdata-database-path "/home/me/.mozilla/firefox/wrki7yvc.dev-edition-default/places.sqlite")
 ;; (setq helm-firefox-bookmark-user-directory "/home/me/.mozilla/firefox/wrki7yvc.dev-edition-default/")
