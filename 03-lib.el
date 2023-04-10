@@ -272,8 +272,10 @@ executing BODY."
   (let ((documented-commands nil)
         (roam-files
          (append (directory-files "/home/kept/roam/" t ".org$")
-                 (directory-files "/home/kept/roam/blog/" t ".org$")
-                 (directory-files "/home/kept/roam/beorg/" t ".org$")
+                 (directory-files "/home/kept/roam/bloggable/" t ".org$")
+                 (directory-files "/home/kept/roam/frozen/" t ".org$")
+                 (directory-files "/home/kept/roam/martin/pages/" t ".org$")
+                 (directory-files "/home/kept/roam/grismartin/pages/" t ".org$")
                  (directory-files "/home/kept/roam/daily/" t ".org$"))))
     (mapatoms
      (lambda (sym)
@@ -288,8 +290,6 @@ executing BODY."
     (list
      (cons #'find-file roam-files)
      (cons #'describe-function documented-commands))))
-
-(defvar my-stim-collection (my-stim-collection-generate))
 
 (my-hook-once 'doom-after-init-hook
   (setq my-stim-collection (my-stim-collection-generate)))

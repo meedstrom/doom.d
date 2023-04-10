@@ -17,18 +17,20 @@
 
 ;;; Commentary:
 
+;; Ensure survival of data such as recentf.
+
 ;; It's insane to put data-syncs on kill-emacs-hook.  Most of the time my emacs
 ;; goes down, it happens in a non-clean way -- why would I intentionally shut
 ;; off Emacs if everything is fine?  As a result, I'm missing some data
 ;; every time I start Emacs: I can't find org notes by org-id, recentf
-;; suffers partial amnesia, and so on.  This has been annoying me for years.
+;; suffers partial amnesia, and so on.  This code fixes it.
 
 ;;; Code:
 
 (defvar my-state-sync-hooks nil
   "Dynamic variable.
 For some reason, lexical binding does not permit `my-state-sync'
-to just let-bind a variable, so we have this.")
+to just let-bind a temp variable, so we use this.")
 
 (defun my-state-sync ()
   "Write histories and caches to disk.
@@ -48,7 +50,7 @@ rely on that hook.  You may put this on a repeating timer."
             doom-cleanup-project-cache-h
             doom-persist-scratch-buffers-h)
          kill-emacs-hook))
-  (run-hooks my-state-sync-hooks))
+  (run-hooks 'my-state-sync-hooks))
 
 ;; Run after 3 minutes of idle.
 (setq my-state-sync-timer

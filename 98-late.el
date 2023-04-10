@@ -14,6 +14,8 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+(defvar my-stim-collection (my-stim-collection-generate))
+
 (save-place-mode)
 (auto-save-visited-mode)
 (display-battery-mode)
