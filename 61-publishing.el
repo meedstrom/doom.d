@@ -329,68 +329,71 @@ that org-id links will resolve correctly."
 </feed>")))
 
 ;; WIP
-;; coalesce git logs for the month
 ;;
 ;; how should i flag dailies worth sharing?  the :star: tag i guess
 ;;
 ;; how should i add arbitrary text for the month?  i guess it would be easier if
 ;; I have a preexisting roam node named Changelog, and I write into it headings
-;; for each month.  That way, this function would just plug in during
-;; org-publish for this one file to expand each (preexisting) heading with lots
-;; of info for that month.  the headings must be titled YYYY-MM.
+;; for each month, titled "Summary March 2022" etc.  That way, this function
+;; would just plug in during org-publish for this one file to expand each
+;; (preexisting) heading with lots of info for that month.
 ;;
-;; As an alternative, make a separate changelog note for every month.  I think
-;; this works better for me: they could be named "Summary March 2022" which
-;; sounds nicer than changelog, and there can still be a Changelog page that
-;; links AND transcludes them all.  (i.e. each heading is a link and their body
-;; is a transclusion)
+;; Could discuss whether the summaries should just be titled "Changes March
+;; 2022" to keep the scope down, or if I'm to retitle the Changelog as a broader
+;; News-page, allowing broad-sense summaries.
 (defun my-coalesce-git-log-by-month ()
   (require 'ts)
   (let ((default-directory org-roam-directory)
         (files (directory-files-recursively org-roam-directory "\\.org$" t))
         ;; WIP: make a renames table I can look up to know a file's current name
-        (renames
-         (let (renames)
-           (with-temp-buffer
-             (insert (my-process-output-to-string
-                      "git" "log" "-M" "--diff-filter=R" "" "--summary"
-                      "--format=commit%ai%n%B" "--date" "default"))
-             (goto-char (point-min))
-             (while (re-search-forward "^commit" nil t)
-               (let ((date (ts-parse (buffer-substring (point) (line-end-position))))
-                     (end (save-excursion (or (re-search-forward "^commit" nil t)
-                                              (point-max)))))
-                 (forward-line 3) ;; just in case
-                 (while (re-search-forward "^ rename " end t)
-                   (if (search-forward "{" (line-end-position) t)
-                       ;; Some log lines print curly braces, as in this line:
-                       ;;  rename {People => attachments}/laplace.jpg (100%)
-                       (progn ;; TODO: Deal with them specially.
-
-                         )
-                     ;; Plain log lines look like this:
-                     ;;  rename index.org => 2022-10-19-index.org (56%)
-                     (let ((old (buffer-substring (point) (1- (search-forward " "))))
-                           (new (buffer-substring (search-forward "=> ") (1- (search-forward " ")))))
-                       (push (list old new (ts-format "%F" date)) renames)
-                       )
-                     )
-                   )
-                 )
-               )
-             )
-           ;; TODO: Now that we have a list of renames, how do we get the
-           ;; current name of any given file from a given month?  What if we
-           ;; restructure the table so the key is month+filename, and the value
-           ;; is the current filename?
-           renames)))
+        (renames nil))
+    (with-temp-buffer
+      (insert (my-process-output-to-string
+               "git" "log" "-M" "--diff-filter=R" "--summary"
+               "--format=commit%ai%n%B" "--date" "default"))
+      (goto-char (point-min))
+      (while (re-search-forward "^commit" nil t)
+        (let ((date (ts-parse (buffer-substring (point) (line-end-position))))
+              (end (save-excursion (or (re-search-forward "^commit" nil t)
+                                       (point-max)))))
+          (forward-line 3) ;; just in case
+          (while (re-search-forward "^ rename " end t)
+            (if (looking-at-p "{")
+                ;; Some log lines print curly braces, as in this line:
+                ;;  rename {People => attachments}/laplace.jpg (100%)
+                (progn ;; Deal with them specially.
+                  (re-search-forward (rx (group (+ nonl)) " => " (group (+ nonl)) "}") (line-end-position))
+                  (let ((fname-remainder
+                         (buffer-substring (point)
+                                           (- (search-forward " (") 2))))
+                    (push (list (concat (match-string 1) fname-remainder)
+                                (concat (match-string 2) fname-remainder)
+                                (ts-format "%F" date))
+                          renames)))
+              ;; Plain log lines look like this:
+              ;;  rename index.org => 2022-10-19-index.org (56%)
+              (let ((old (buffer-substring (point) (1- (search-forward " "))))
+                    (new (buffer-substring (search-forward "=> ") (1- (search-forward " ")))))
+                (push (list old new (ts-format "%F" date)) renames)
+                )
+              )
+            )
+          )
+        )
+      )
+    ;; TODO: Now that we have a list of renames, how do we get the
+    ;; current name of any given file from a given month?  What if we
+    ;; restructure the table so the key is month+filename, and the value
+    ;; is the current filename?
+    (setq foo renames)
+    (message "Renames: %s" renames)
     (with-temp-file "/tmp/test"
       (cl-loop
        ;; Relevant dates:
        ;; - Git-init on 2021-Aug-31, but little real use until 2022
        ;; - The first half of 2022 was dense with refactoring
        ;; - 2023 is when I started with auto-commits
-       for year from 2022 to (decoded-time-year (decode-time))
+       for year from 2023 to (decoded-time-year (decode-time))
        do (cl-loop
            for month from 1 to 12
            as this-month = (concat (int-to-string year)
@@ -404,10 +407,11 @@ that org-id links will resolve correctly."
                                      (string-pad (int-to-string (1+ month)) 2 ?0 t)
                                      "-01"))
            do (let ((files-changed-this-month
-                     (-uniq (split-string (my-process-output-to-string
-                                           "git" "log" "--format=" "--name-only"
-                                           (concat "--since=" this-month)
-                                           (concat "--until=" next-month))))))
+                     (--filter (member (file-name-extension it) '(nil "org" "txt" "md"))
+                               (-uniq (split-string (my-process-output-to-string
+                                                     "git" "log" "--format=" "--name-only"
+                                                     (concat "--since=" this-month)
+                                                     (concat "--until=" next-month)))))))
                 (when files-changed-this-month
                   (insert "\n\n Changelog " (ts-format "%B %Y" (ts-parse this-month))))
                 (cl-loop
@@ -435,4 +439,6 @@ that org-id links will resolve correctly."
                   (when (> total-diff 20)
                     (insert "\n" (int-to-string total-diff) " new lines in " file)))
                  )))))))
-;; (my-make-changelogs)
+;; (my-coalesce-git-log-by-month)
+
+(setq foo nil)

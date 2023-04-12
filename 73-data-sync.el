@@ -30,7 +30,7 @@
 (defvar my-state-sync-hooks nil
   "Dynamic variable.
 For some reason, lexical binding does not permit `my-state-sync'
-to just let-bind a temp variable, so we use this.")
+to just let-bind a temp variable, so it uses this.")
 
 (defun my-state-sync ()
   "Write histories and caches to disk.

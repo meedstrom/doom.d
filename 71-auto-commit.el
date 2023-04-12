@@ -1,4 +1,5 @@
 ;; -*- lexical-binding: t; -*-
+
 ;; Copyright (C) 2023 Martin Edström
 ;;
 ;; This program is free software: you can redistribute it and/or modify
@@ -36,10 +37,10 @@ Suitable on `after-save-hook'."
   (require 'project)
   (when (and (project-current)
              (member (project-root (project-current)) my-auto-commit-dirs))
-    (let ((last-commit-date (my-process-output-to-string
-                             "git" "log" "-n" "1" "--pretty=format:%cs"))
-          (last-commit-msg (my-process-output-to-string
-                             "git" "log" "-n" "1" "--pretty=format:%s")))
+    (let ((last-commit-date (shell-command-to-string
+                             "git log -n 1 --pretty=format:%cs"))
+          (last-commit-msg (shell-command-to-string
+                             "git log -n 1 --pretty=format:%s")))
       (if (string-search "Fatal" last-commit-date)
           (message "Git failed, probably not a Git repo: %s" default-directory)
         ;; Special case for Org-Roam: auto-stage new notes, bc it happens often
