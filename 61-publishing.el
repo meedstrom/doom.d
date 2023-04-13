@@ -295,6 +295,7 @@ that org-id links will resolve correctly."
 
 
 ;;; WIP: Make an Atom/RSS feed
+;; unused for now
 
 ;; see syntax on https://validator.w3.org/feed/docs/atom.html
 (defun my-make-atom-feed ()
@@ -329,18 +330,6 @@ that org-id links will resolve correctly."
 </feed>")))
 
 ;; WIP
-;;
-;; how should i flag dailies worth sharing?  the :star: tag i guess
-;;
-;; how should i add arbitrary text for the month?  i guess it would be easier if
-;; I have a preexisting roam node named Changelog, and I write into it headings
-;; for each month, titled "Summary March 2022" etc.  That way, this function
-;; would just plug in during org-publish for this one file to expand each
-;; (preexisting) heading with lots of info for that month.
-;;
-;; Could discuss whether the summaries should just be titled "Changes March
-;; 2022" to keep the scope down, or if I'm to retitle the Changelog as a broader
-;; News-page, allowing broad-sense summaries.
 (defun my-coalesce-git-log-by-month ()
   (require 'ts)
   (let ((default-directory org-roam-directory)
@@ -437,8 +426,26 @@ that org-id links will resolve correctly."
                          (message "Non-number in log line %s" line)))
                   finally do
                   (when (> total-diff 20)
-                    (insert "\n" (int-to-string total-diff) " new lines in " file)))
+                    (insert "\n" (int-to-string total-diff) " lines changed in " file)))
                  )))))))
 ;; (my-coalesce-git-log-by-month)
 
 (setq foo nil)
+
+;; WIP
+;; flag unhidden dailies (i.e. lacking :personal: tag) and then auto-link them
+;;
+;; how should i add arbitrary text for the month?  i guess it would be easier if
+;; I have a preexisting roam node named Changelog, and I write into it headings
+;; for each month, following the format "Summary March 2022" etc.  That way,
+;; this function would just plug in during org-publish for that one file to
+;; expand each heading with lots of info for that month.  Also creating the
+;; heading if it doesn't exist yet (no need to create ID then).
+;;
+;; Could discuss whether the summaries should just be titled "Changes March
+;; 2022" to limit the scope, or if I'm to retitle the Changelog as a broader
+;; "News", which fits better with broad-topic summaries?
+(defun my-make-changelog ()
+  (my-coalesce-git-log-by-month)
+  ;; etc
+  )

@@ -1,49 +1,50 @@
-;;;
+;; -*- lexical-binding: t; -*-
+
 ;;; Commentary:
-
-;; REQUIREMENTS
-
-;; - org-fontify-emphasized-text should be t in all relevant buffers (don't
-;; worry, this is a very uncommon default to disable), AND none of those buffers
-;; are visited literally (with find-file-literally).  That is to say, when we
-;; scan for flashcards, we need that those text bits wrapped in asterisks are in
-;; fact given the 'bold text property in your Org buffers.  Org is already good
-;; at rooting out false matches via org-do-emphasis-faces, so
-;; inline-anki-convert-implicit-clozes follows in its tracks and look only at
-;; the substrings Org already bolded.
-;;
-;; - Clozes only.  The hardcoded note type is called "Cloze" with a field
-;;   called "Text".
 
 ;;; Code:
 
+(require 'anki-editor)
+
 (defun anki-editor-push-notes ()
   (interactive)
-  (let ((failed 0)
-        (times
-         (inline-anki-map-note-things
-          (lambda ()
-            (message "Processing notes in buffer \"%s\", wait a moment..." (buffer-name))
-            (condition-case-unless-debug err
-                (anki-editor--push-note (anki-editor-note-at-point))
-              (error
-               ;; (cl-incf failed)
-               (message "Note at point %d failed: %s" (point) (error-message-string err))))))))))
+  ;; org-fontify-emphasized-text should be t in all relevant buffers (don't
+  ;; worry, this is a very uncommon default to disable), AND none of those buffers
+  ;; are visited literally (with find-file-literally).  That is to say, when we
+  ;; scan for flashcards, we need that those text bits wrapped in asterisks are in
+  ;; fact given the 'bold text property in your Org buffers.  Org is already good
+  ;; at rooting out false matches via org-do-emphasis-faces, so
+  ;; inline-anki-convert-implicit-clozes follows in its tracks and look only at
+  ;; the substrings Org already bolded.
+  (when (and (eq major-mode 'org-mode)
+             org-fontify-emphasized-text)
+    (let ((failed 0)
+          (times
+           (inline-anki-map-note-things
+            (lambda ()
+              (message "Processing notes in buffer \"%s\", wait a moment..." (buffer-name))
+              (condition-case-unless-debug err
+                  (anki-editor--push-note (anki-editor-note-at-point))
+                (error
+                 ;; (cl-incf failed)
+                 (message "Note at point %d failed: %s" (point) (error-message-string err)))))))))))
+
+(defvar inline-anki-default-tags '("from-emacs"))
 
 (defun anki-editor-note-at-point ()
   "Construct an alist representing a note from current entry."
   (let* ((org-trust-scanner-tags t)
          (deck (or (org-entry-get-with-inheritance anki-editor-prop-deck)
-                   inline-anki-default-deck))
+                   inline-anki-deck))
          (note-id (inline-anki-thing-id))
-         (note-type "Cloze")
-         (tags (org-get-tags-at))
+         (note-type (car inline-anki-note-type))
+         (tags (seq-union inline-anki-default-tags (org-get-tags-at)))
          (begin (org-element-property :contents-begin (org-element-at-point)))
          (end (save-excursion
                 (goto-char (org-element-property :contents-end (org-element-at-point)))
                 (re-search-backward "[_^]{" begin)
                 (point)))
-         (fields (list (cons "Text"
+         (fields (list (cons (cadr inline-anki-note-type)
                              (inline-anki-convert-implicit-clozes
                               (buffer-substring begin end)))
                        )))
@@ -72,6 +73,8 @@
   (if (looking-at-p "}[[:space:]]*?$")
       (insert (int-to-base64 id))
     (error "Note creation failed for unknown reason")))
+
+(defvar inline-anki-note-type '("Cloze" "Text"))
 
 ;; Unused
 (defcustom inline-anki-flag ""
@@ -138,7 +141,9 @@ Set this to '(bold), '(italic), or '(underline)."
     ;; (buffer-string)
     (buffer-substring-no-properties (point-min) (point-max))))
 
-(defvar inline-anki-default-deck "Default")
+(defvar inline-anki-deck "Default")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; As per RFC 4648 https://en.wikipedia.org/wiki/Base_64
 (defconst base64-alphabet "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/")

@@ -2,35 +2,90 @@
 
 A dream from before I was a programmer, that I couldn't turn into reality until now.
 
-For years I've daydreamed of writing SRS flashcards as body text, so that the same text could serve as a single-source-of-truth for multiple purposes.
+For years I've daydreamed of writing [[https://en.wikipedia.org/wiki/Spaced_repetition#Software][SRS]] flashcards as body text in regular notes, so that the same text could serve as a single-source-of-truth for multiple purposes.
 
-That is, not only writing flashcards in plaintext form in a dedicated file... not only awkwardly appending them to the end of an Org-mode section as a kind of paraphrasis or summary of that section... but letting the flashcards serve /as/ paragraphs in their own right. 
+That is, not only storing flashcards in plaintext form... not only awkwardly appending them to the end of an Org-mode section as a kind of paraphrasis or summary of that section... but letting the flashcards serve /as/ paragraphs in their own right. 
 
 We have many flashcard programs in the Emacs ecosystem (org-fc, org-drill, pamparam, anki-editor, not to mention the predecessor to Anki itself, flashcard.el)... but for some strange reason, all made the design decision of separating the flashcards from normal text by way of shoving them under a dedicated headline.  I don't understand the point of integrating with Org if it's gonna be like this.  They are effectively as locked-away as if they lived in a SQL database.  Perhaps not technically, but psychologically, which is just as real a barrier.
 
-This shows you how it's empowering to know Emacs Lisp.  All I had to do was fork anki-editor and make some small changes.  Now I can write this in my Org notes:
+This shows you how it's empowering to know Emacs Lisp.  All I had to do was fork anki-editor and make some small changes.  Now I can write as in the following section!
 
-As list items:
+* Demonstration
+** As list items:
 
-Or as running paragraphs:
+- (100000421) DRY is short for *Don't Repeat Yourself*
+- (100000404) 🇫🇷 *legerdemain*  🇬🇧 *sleight-of-hand*
+- (100000402) 🇫🇷 *maison*  🇬🇧 *house*
+- (100000403) 🇫🇷 *reunion*  🇬🇧 *meeting*
 
-Multiline flashcards can go in drawers:
+** As list items, with the anki note ID at the end:
 
+- When a muscle feels tight after exercise, DON'T *stretch*.^{1000000201}
+- Good relationships aren't built on two halves, but two *wholes*.^{1000000210}
+- Most people are willing to bet money in the lab that they are superior to *most people* on most desirable traits.^{1000000013}
+- Here is a non-card...
+  - Just some text unrelated to anki...
+    - Favorite trick of fitness program gurus: babysit *genetic freaks* and bask in their performance.^{100000001}
+  
+** As running paragraphs:
 
-Be aware: this is LESS CAPABLE version of anki-editor.  There is only one deck and only one note type (cloze), with only one field.  Tags can't be set on a note-by-note basis, but they are inherited from the context. 
+In English, we have the word-pair truth and lying.  We also have the word-pair *rational* and rationalization.  It's as if lying was called *truthization*.^{1000000021}
+
+No matter how much you want to, you cannot make rational an idea that wasn't originated *in a rational way*.^{100000034}
+
+** As drawers (for multiline flashcards):
+
+: :anki-100232020:
+: Q: YAGNI
+: 
+: A: You aren't gonna need it
+: :end:
+
+* Usage
+
+Be aware: this is LESS CAPABLE version of anki-editor (and in the current form, overrides some of anki-editor's functions when loaded):
+
+- It uses only one deck ("Default")
+- It uses only one note type ("Cloze"), presuming only one field ("Text")
+- Tags can't be set per individual card, but they are inherited from the context, so the Org filetags and heading tags will carry over
+  - Note that Anki tags have lost much of their organizational purpose if all your notes live in Org files anyway -- you'll be organizing from within Org, not from within Anki.  However, at least two use cases remain:
+    - The tags can be displayed inside cards as a contextual hint (if you code this in the card template)
+    - The tags can be used for Custom Study sessions on a filtered subset of notes
+
+Syntax of a card:
+
+- Inline-anki looks for one of these things to identify a flashcard:
+  - a special string at the end of a line: =_{anki}= or =^{anki}=, or the same with the letters replaced by a number (the number is the auto-assigned Anki note ID).
+  - a special string at the start of a list item: =(anki)=, or the same with the letters replaced by a number (the number is the auto-assigned Anki note ID).
+  - a drawer named =:anki:=, which is renamed to something like =:anki-10000001:= when the Anki note ID is set.
+- Clozes are marked by bold text.
+  - You can, if necessary, write the regular ={{c1::}}= syntax directly.  Mainly useful for writing math equations.
+
+To push cards:
+
+1. Install the AnkiConnect addon for Anki
+2. With Anki open in the background, visit an Org file that contains some inline-anki cards, and type =M-x anki-editor-push-notes RET=
 
 Config variables:
 
-- inline-anki-default-deck
 - inline-anki-default-tags
-- inline-anki-note-type
-- inline-anki-flag
-- inline-anki-use-base62
+  - Default ='("from-emacs")=.
+- inline-anki-emphasis-type
+  - Default ='(bold)=.  Can be set to either ='(italic)= or ='(underline)= instead.
 
-** Lighter than air
+And some config variables I expect you never need to touch:
+
+- inline-anki-deck
+  - Default ="Default"=.
+- inline-anki-note-type
+  - Default ='("Cloze" "Text")=.  The first string sets the note type, the second string sets the main field name.  Be warned it does not (yet) support non-cloze types, and may never.
+
+* Lighter than air
 
 You know the feeling when you finally have a reasonable way of doing things?
 
-An example some of you will recognize.  Before I got into Org-roam/zettelkasten, I had a history of leaving notes all over the filesystem and forgetting about them.  Time and again I got the sense I need some sort of personal wiki system, but trying to implement it in various ways such as with Org radio target links, never was good enough.  Once I got over the hump with Org-roam, I built enough critical mass that now it's my only system, and it cuts down on forgetting and duplicating, and I'm never at a loss as to where to write anything.  It unlocked a new stage of life; I leveled up.
+An example some of you will recognize...  before I got into Org-roam/zettelkasten, I had a history of leaving notes all over the filesystem and forgetting about them.  Time and again I got the sense I need some sort of personal wiki system, but trying to implement it in various ways such as with Org radio target links, never was good enough.
 
-I think of inline-anki the same way.  I couldn't stick with doing SRS flashcards, but all along the missing link for me was a logistical one.  Why *shouldn't* it be as easy as typing "(anki)" next to *any sort of paragraph anywhere on your filesystem?*  No inconvenience is trivial enough to discount. 
+Once I got over the hump with Org-roam, I built enough critical mass that now it's my only system, and it cuts down on forgetting and duplicating, and I'm never at a loss as to where to write anything.  It unlocked a new stage of life; I leveled up.
+
+So back on topic, I think of inline-anki the same way.  I couldn't stick with doing SRS flashcards, but all along the missing link for me was logistics.  Why *shouldn't* it be as easy as typing "(anki)" next to *any sort of paragraph anywhere on your filesystem!?*  No inconvenience is trivial enough to discount. 
