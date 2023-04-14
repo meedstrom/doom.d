@@ -1,4 +1,5 @@
 ;; -*- lexical-binding: t; -*-
+
 ;; Copyright (C) 2023 Martin Edström
 ;;
 ;; This program is free software: you can redistribute it and/or modify
@@ -114,9 +115,11 @@ date slug in the org-roam filenames.  So prepare to work from a
 /tmp/roam/ copy of the org-roam dir, with the dates stripped from
 filenames, and the `org-id-locations' table modified likewise, so
 that org-id links will resolve correctly."
-  (org-id-update-id-locations)
-  (org-roam-db-sync)
-  (org-roam-update-org-id-locations)
+  (switch-to-buffer "*Messages*")
+  (delete-other-windows)
+  (when (org-id-update-id-locations)
+    (org-roam-db-sync)
+    (org-roam-update-org-id-locations))
   (fset 'org-id-update-id-locations #'ignore) ;; stop it autotriggering
   ;; Don't save the changes to `org-id-locations'
   (cancel-timer my-state-sync-timer)
@@ -124,7 +127,7 @@ that org-id links will resolve correctly."
   (remove-hook 'kill-emacs-hook #'save-place-kill-emacs-hook)
 
   (setopt org-export-use-babel nil)
-  ;; (setopt org-export-with-broken-links t)
+  (setopt org-export-with-broken-links t)
 
   ;; Hack the `org-id-locations' table
 
@@ -142,11 +145,11 @@ that org-id links will resolve correctly."
              for pair in new
              collect (cons (->> (car pair)
                                 ;; Pretend roam directory is /tmp/roam since we'll work from there
-                                (s-replace "^/home/kept/roam/"  
-                                           "/tmp/roam/")
+                                (string-replace "/home/kept/roam/" "/tmp/roam/")
                                 ;; Flatten the directory tree (no subdirs)
-                                (s-replace (rx (group bol "/tmp/roam/") (* nonl) "/" )
-                                           "\\1"))
+                                (replace-regexp-in-string
+                                 (rx (group bol "/tmp/roam/") (* nonl) "/" )
+                                 "\\1"))
                            (cdr pair))))
   (setq org-id-locations (org-id-alist-to-hash new))
 
@@ -179,7 +182,13 @@ that org-id links will resolve correctly."
                                                   nil
                                                 t)))
    unless (equal (file-name-directory file) "/tmp/roam/")
-   do (rename-file file "/tmp/roam/")))
+   do (if (file-exists-p (concat "/tmp/roam/" (file-name-nondirectory file)))
+          (progn
+            (message "FILE ALREADY EXISTS: %s" (file-name-nondirectory file))
+            (delete-file file))
+        (rename-file file "/tmp/roam/")))
+  
+  (goto-char (point-max)))
 
 ;; Struggled so long looking for a hook that would work like the old
 ;; before-export-hook.  Let this be a lesson: the emacs hook system exists to
@@ -221,6 +230,7 @@ that org-id links will resolve correctly."
                            (or (sort (org-get-tags) #'string-lessp) '(""))))
                    (refs (save-excursion
                            (when (search-forward ":roam_refs: " nil t)
+                             ;; Top level, not a subheading
                              (unless (search-backward "\n*" nil t)
                                (buffer-substring (point) (line-end-position))))))
                    (wordcount (save-excursion
@@ -243,17 +253,18 @@ that org-id links will resolve correctly."
               (cond
                ((not (and title created))
                 (delete-file output-path)
-                (warn "FILE DELETED: LACKING TITLE OR LACKING DATE: %s" output-path))
+                (warn "DELETED, TITLE OR DATE MISSING: %s" output-path))
                ;; This file is empty because it met :exclude-tags, seems
                ;; org-publish is not smart enough to just skip the export.
                ;; Though I don't understand why the next clause sometimes
                ;; succeeds?
                ((= 0 (doom-file-size output-path))
                 (delete-file output-path)
-                (message "File deleted because empty: %s" output-path))
+                (message "Deleted because empty: %s" output-path))
+               ;; This should not happen anymore
                ((seq-intersection tags my-tags-to-avoid-uploading)
                 (delete-file output-path)
-                (message "File deleted because found excluded-tag: %s" output-path))
+                (warn "Deleted because found excluded-tag: %s" output-path))
                ;; ((not (org-id-get))
                ;;  (delete-file output-path)
                ;;  (message "FILE DELETED BECAUSE NO ID: %s" output-path))
@@ -264,7 +275,7 @@ that org-id links will resolve correctly."
                     (kill-buffer output-buf)))
                 (with-temp-buffer
                   (goto-char (point-min))
-                  (insert "<h1 id='title'>" title "</h1>")
+                  (insert "<h1 id=\"title\">" title "</h1>")
                   (when refs
                     (insert "Reference(s): "  )
                     (dolist (ref (split-string refs))
@@ -273,13 +284,13 @@ that org-id links will resolve correctly."
                     (insert "<br />"))
                   (insert-file-contents output-path)
 
-                  ;; Remove divs since they mess up the look of Bulma CSS.
-                  ;; As an alternative, if I want to emulate the look of
-                  ;; org-indent-mode. I could probably keep the divs classed
-                  ;; .outline-[123456] and manually fix the slight
-                  ;; misalignment of headlines that results (or give the divs
-                  ;; the Bulma class .section).  Or the alignment might
-                  ;; work normally if they were spans, not divs.
+                  ;; Remove divs since they mess up the look of Bulma CSS.  As
+                  ;; an alternative, if I want the web pages to emulate the look
+                  ;; of org-indent-mode. I could probably keep the divs classed
+                  ;; .outline-[123456] and manually fix the slight misalignment
+                  ;; of headlines that results (or give the divs the Bulma class
+                  ;; .section).  Or the alignment might work normally if the
+                  ;; divs were replaced by spans.
                   (goto-char (point-min))
                   (while (re-search-forward "</?div.*?>" nil t)
                     (replace-match ""))
@@ -433,7 +444,6 @@ that org-id links will resolve correctly."
 (setq foo nil)
 
 ;; WIP
-;; flag unhidden dailies (i.e. lacking :personal: tag) and then auto-link them
 ;;
 ;; how should i add arbitrary text for the month?  i guess it would be easier if
 ;; I have a preexisting roam node named Changelog, and I write into it headings
@@ -447,5 +457,9 @@ that org-id links will resolve correctly."
 ;; "News", which fits better with broad-topic summaries?
 (defun my-make-changelog ()
   (my-coalesce-git-log-by-month)
+
+  ;; find public dailies (i.e. those lacking :private: tag) and then auto-link them
+
+
   ;; etc
   )
