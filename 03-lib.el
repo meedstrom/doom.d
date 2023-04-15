@@ -99,13 +99,14 @@
                       (goto-char (point-min))
                       (when (search-forward "#+title: " nil t)
                         (buffer-substring (point) (line-end-position))))))))
-  (let* ((filename-preamble
-          (when (string-match-p (rx (= 4 digit) "-" (= 2 digit) "-" (= 2 digit))
-                                (file-name-nondirectory path))
-            (substring (file-name-nondirectory path) 0 10)))
+  (let* ((name (file-name-nondirectory path))
+         (filename-preamble
+          (when (string-match
+                 (rx (= 4 digit) "-" (= 2 digit) "-" (= 2 digit) "-")
+                 name)
+            (match-string 0 name)))
          (slugified-path (concat (file-name-directory path)
                                  filename-preamble
-                                 "-"
                                  (my-slugify title)
                                  ".org"))
          (visiting (find-buffer-visiting path)))

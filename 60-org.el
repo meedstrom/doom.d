@@ -62,7 +62,7 @@
 (setopt org-roam-directory "/home/kept/roam/")
 (setopt org-roam-dailies-capture-templates
       '(("d" "default" entry "* %<%H:%M>\n%?" :if-new
-         (file+head "%<%Y-%m-%d>.org" "#+title: [%<%Y-%m-%d>]\n#+filetags: :personal:\n")
+         (file+head "%<%Y-%m-%d>.org" "#+title: [%<%Y-%m-%d>]\n#+filetags: :noexport:\n")
          :immediate-finish t
          :jump-to-captured t)))
 
@@ -82,7 +82,8 @@
 (add-hook 'org-clock-in-hook #'org-clock-save)
 (add-hook 'text-mode-hook (defun my-kill-smartparens () (smartparens-mode 0)))
 
-;; see Org-roam UI in Chromium's kiosk mode
+;; Open Org-roam UI in Chromium's kiosk mode.
+;; I don't use Chromium for anything else.
 (setopt browse-url-chromium-arguments '("--app=http://localhost:35901"))
 (setopt org-roam-ui-browser-function #'browse-url-chromium)
 (when guix
@@ -96,14 +97,20 @@
 ;;                                      ("w" todo "WAITING")
 ;;                                      ("p" todo "PROCRASTINATING")
 ;;                                      ("c" tags-todo "+active")))
-(setopt org-agenda-tag-filter-preset '("-exclude"))
+;; (setopt org-agenda-tag-filter-preset '("-exclude"))
 (setopt org-agenda-todo-list-sublevels nil)
 (setopt org-agenda-todo-ignore-scheduled t)
 (setopt org-agenda-files '("/home/kept/archive/journal/diary.org"
                            ;; to always cache the org-id locations
                            "/home/kept/emacs/conf-doom/elfeed.org"
                            "/home/kept/roam/"
-                           "/home/sync-phone/beorg/"))
+                           "/home/kept/roam/bloggable/"
+                           "/home/kept/roam/daily/"
+                           "/home/kept/roam/refs/"
+                           "/home/kept/roam/frozen/"
+                           "/home/kept/roam/grismartin/pages/"
+                           "/home/kept/roam/martin/pages/"
+                           ))
 
 (setopt org-archive-location "/home/kept/archive/2021-journal/diary.org::datetree/")
 (setopt org-archive-save-context-info '(time file itags olpath))

@@ -27,8 +27,10 @@
            :body-only t
            :with-toc nil
            :section-numbers nil
-           :exclude "daily/\\|logseq/"
-           ;; NOTE: this does not seem to work for filetags, only subtrees, but
+           ;; TODO: what effect does this have?
+           ;; :exclude "daily/\\|logseq/"
+
+           ;; NOTE: this works not for filetags, only subtrees, but
            ;; we fix that in `my-publish-to-blog'.
            :exclude-tags ,my-tags-to-avoid-uploading)))
 
@@ -37,11 +39,11 @@
   (setq org-export-exclude-tags
         (seq-union org-export-exclude-tags my-tags-to-avoid-uploading)))
 
-;; TODO
-;; Give h1...h6 headings an ID from the source org-ids instead of "org953031",
-;; so that hash-links such as #ID-e10bbdfe-1ffb-4c54-9228-2818afdfc5ba will make
-;; the web browser jump to that heading.
-;; (after! ox (require 'org-roam-export))
+;; Give h2...h6 headings an ID from the source org-id, if it has one,
+;; instead of e.g. "org953031".  Then hash-links such as
+;; #ID-e10bbdfe-1ffb-4c54-9228-2818afdfc5ba will make the web browser jump to
+;; that heading.
+(after! ox (require 'org-roam-export))
 
 (add-hook 'org-export-before-parsing-functions #'my-add-backlinks-if-roam)
 (add-hook 'org-export-before-parsing-functions #'my-replace-web-links-with-note-links-if-ref-exists)
@@ -127,7 +129,8 @@ that org-id links will resolve correctly."
   (remove-hook 'kill-emacs-hook #'save-place-kill-emacs-hook)
 
   (setopt org-export-use-babel nil)
-  (setopt org-export-with-broken-links t)
+  ;; no bueno because broken links actually disappear
+  ;; (setopt org-export-with-broken-links t)
 
   ;; Hack the `org-id-locations' table
 
@@ -135,6 +138,7 @@ that org-id links will resolve correctly."
   ;; Strip dates from filename references (my files have YYYY-MM-DD)
   (setq new (cl-loop
              for pair in new
+             ;; Note that this won't affect the dailies since they don't have a trailing dash.
              if (string-match-p (rx bol (= 4 digit) "-" (= 2 digit) "-" (= 2 digit) "-")
                                 (file-name-nondirectory (car pair)))
              collect (cons (concat (file-name-directory (car pair))
@@ -158,29 +162,22 @@ that org-id links will resolve correctly."
   ;; Duplicate the files to /tmp so we can work from there
   (shell-command "rm -rf /tmp/roam")
   (copy-directory "/home/kept/roam/" "/tmp/" t)
-  (shell-command "rm -rf /tmp/roam/daily") ;; TODO: Include it
-  (shell-command "rm -rf /tmp/roam/{martin,grismartin}/logseq")
+  ;; no logseq backups
+  (shell-command "rm -rf /tmp/roam/{grismartin,martin}/logseq")
 
   ;; Strip dates from filenames (my files have YYYY-MM-DD)
   (cl-loop
    for file in (directory-files-recursively
                 "/tmp/roam"
                 (rx bol (= 4 digit) "-" (= 2 digit) "-" (= 2 digit) "-" (+ nonl) ".org" eol)
-                nil
-                (lambda (dir)
-                  (unless (string-search "daily" dir)
-                    t)))
+                nil)
    do (rename-file file
                    (concat (file-name-directory file)
                            (substring (file-name-nondirectory file) 11))))
 
-  ;; Flatten the directory tree, no more subdirs except for daily/
+  ;; Flatten the directory tree, no more subdirs
   (cl-loop
-   for file in (directory-files-recursively "/tmp/roam" "\\.org$" nil
-                                            (lambda (dir)
-                                              (if (string-search "daily" dir)
-                                                  nil
-                                                t)))
+   for file in (directory-files-recursively "/tmp/roam" "\\.org$" nil)
    unless (equal (file-name-directory file) "/tmp/roam/")
    do (if (file-exists-p (concat "/tmp/roam/" (file-name-nondirectory file)))
           (progn
@@ -206,7 +203,13 @@ that org-id links will resolve correctly."
     (unless (with-current-buffer work-buffer
               (save-excursion
                 (goto-char (point-min))
-                (seq-intersection (org-get-tags) my-tags-to-avoid-uploading)))
+                (or (seq-intersection (org-get-tags) my-tags-to-avoid-uploading)
+                    (not (org-id-get))
+                    (when (or (not (search-forward "#+title: " nil t))
+                              ;; (not (search-forward "#+date: " nil t))
+                              )
+                      (message "TITLE OR DATE MISSING: %s" filename)
+                      t))))
 
       ;; The original publish function
       (org-publish-org-to 'html filename org-html-extension plist pub-dir)
@@ -251,9 +254,6 @@ that org-id links will resolve correctly."
                            (tags . ,tags)
                            (content . nil))))
               (cond
-               ((not (and title created))
-                (delete-file output-path)
-                (warn "DELETED, TITLE OR DATE MISSING: %s" output-path))
                ;; This file is empty because it met :exclude-tags, seems
                ;; org-publish is not smart enough to just skip the export.
                ;; Though I don't understand why the next clause sometimes
@@ -261,13 +261,6 @@ that org-id links will resolve correctly."
                ((= 0 (doom-file-size output-path))
                 (delete-file output-path)
                 (message "Deleted because empty: %s" output-path))
-               ;; This should not happen anymore
-               ((seq-intersection tags my-tags-to-avoid-uploading)
-                (delete-file output-path)
-                (warn "Deleted because found excluded-tag: %s" output-path))
-               ;; ((not (org-id-get))
-               ;;  (delete-file output-path)
-               ;;  (message "FILE DELETED BECAUSE NO ID: %s" output-path))
                (t
                 (when output-buf
                   (setq was-opened t)
