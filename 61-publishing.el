@@ -239,6 +239,8 @@ that org-id links will resolve correctly."
                    (wordcount (save-excursion
                                 (re-search-forward "^[^#:\n]" nil t)
                                 (count-words (point) (point-max))))
+
+                   ;; DOES NOT WORK
                    (backlinks (save-excursion
                                 (goto-char (point-max))
                                 (when (search-backward "* What links here" nil t)
@@ -287,6 +289,13 @@ that org-id links will resolve correctly."
                   (goto-char (point-min))
                   (while (re-search-forward "</?div.*?>" nil t)
                     (replace-match ""))
+
+                  ;; New way to figure out backlinks
+                  (goto-char (point-max))
+                  (when (search-backward "What links here" nil t)
+                    (setf (alist-get 'backlinks data)
+                          (cl-loop while (search-forward "<li>" nil t)
+                                   count t)))
 
                   (setf (alist-get 'content data) (buffer-string)))
                 (with-temp-file output-path
