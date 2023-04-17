@@ -15,6 +15,8 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+(setopt org-html-checkbox-type 'html)
+
 (setq my-tags-to-avoid-uploading '("noexport" "private" "censor" "drill" "fc" "anki"))
 
 (setopt org-publish-project-alist
@@ -77,10 +79,14 @@ does, it will not modify the source file."
             (insert "What links here"))
           (dolist (backlink backlinks)
             (newline)
-            (insert "- [[id:" (car backlink) "][" (cdr backlink) "]]"))
+            (insert "- [[id:" (car backlink) "]["
+                    (replace-regexp-in-string (rx (any "[]")) "" (cdr backlink))
+                    "]]"))
           (dolist (reflink reflinks)
             (newline)
-            (insert "- [[id:" (car reflink) "][" (cdr reflink) "]]")))))))
+            (insert "- [[id:" (car reflink) "]["
+                    (replace-regexp-in-string (rx (any "[]")) "" (cdr backlink))
+                    "]]")))))))
 
 (defun my-replace-web-links-with-note-links-if-ref-exists (&rest _)
   "Anywhere there's a link to an URL, if there exists an Org note
@@ -104,7 +110,9 @@ does, it will not modify the source file."
                        ;; ignore if same page
                        (not (equal (caddr ref) (org-get-title))))
               (delete-region (point) (org-element-property :end elem))
-              (insert "[[id:" (cadr ref) "][" (caddr ref) "]]"))))))))
+              (insert "[[id:" (cadr ref) "]["
+                      (replace-regexp-in-string (rx (any "[]")) "" (caddr ref))
+                      "]]"))))))))
 
 (defun my-prep-fn (_)
   "Prepare Emacs for publishing my website.
@@ -272,12 +280,17 @@ that org-id links will resolve correctly."
                   (goto-char (point-min))
                   (insert "<h1 id=\"title\">" title "</h1>")
                   (when refs
-                    (insert "Reference(s): "  )
+                    (insert "</p>Reference(s): "  )
                     (dolist (ref (split-string refs))
                       (setq ref (string-replace "\"" "" ref))
                       (insert " <a href=\"" ref "\">" (replace-regexp-in-string "http.?://" "" ref) "</a> "))
-                    (insert "<br />"))
+                    (insert "</p>"))
                   (insert-file-contents output-path)
+                  ;; TODO: Make Bulma render the Table of Contents as some sort
+                  ;; of infobox.  May need to transform the source HTML here,
+                  ;; which is just a h2 tag "Table of Contents" with some ul/li
+                  ;; elements.
+
 
                   ;; Remove divs since they mess up the look of Bulma CSS.  As
                   ;; an alternative, if I want the web pages to emulate the look
