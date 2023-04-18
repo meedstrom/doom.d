@@ -18,6 +18,7 @@
 (setopt org-html-checkbox-type 'html)
 
 (setq my-tags-to-avoid-uploading '("noexport" "private" "censor" "drill" "fc" "anki"))
+(setq my-tags-to-upload-as-private '("friends-only" "partner" "therapist"))
 
 (setopt org-publish-project-alist
         `(("react-blog"
@@ -36,13 +37,8 @@
            ;; we fix that in `my-publish-to-blog'.
            :exclude-tags ,my-tags-to-avoid-uploading)))
 
-;; REVIEW: Does this do anything?
-(after! ox
-  (setq org-export-exclude-tags
-        (seq-union org-export-exclude-tags my-tags-to-avoid-uploading)))
-
 ;; Give h2...h6 headings an ID from the source org-id, if it has one,
-;; instead of e.g. "org953031".  Then hash-links such as
+;; instead of e.g. "org953031".  That way, hash-links such as
 ;; #ID-e10bbdfe-1ffb-4c54-9228-2818afdfc5ba will make the web browser jump to
 ;; that heading.
 (after! ox (require 'org-roam-export))
@@ -74,24 +70,19 @@ does, it will not modify the source file."
           (if (bobp)
               (progn
                 (goto-char (point-max))
-                (insert "* What links here"))
+                (insert "\n* What links here"))
             (org-insert-subheading nil)
             (insert "What links here"))
-          (dolist (backlink backlinks)
+          (dolist (link (seq-union backlinks reflinks))
             (newline)
-            (insert "- [[id:" (car backlink) "]["
-                    (replace-regexp-in-string (rx (any "[]")) "" (cdr backlink))
-                    "]]"))
-          (dolist (reflink reflinks)
-            (newline)
-            (insert "- [[id:" (car reflink) "]["
-                    (replace-regexp-in-string (rx (any "[]")) "" (cdr backlink))
+            (insert "- [[id:" (car link) "]["
+                    (replace-regexp-in-string (rx (any "[]")) "" (cdr link))
                     "]]")))))))
 
 (defun my-replace-web-links-with-note-links-if-ref-exists (&rest _)
-  "Anywhere there's a link to an URL, if there exists an Org note
-with the same link in its :ROAM_REFS: property, then replace that
-web-link with a link to the roam note.
+  "Anywhere there's an URL, if there exists an Org note
+with the same URL in its :ROAM_REFS: property, then replace that
+URL with a link to the roam note.
 
 Meant to run on `org-export-before-parsing-functions', and if it
 does, it will not modify the source file."
@@ -102,7 +93,7 @@ does, it will not modify the source file."
                       :left-join nodes
                       :on (= refs:node-id nodes:id)])))
       (save-excursion
-        (while (not (equal "No further link found" (org-next-link)))
+        (while (not (equal "No further link found" (quiet! (org-next-link))))
           (let* ((elem (org-element-context))
                  (link (org-element-property :path elem))
                  (ref (assoc link all-refs)))
@@ -127,21 +118,26 @@ filenames, and the `org-id-locations' table modified likewise, so
 that org-id links will resolve correctly."
   (switch-to-buffer "*Messages*")
   (delete-other-windows)
-  (when (org-id-update-id-locations)
-    (org-roam-db-sync)
-    (org-roam-update-org-id-locations))
-  (fset 'org-id-update-id-locations #'ignore) ;; stop it autotriggering
-  ;; Don't save the changes to `org-id-locations'
+  (org-roam-update-org-id-locations)
+  (org-roam-db-sync)
+
+  (fset 'org-id-update-id-locations #'ignore) ;; Stop it autotriggering
+
+  ;; The subordinate emacs should sync nothing
   (cancel-timer my-state-sync-timer)
-  (remove-hook 'kill-emacs-hook #'org-id-locations-save)
-  (remove-hook 'kill-emacs-hook #'save-place-kill-emacs-hook)
+  (setq kill-emacs-hook nil)
+
+  ;; REVIEW: Does this do anything?
+  ;; (setopt org-export-exclude-tags
+  ;;         (seq-union org-export-exclude-tags my-tags-to-avoid-uploading)))
 
   (setopt org-export-use-babel nil)
-  ;; no bueno because broken links actually disappear
-  ;; (setopt org-export-with-broken-links t)
+  ;; (setopt org-export-with-broken-links t) ;; no bueno, broken links actually disappear from the html
 
-  ;; Hack the `org-id-locations' table
 
+  ;;; Hack the `org-id-locations' table
+
+  (fset 'org-id-locations-save #'ignore) ;; Don't save the hacks
   (setq new (org-id-hash-to-alist org-id-locations))
   ;; Strip dates from filename references (my files have YYYY-MM-DD)
   (setq new (cl-loop
@@ -165,7 +161,8 @@ that org-id links will resolve correctly."
                            (cdr pair))))
   (setq org-id-locations (org-id-alist-to-hash new))
 
-  ;; Do changes on-disk mirroring what we did to the `org-id-locations' table
+
+  ;;; Do changes on-disk mirroring what we did to the `org-id-locations' table
 
   ;; Duplicate the files to /tmp so we can work from there
   (shell-command "rm -rf /tmp/roam")
@@ -202,12 +199,12 @@ that org-id links will resolve correctly."
 ;; possible to use `add-function' or call a wrapper such as this.
 (defun my-publish-to-blog (plist filename pub-dir)
   (let* ((org-inhibit-startup t)
+         (org-html-extension "")
+         (case-fold-search t)
          (visiting (find-buffer-visiting filename))
-         (work-buffer (or visiting (find-file-noselect filename)))
-         (org-html-extension ""))
+         (work-buffer (or visiting (find-file-noselect filename))))
 
     ;; Save time by not even calling `org-publish-org-to'.
-    ;; Now I expect to never trigger the excluded-tags clause in the cond further below.
     (unless (with-current-buffer work-buffer
               (save-excursion
                 (goto-char (point-min))
@@ -228,7 +225,6 @@ that org-id links will resolve correctly."
             (let* ((output-path (org-export-output-file-name org-html-extension nil pub-dir))
                    (output-buf (find-buffer-visiting output-path))
                    (was-opened nil)
-                   (case-fold-search t)
                    (slug (string-replace pub-dir "" output-path))
                    (title (save-excursion
                             (when (search-forward "#+title: " nil t)
@@ -247,30 +243,21 @@ that org-id links will resolve correctly."
                    (wordcount (save-excursion
                                 (re-search-forward "^[^#:\n]" nil t)
                                 (count-words (point) (point-max))))
-
-                   ;; DOES NOT WORK
-                   (backlinks (save-excursion
-                                (goto-char (point-max))
-                                (when (search-backward "* What links here" nil t)
-                                  (cl-loop while (re-search-forward "^- " nil t)
-                                           count t))))
                    (data `((slug . ,slug)
                            (title . ,title)
                            (created . ,created)
                            (updated . ,updated)
                            (wordcount . ,wordcount)
-                           (backlinks . ,backlinks)
+                           (backlinks . 0)
                            (refs . ,refs)
                            (tags . ,tags)
                            (content . nil))))
               (cond
-               ;; This file is empty because it met :exclude-tags, seems
-               ;; org-publish is not smart enough to just skip the export.
-               ;; Though I don't understand why the next clause sometimes
-               ;; succeeds?
-               ((= 0 (doom-file-size output-path))
-                (delete-file output-path)
-                (message "Deleted because empty: %s" output-path))
+               ;; Not sure why but a rare few near-empty files end up totally
+               ;; empty without even a title.
+               ;; ((= 0 (doom-file-size output-path))
+               ;;  (delete-file output-path)
+               ;;  (message "Deleted because empty: %s" output-path))
                (t
                 (when output-buf
                   (setq was-opened t)
@@ -285,7 +272,11 @@ that org-id links will resolve correctly."
                       (setq ref (string-replace "\"" "" ref))
                       (insert " <a href=\"" ref "\">" (replace-regexp-in-string "http.?://" "" ref) "</a> "))
                     (insert "</p>"))
+                  (when (member "logseq" tags)
+                    (insert "<span class=\"logseq\">"))
                   (insert-file-contents output-path)
+                  (when (member "logseq" tags)
+                    (insert "</span>>"))
                   ;; TODO: Make Bulma render the Table of Contents as some sort
                   ;; of infobox.  May need to transform the source HTML here,
                   ;; which is just a h2 tag "Table of Contents" with some ul/li
@@ -305,7 +296,7 @@ that org-id links will resolve correctly."
 
                   ;; New way to figure out backlinks
                   (goto-char (point-max))
-                  (when (search-backward "What links here" nil t)
+                  (when (search-backward ">What links here</" nil t)
                     (setf (alist-get 'backlinks data)
                           (cl-loop while (search-forward "<li>" nil t)
                                    count t)))
@@ -427,33 +418,41 @@ that org-id links will resolve correctly."
                                                      "git" "log" "--format=" "--name-only"
                                                      (concat "--since=" this-month)
                                                      (concat "--until=" next-month)))))))
+                ;; while we're at it, find dailies created this month
+                ;; (cl-loop for file in (directory-files "/home/kept/roam/daily" t)
+                ;;          when (and (string-search (substring this-month 0 8) file)
+                ;;                    (with-temp-buffer
+                ;;                      (insert-file-contents file)
+                ;;                      ;; file is completely untagged? then it's public
+                ;;                      (not (org-get-tags))))
+                ;;          do (insert "\n- " file))
                 (when files-changed-this-month
-                  (insert "\n\n Changelog " (ts-format "%B %Y" (ts-parse this-month))))
-                (cl-loop
-                 for file in files-changed-this-month
-                 as changes = (split-string
-                               (my-process-output-to-string
-                                "git" "log" "--format=" "--numstat"
-                                (concat "--since=" this-month)
-                                (concat "--until=" next-month)
-                                "--follow" "--" (shell-quote-argument file))
-                               "\n")
-                 do
-                 (cl-loop
-                  for line in changes
-                  with total-diff = 0
-                  when (/= 0 (length line))
-                  do (seq-let (adds dels &rest _) (split-string line)
-                       (if (and adds dels
-                                (string-match-p "^[[:digit:]]+$" adds)
-                                (string-match-p "^[[:digit:]]+$" dels))
-                           (cl-incf total-diff (- (string-to-number adds)
-                                                  (string-to-number dels)))
-                         (message "Non-number in log line %s" line)))
-                  finally do
-                  (when (> total-diff 20)
-                    (insert "\n" (int-to-string total-diff) " lines changed in " file)))
-                 )))))))
+                  (insert "\n\n Changelog " (ts-format "%B %Y" (ts-parse this-month)))
+                  (cl-loop
+                   for file in files-changed-this-month
+                   as changes = (split-string
+                                 (my-process-output-to-string
+                                  "git" "log" "--format=" "--numstat"
+                                  (concat "--since=" this-month)
+                                  (concat "--until=" next-month)
+                                  "--follow" "--" (shell-quote-argument file))
+                                 "\n")
+                   do
+                   (cl-loop
+                    for line in changes
+                    with total-diff = 0
+                    when (/= 0 (length line))
+                    do (seq-let (adds dels &rest _) (split-string line)
+                         (if (and adds dels
+                                  (string-match-p "^[[:digit:]]+$" adds)
+                                  (string-match-p "^[[:digit:]]+$" dels))
+                             (cl-incf total-diff (- (string-to-number adds)
+                                                    (string-to-number dels)))
+                           (message "Non-number in log line %s" line)))
+                    finally do
+                    (when (> total-diff 20)
+                      (insert "\n" (int-to-string total-diff) " new lines in " file)))
+                   ))))))))
 ;; (my-coalesce-git-log-by-month)
 
 (setq foo nil)
@@ -472,9 +471,6 @@ that org-id links will resolve correctly."
 ;; "News", which fits better with broad-topic summaries?
 (defun my-make-changelog ()
   (my-coalesce-git-log-by-month)
-
-  ;; find public dailies (i.e. those lacking :private: tag) and then auto-link them
-
 
   ;; etc
   )
