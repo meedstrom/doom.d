@@ -229,9 +229,11 @@ that org-id links will resolve correctly."
                    (title (save-excursion
                             (when (search-forward "#+title: " nil t)
                               (buffer-substring (point) (line-end-position)))))
-                   (created (save-excursion
-                              (when (search-forward "#+date: " nil t)
-                                (buffer-substring (1+ (point)) (+ 11 (point))))))
+                   (created (or (save-excursion
+                                  (when (search-forward "#+date: " nil t)
+                                    (buffer-substring (1+ (point)) (+ 11 (point)))))
+                                (when (string-match-p (rx bos "[" (= 4 digit) "-" (= 2 digit) "-" (= 2 digit) "]" eos) title)
+                                  title)))
                    (updated (format-time-string "%F" (f-modification-time filename)))
                    (tags (save-excursion
                            (or (sort (org-get-tags) #'string-lessp) '(""))))

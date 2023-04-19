@@ -57,4 +57,8 @@ Suitable on `after-save-hook'."
             ;; New day, new commit
             (magit-commit-create '("--all" "--message=Auto-commit"))))))))
 
-(add-hook 'after-save-hook #'my-auto-commit-maybe)
+(define-minor-mode my-auto-commit ""
+  :global t
+  (if my-auto-commit-mode
+      (add-hook 'after-save-hook #'my-auto-commit-maybe)
+    (remove-hook 'after-save-hook #'my-auto-commit-maybe)))
