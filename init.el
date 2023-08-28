@@ -10,7 +10,7 @@
        unicode
        (emoji +unicode)
        ;; doom-dashboard
-       ;; modeline
+       modeline
        hl-todo
        ;; (ligatures +extra)
        ligatures
@@ -39,6 +39,7 @@
        :checkers
        ;; syntax
        grammar
+       ;; spell
 
        :lang
        data
@@ -46,6 +47,7 @@
        ess
        (go +lsp +tree-sitter)
        web
+       nix
        ;; (web +tree-sitter)
        ;; javascript
        (javascript +lsp +tree-sitter)   ;; tsserver freezes Emacs, maybe edit tide-server-max-response-length
@@ -64,7 +66,7 @@
        :app
        calendar
        (rss +org)
-       ;; everywhere ;; try this if im on neither exwm nor sway
+       ;; everywhere ;; try this if im on neither exwm nor wayland
 
        :tools
        biblio

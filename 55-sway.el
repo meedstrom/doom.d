@@ -188,22 +188,22 @@ floating windows.")
       ;;                               ))
       ;;       (warn "Failed to find and place minibuffer frame"))))
       )
-  (scroll-bar-mode)
-  ;; DEPRECATED emacs29
-  ;; Good in X.  In Sway WM, use its opacity setting instead.
-  ;; (add-to-list 'default-frame-alist '(alpha . 85))
+  ;; (scroll-bar-mode)
   )
 
 
-;; (setq display-buffer-base-action '((display-buffer-use-some-frame
-;;                                     display-buffer-pop-up-frame)
-;;                                    ((reusable-frames . t))))
+;; (setq pop-up-frames t)
+
+(setq display-buffer-base-action '((display-buffer-use-some-window
+                                    display-buffer-use-some-frame
+                                    ;; display-buffer-pop-up-frame
+                                    )
+                                   ((reusable-frames . t))))
 
 (setq frame-auto-hide-function #'ignore)
 
-;; Append a final rule to pass arguments to base-action and fallback-action
-;; when no other rule matched.  I already set base-action with arguments, but
-;; it's good in case fallback-action is invoked.
+;; Ensure that -base-action and -fallback-action use "reusable-frames" when no
+;; other rule matched.
 (add-to-list 'display-buffer-alist
              '("." nil (reusable-frames . t))
              'append)

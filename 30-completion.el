@@ -28,8 +28,8 @@
 ;; my first action after startup is often to reach for virtual buffers, so preload please
 (recentf-mode)
 
-(add-hook 'minibuffer-setup-hook #'my-adjust-scale-2)
-(add-hook 'dired-mode-hook #'my-adjust-scale-2)
+;; (add-hook 'minibuffer-setup-hook #'my-adjust-scale-2)
+;; (add-hook 'dired-mode-hook #'my-adjust-scale-2)
 
 
 ;; TODO: Avoid matching on initialisms during plaintext search (consult-line,
@@ -65,8 +65,7 @@
 (after! orderless
   (add-to-list 'orderless-style-dispatchers #'my-orderless-first-piece-may-be-initialism))
 
-(setopt orderless-matching-styles '(orderless-literal
-                                    orderless-regexp))
+;; (setopt orderless-matching-styles '(orderless-literal orderless-regexp))
 
 
 

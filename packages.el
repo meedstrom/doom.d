@@ -22,6 +22,7 @@
 
 ;; The rest
 
+(package! kbd-mode :recipe (:host github :repo "kmonad/kbd-mode"))
 (package! circadian)
 (package! academic-phrases)
 ;; (package! affe)
@@ -160,3 +161,6 @@
 ;; (package! navi-mode)
 ;; (package! snow)
 ;; (package! sx)
+
+;; another alternative to feebleline!
+(package! awesome-tray :recipe (:host github :repo "manateelazycat/awesome-tray"))

@@ -73,11 +73,12 @@
 ;; C-c C-g  merge: merge a detached tab back into its "parent" window
 ;; (exwm-firefox-mode)
 
-(use-package! exwm
-  :config
-  ;; NOTE: exwm-enable just adds exwm-init on various hooks which will be called
-  ;; later, so the actual exwm-init doesn't happen at this stage.
-  (exwm-enable))
+(when (eq window-system 'x)
+  (use-package! exwm
+    :config
+    ;; NOTE: exwm-enable just adds exwm-init on various hooks which will be called
+    ;; later; exwm-init won't get called at the end of this sexp.
+    (exwm-enable)))
 
 ;; not good
 ;; (setopt exwm-workspace-minibuffer-position 'bottom)

@@ -29,6 +29,15 @@
 (autoload #'objed-ipipe "objed")
 (autoload #'piper "piper")
 
+;; TODO: craft a hyprctl command that only considers emacs frames (if there are
+;;       2 emacs frames and 1 firefox frame, stay in emacs).  Remember to
+;;       discount frames not on the current workspace.
+(defun my-other-window-any-frame-hyprland ()
+  (interactive)
+  (unless (equal (window-frame)
+                 (window-frame (next-window nil 'skip-minibuf 'visible)))
+      (my-exec "hyprctl" "dispatch" "cyclenext"))
+  (other-window 1))
 
 ;; Modified version of `org-roam-node-slug'
 (defun my-slugify (title)
@@ -273,9 +282,9 @@ executing BODY."
   (let ((documented-commands nil)
         (roam-files
          (append (directory-files "/home/kept/roam/" t ".org$")
-                 (directory-files "/home/kept/roam/bloggable/" t ".org$")
+                 ;; (directory-files "/home/kept/roam/bloggable/" t ".org$")
                  (directory-files "/home/kept/roam/frozen/" t ".org$")
-                 (directory-files "/home/kept/roam/martin/pages/" t ".org$")
+                 ;; (directory-files "/home/kept/roam/martin/pages/" t ".org$")
                  (directory-files "/home/kept/roam/grismartin/pages/" t ".org$")
                  (directory-files "/home/kept/roam/daily/" t ".org$"))))
     (mapatoms
@@ -675,8 +684,8 @@ until the program finishes."
         (find-file first-relevant-file)
       (message "No more files in directory"))))
 
-(defun my-next-file-in-dir (&optional override)
-  (interactive)
+(defun my-next-file-in-dir (&optional literally)
+  (interactive "p")
   (let* ((remainder (cdr (member (buffer-file-name)
                                  (directory-files default-directory t))))
          (first-relevant-file
@@ -694,7 +703,9 @@ until the program finishes."
                                   (file-directory-p x)))
                    finally return x)))
     (if first-relevant-file
-        (find-file first-relevant-file)
+        (if (= 4 literally)
+            (find-file-literally first-relevant-file)
+          (find-file first-relevant-file))
       (message "No more files in directory"))))
 
 (defun my-compile-and-drop ()

@@ -19,7 +19,7 @@
 ;; Which directories do you want to auto-commit?
 (defvar my-auto-commit-dirs
   '("/home/kept/roam/"
-    "/home/kept/emacs/conf-doom/"))
+    "/home/me/.doom.d/"))
 
 (defun my-auto-commit-maybe ()
   "Create a new commit if the last was on a different day.
@@ -57,8 +57,10 @@ Suitable on `after-save-hook'."
             ;; New day, new commit
             (magit-commit-create '("--all" "--message=Auto-commit"))))))))
 
-(define-minor-mode my-auto-commit ""
+(define-minor-mode my-auto-commit-mode ""
   :global t
   (if my-auto-commit-mode
       (add-hook 'after-save-hook #'my-auto-commit-maybe)
     (remove-hook 'after-save-hook #'my-auto-commit-maybe)))
+
+(my-auto-commit-mode)

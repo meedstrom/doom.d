@@ -8,7 +8,7 @@ That is, not only storing flashcards in plaintext form... not only awkwardly app
 
 We have many flashcard programs in the Emacs ecosystem (org-fc, org-drill, pamparam, anki-editor, not to mention the predecessor to Anki itself, flashcard.el)... but for some strange reason, all made the design decision of separating the flashcards from normal text by way of shoving them under a dedicated headline.  I don't understand the point of integrating with Org if it's gonna be like this.  They are effectively as locked-away as if they lived in a SQL database.  Perhaps not technically, but psychologically, which is just as real a barrier.
 
-This shows you how it's empowering to know Emacs Lisp.  All I had to do was fork anki-editor and make some small changes.  Now I can write as in the following section!
+This shows you how it's empowering to know Emacs Lisp.  All I had to do was fork anki-editor and make some small changes.  Now I can write as follows!
 
 * Demonstration
 ** As list items:
@@ -36,9 +36,7 @@ No matter how much you want to, you cannot make rational an idea that wasn't ori
 ** As drawers (for multiline flashcards):
 
 : :anki-100232020:
-: Q: YAGNI
-: 
-: A: You aren't gonna need it
+
 : :end:
 
 * Usage
@@ -52,14 +50,14 @@ Be aware: this is LESS CAPABLE version of anki-editor (and in the current form, 
     - The tags can be displayed inside cards as a contextual hint (if you code this in the card template)
     - The tags can be used for Custom Study sessions on a filtered subset of notes
 
-Syntax of a card:
+Syntax of a flashcard:
 
-- Inline-anki looks for one of these things to identify a flashcard:
+- To identify a flashcard, this package looks for one of the following things:
   - a special string at the end of a line: =_{anki}= or =^{anki}=, or the same with the letters replaced by a number (the number is the auto-assigned Anki note ID).
   - a special string at the start of a list item: =(anki)=, or the same with the letters replaced by a number (the number is the auto-assigned Anki note ID).
   - a drawer named =:anki:=, which is renamed to something like =:anki-10000001:= when the Anki note ID is set.
-- Clozes are marked by bold text.
-  - You can, if necessary, write the regular ={{c1::}}= syntax directly.  Mainly useful for writing math equations.
+- Clozes are marked by *bold text*, end of story.
+  - You can, if necessary, write Anki's regular ={{c1::}}= syntax directly.  Mainly useful for writing math equations.  For now, if you do this, don't have any bold text also!
 
 To push cards:
 

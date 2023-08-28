@@ -16,6 +16,7 @@
 ;; along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 (setopt org-html-checkbox-type 'html)
+(setopt org-export-with-drawers '(not "LOGBOOK" "NOEXPORT"))
 
 (setq my-tags-to-avoid-uploading '("noexport" "private" "censor" "drill" "fc" "anki"))
 (setq my-tags-to-upload-as-private '("friends-only" "partner" "therapist"))
@@ -118,6 +119,8 @@ filenames, and the `org-id-locations' table modified likewise, so
 that org-id links will resolve correctly."
   (switch-to-buffer "*Messages*")
   (delete-other-windows)
+  (unless (member "NOEXPORT" org-export-with-drawers)
+    (error "noexport not in `org-export-with-drawers' and so would be exported"))
   (org-roam-update-org-id-locations)
   (org-roam-db-sync)
 
@@ -211,8 +214,7 @@ that org-id links will resolve correctly."
                 (or (seq-intersection (org-get-tags) my-tags-to-avoid-uploading)
                     (not (org-id-get))
                     (when (or (not (search-forward "#+title: " nil t))
-                              ;; (not (search-forward "#+date: " nil t))
-                              )
+                              (not (search-forward "#+date: " nil t)))
                       (message "TITLE OR DATE MISSING: %s" filename)
                       t))))
 

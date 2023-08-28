@@ -31,7 +31,7 @@
 ;; the time.
 (advice-remove #'make-backup-file-name-1 #'doom-make-hashed-backup-file-name-a)
 
-;; check
+;; Have grace
 (unless (file-writable-p "/home/backups/")
   (error "Disabling backups because can't write to: /home/backups/")
   (setq backup-directory-alist nil)
@@ -46,13 +46,9 @@
 
 ;;; Font and theme
 
-;; The default is Symbola, but I can't find it on pacman repos.
-;; Note that this is ignored when the module :ui unicode is enabled.
-(setq doom-unicode-font (font-spec :family "DejaVu Sans Mono"))
-
 ;; (setq doom-font (font-spec :family "Cozette" :size 10))
 ;; (setq doom-font (font-spec :family "Tamzen" :size 10))
-(setq doom-font (font-spec :family "Terminus" :size 15))
+;; (setq doom-font (font-spec :family "Terminus" :size 15))
 ;; (setq doom-font (font-spec :family "Dina" :size 20))
 ;; (setq doom-font (font-spec :family "Modd" :size 20))
 ;; (setq doom-font (font-spec :family "orp" :size 20))
@@ -62,9 +58,36 @@
 ;; (setq doom-font (font-spec :family "Hasklig" :size 14))
 ;; (setq doom-font (font-spec :family "Iosevka" :size 14))
 
+;; For my Surface Pro screen (2736x1824).  Here are the respective fonts'
+;; maximum size that still let you split the screen into two 80-column panes.
+;; ASSUMING NO DPI SCALING.
+;;
+;; FONTS THAT SUPPORT LIGATURES https://wiki.archlinux.org/title/Font#Monospaced
+;; (setq doom-font (font-spec :family "Iosevka Nerd Font" :size 32))
+;; (setq doom-font (font-spec :family "Hurmit Nerd Font" :size 26))
+;; (setq doom-font (font-spec :family "Hasklug Nerd Font" :size 27))
+;; (setq doom-font (font-spec :family "JetBrains Mono Nerd Font" :size 27))
+;; (setq doom-font (font-spec :family "Lilex Nerd Font" :size 27))
+;; (setq doom-font (font-spec :family "CaskaydiaCove Nerd Font" :size 28))
+;; (setq doom-font (font-spec :family "FiraCode Nerd Font" :size 26))
+;; OTHER FONTS
+;; (setq doom-font (font-spec :family "DejaVu SansM Nerd Font" :size 27))
+;; (setq doom-font (font-spec :family "Noto Sans Mono" :size 27))
+
+(setq doom-font (font-spec :family "Iosevka Nerd Font" :size 15))
+
+;; The default is Symbola, but I can't find it on pacman repos.
+;; (setq doom-unicode-font (font-spec :family "DejaVu Sans Mono"))
+;; (setq doom-unicode-font (font-spec :family "Noto Sans Mono"))
+(setq doom-unicode-font doom-font) ;; if it has good unicode coverage alrdy
+
+;; -----------------------------------------------------------------------------
+
+
+(setq doom-theme 'doom-pine)
 ;; (setq doom-theme 'doom-one)
 ;; (setq doom-theme 'doom-tomorrow-night)
-(setq doom-theme 'doom-dark+)
+;; (setq doom-theme 'doom-dark+)
 ;; (setq doom-theme 'doom-manegarm)
 ;; (setq doom-theme 'doom-storage-tube-amber-2)
 ;; (setq doom-theme 'doom-Iosvkem)
@@ -72,6 +95,7 @@
 ;; (setq doom-theme 'doom-outrun-electric)
 ;; (setq doom-theme 'doom-badger)
 ;; (setq doom-theme 'doom-rouge)
+(setq doom-theme 'doom-dracula)
 
 
 ;;; Debugging
@@ -91,7 +115,6 @@
 
 ;; (debug-watch 'org-mode)
 
-;; ;; NOTE: broken in native-comp
 ;; (use-package! snitch
 ;;   :config
 ;;   ;; (setq snitch-log-policy '(allowed blocked whitelisted blacklisted))
@@ -244,6 +267,7 @@
 ;; undoom
 (remove-hook 'term-mode-hook #'hide-mode-line-mode)
 
+(remove-hook 'doom-first-input-hook #'which-key-mode)
 ;; (add-hook 'after-save-hook #'my-fix-invalid-backup-settings)
 
 ;; often it's a binary file, so prevent accidental edits

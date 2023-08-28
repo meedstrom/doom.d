@@ -17,7 +17,7 @@
 (require 'my-lib-external)
 
 (add-hook 'delve-mode-hook #'delve-compact-view-mode)
-(add-hook 'lister-mode-hook #'View-exit)
+;; (add-hook 'lister-mode-hook #'View-exit)
 (after! delve
   ;; It normally inherits from org-roam-title, which I find too big
   (set-face-attribute 'delve-title-face () :inherit 'org-document-title))
@@ -32,7 +32,7 @@
 
 (after! org
   (org-recent-headings-mode)
-  (setopt org-startup-folded 'fold)
+  ;; (setopt org-startup-folded 'fold)
   ;; Undoom. Having exactly two states makes for comfy toggling.
   (setopt org-todo-keywords '((sequence "TODO" "DONE"))))
 
@@ -62,7 +62,7 @@
 (setopt org-roam-directory "/home/kept/roam/")
 (setopt org-roam-dailies-capture-templates
       '(("d" "default" entry "* %<%H:%M>\n%?" :if-new
-         (file+head "%<%Y-%m-%d>.org" "#+title: [%<%Y-%m-%d>]\n#+filetags: :noexport:\n")
+         (file+head "%<%Y-%m-%d>.org" "#+title: %<%Y-%m-%d>\n#+filetags: :noexport:daily:\n#+date: [%<%Y-%m-%d>]\n")
          :immediate-finish t
          :jump-to-captured t)))
 
@@ -100,18 +100,16 @@
 ;; (setopt org-agenda-tag-filter-preset '("-exclude"))
 (setopt org-agenda-todo-list-sublevels nil)
 (setopt org-agenda-todo-ignore-scheduled t)
-(setopt org-agenda-files '("/home/kept/archive/journal/diary.org"
-                           ;; to always cache the org-id locations
-                           "/home/kept/emacs/conf-doom/elfeed.org"
-                           "/home/kept/roam/"
-                           "/home/kept/roam/bloggable/"
-                           "/home/kept/roam/daily/"
-                           "/home/kept/roam/refs/"
-                           "/home/kept/roam/frozen/"
-                           "/home/kept/roam/grismartin/pages/"
-                           "/home/kept/roam/martin/pages/"
-                           ))
-
+(setopt org-agenda-files (-filter #'file-exists-p
+                                  '("/home/kept/archive/journal/diary.org"
+                                    ;; to always cache the org-id locations
+                                    "/home/me/.doom.d/elfeed.org"
+                                    "/home/kept/roam/"
+                                    "/home/kept/roam/daily/"
+                                    "/home/kept/roam/refs/"
+                                    "/home/kept/roam/frozen/"
+                                    "/home/kept/roam/grismartin/pages/"
+                                    )))
 (setopt org-archive-location "/home/kept/archive/2021-journal/diary.org::datetree/")
 (setopt org-archive-save-context-info '(time file itags olpath))
 (setopt org-attach-id-dir "attachments/") ;; doom prolly overrides
@@ -211,7 +209,7 @@ to the new note in the \"timeline\" note."
   (setopt org-roam-capture-templates
         `(("d" "default" plain "%?" :if-new
            (file+head "%<%Y-%m-%d>-${slug}.org"
-                      "#+title: ${title}\n#+filetags: :stub:\n#+date: \[%<%Y-%m-%d>\]\n")
+                      "#+title: ${title}\n#+filetags: :noexport:stub:\n#+date: \[%<%Y-%m-%d>\]\n")
            :unnarrowed t
            :immediate-finish t
            :jump-to-captured t)
@@ -244,68 +242,67 @@ to the new note in the \"timeline\" note."
 
 ;; has to happen after load bc doom sets capture templates at load time.
 ;; incidentally also means we cannot use custom-file to config them.
-;; to remove the offender, do
-;; (remove-hook 'org-load-hook #'+org-init-capture-defaults-h)
-(after! org
-  (setopt org-capture-templates
-        `(
-          ("p" "Person of history" entry
-           (file "/home/kept/roam/2021-08-27-historical-people.org")
-           ,(lines "* %^{Name} :stub:"
-                   ":PROPERTIES:"
-                   ":ID:       %(org-id-uuid)"
-                   ":ROAM_ALIASES: \"%\\1 (%\\2)\""
-                   ":END:"
-                   "%^{Years of birth and death (YYYY--YYYY)}"
-                   "%?"))
+;; to remove the offender, do (remove-hook 'org-load-hook #'+org-init-capture-defaults-h)
+;; (after! org
+;;   (setopt org-capture-templates
+;;         `(
+;;           ("p" "Person of history" entry
+;;            (file "/home/kept/roam/2021-08-27-historical-people.org")
+;;            ,(lines "* %^{Name} :stub:"
+;;                    ":PROPERTIES:"
+;;                    ":ID:       %(org-id-uuid)"
+;;                    ":ROAM_ALIASES: \"%\\1 (%\\2)\""
+;;                    ":END:"
+;;                    "%^{Years of birth and death (YYYY--YYYY)}"
+;;                    "%?"))
 
-          ;; TODO: Number it by a counter
-          ("u" "untitled note" plain
-           (file "/home/kept/roam/untitled-notes.org")
-           "* \[%<%Y-%m-%d %T>\]
-:PROPERTIES:
-:ID:  %(org-id-uuid)
-:END:
-:DATE: \[%<%Y-%m-%d>\]
-%i%?
-%a")
-          (";" "firefox capture" plain
-           (file "/tmp/captures.org")
-           "* %a
-:PROPERTIES:
-:ID:  %(org-id-uuid)
-:END:
-:DATE: \[%<%Y-%m-%d>\]
-%i%?")
+;;           ;; TODO: Number it by a counter
+;;           ("u" "untitled note" plain
+;;            (file "/home/kept/roam/untitled-notes.org")
+;;            "* \[%<%Y-%m-%d %T>\]
+;; :PROPERTIES:
+;; :ID:  %(org-id-uuid)
+;; :END:
+;; :DATE: \[%<%Y-%m-%d>\]
+;; %i%?
+;; %a")
+;;           (";" "firefox capture" plain
+;;            (file "/tmp/captures.org")
+;;            "* %a
+;; :PROPERTIES:
+;; :ID:  %(org-id-uuid)
+;; :END:
+;; :DATE: \[%<%Y-%m-%d>\]
+;; %i%?")
 
-          ("e" "Emacs idea" entry (file+headline "/home/kept/roam/2021-08-27-someday_maybe.org" "Ideas"))
-          ("q" "Statistics question" entry (file+headline "/home/kept/roam/stats.org" "Questions"))
-          ("t" "Statistics header" entry (file+headline "/home/kept/roam/stats.org" "Statistics"))
-          ("s" "Someday/Maybe" entry (file+headline "/home/kept/roam/2021-08-27-someday_maybe.org" "Unsorted"))
-          ("m" "A Virtual Assistant function")
-          ("mw" "weight" plain (function eva-session-new) :immediate-finish t)
-          ("mf" "visit Ledger file" plain (function eva-present-ledger-file) :immediate-finish t)
+;;           ("e" "Emacs idea" entry (file+headline "/home/kept/roam/2021-08-27-someday_maybe.org" "Ideas"))
+;;           ("q" "Statistics question" entry (file+headline "/home/kept/roam/stats.org" "Questions"))
+;;           ("t" "Statistics header" entry (file+headline "/home/kept/roam/stats.org" "Statistics"))
+;;           ("s" "Someday/Maybe" entry (file+headline "/home/kept/roam/2021-08-27-someday_maybe.org" "Unsorted"))
+;;           ("m" "A Virtual Assistant function")
+;;           ("mw" "weight" plain (function eva-session-new) :immediate-finish t)
+;;           ("mf" "visit Ledger file" plain (function eva-present-ledger-file) :immediate-finish t)
 
-          ("ln" "From Nordea" plain (file "/home/kept/self-data/clean_start.ledger")
-           ,(lines "%<%Y-%m-%d> * \"\""
-                   "    Expenses   %?"
-                   "    Assets:Nordea:Personkonto")
-           :empty-lines 1
-           :jump-to-captured t)
+;;           ("ln" "From Nordea" plain (file "/home/kept/self-data/clean_start.ledger")
+;;            ,(lines "%<%Y-%m-%d> * \"\""
+;;                    "    Expenses   %?"
+;;                    "    Assets:Nordea:Personkonto")
+;;            :empty-lines 1
+;;            :jump-to-captured t)
 
-          ("li" "InvestNotSpend" plain (file "/home/kept/self-data/clean_start.ledger")
-           ,(lines "%<%Y-%m-%d> ! \"\""
-                   "    [Assets:Lysa:InvestNotSpend]   %?"
-                   "    Assets:Nordea:Personkonto")
-           :empty-lines 1
-           :jump-to-captured t)
+;;           ("li" "InvestNotSpend" plain (file "/home/kept/self-data/clean_start.ledger")
+;;            ,(lines "%<%Y-%m-%d> ! \"\""
+;;                    "    [Assets:Lysa:InvestNotSpend]   %?"
+;;                    "    Assets:Nordea:Personkonto")
+;;            :empty-lines 1
+;;            :jump-to-captured t)
 
-          ("r" "Retroactive clock" entry (file+olp+datetree "/home/kept/archive/journal/diary.org")
-           ,(lines "* %^{Activity|School|Piano|Signing|Coding}"
-                   "CLOCK: %^{Time at start}U--%^{Time at finish}U => %^{Rough time spent (sorry, the program is dumb), H:MM}")
-           :immediate-finish t)
+;;           ("r" "Retroactive clock" entry (file+olp+datetree "/home/kept/archive/journal/diary.org")
+;;            ,(lines "* %^{Activity|School|Piano|Signing|Coding}"
+;;                    "CLOCK: %^{Time at start}U--%^{Time at finish}U => %^{Rough time spent (sorry, the program is dumb), H:MM}")
+;;            :immediate-finish t)
 
-          )))
+;;           )))
 
 ;; Because capfs don't do what I want in Roam
 (add-hook 'org-mode-hook #'my-corfu-turn-off)

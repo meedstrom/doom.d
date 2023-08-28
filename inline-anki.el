@@ -1,21 +1,25 @@
 ;; -*- lexical-binding: t; -*-
 
+;; Copyright (C) 2023 Martin Edström <meedstrom91@gmail.com>
+;;
+;; Description: Make Anki Cards in Org-mode
+;; Author: Martin Edström
+;; Version:
+;; Package-Requires: ((emacs "25") (request "0.3.0") (dash "2.12.0"))
+;; URL:
+
 ;;; Commentary:
+
+;; TODO: send breadcrumbs as an extra field
 
 ;;; Code:
 
-(require 'anki-editor)
+;; (require 'inline-anki-fork)
+(load "/home/me/.doom.d/inline-anki-fork")
 
-(defun anki-editor-push-notes ()
+(defun inline-anki-push-notes ()
   (interactive)
-  ;; org-fontify-emphasized-text should be t in all relevant buffers (don't
-  ;; worry, this is a very uncommon default to disable), AND none of those buffers
-  ;; are visited literally (with find-file-literally).  That is to say, when we
-  ;; scan for flashcards, we need that those text bits wrapped in asterisks are in
-  ;; fact given the 'bold text property in your Org buffers.  Org is already good
-  ;; at rooting out false matches via org-do-emphasis-faces, so
-  ;; inline-anki-convert-implicit-clozes follows in its tracks and look only at
-  ;; the substrings Org already bolded.
+  ;; Check that necessary variables are on.
   (when (and (eq major-mode 'org-mode)
              org-fontify-emphasized-text)
     (let ((failed 0)
@@ -31,7 +35,7 @@
 
 (defvar inline-anki-default-tags '("from-emacs"))
 
-(defun anki-editor-note-at-point ()
+(defun inline-anki-note-at-point ()
   "Construct an alist representing a note from current entry."
   (let* ((org-trust-scanner-tags t)
          (deck (or (org-entry-get-with-inheritance anki-editor-prop-deck)
@@ -66,13 +70,10 @@
     (error "Note creation failed for unknown reason"))
   (goto-char (line-beginning-position))
   (re-search-forward (rx (literal inline-anki-flag) (or "^" "_") "{"))
-  (when (looking-at-p "[^}]+?}")
+  (when (looking-at-p "[[:digit:]]+?}[[:space:]]*?$")
     (error "Attempted to create note for note already with ID"))
-  (when (looking-at-p "[^}]")
-    (error "no closing brace"))
-  (if (looking-at-p "}[[:space:]]*?$")
-      (insert (int-to-base64 id))
-    (error "Note creation failed for unknown reason")))
+  (when (looking-at-p "anki}[[:space:]]*?$")
+    (insert id)))
 
 (defvar inline-anki-note-type '("Cloze" "Text"))
 
@@ -143,62 +144,4 @@ Set this to '(bold), '(italic), or '(underline)."
 
 (defvar inline-anki-deck "Default")
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;; As per RFC 4648 https://en.wikipedia.org/wiki/Base_64
-(defconst base64-alphabet "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/")
-
-(defconst base62-alphabet "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
-(defconst base36-alphabet "0123456789abcdefghijklmnopqrstuvwxyz")
-
-;; Unicode's entire Basic Multilingual Plane: from 0033 to FFFF.
-;; (quiet! (setq base65503-alphabet (apply #'string (cl-loop for x from 33 to 65535 collect x))))
-
-(defun int-to-base64 (num)
-  "Re-express a number in base-64, and return that as a string.
-See also the inverse, `base64-to-int'.  Do not confuse with
-`base64-encode-string'."
-  (let ((sign "")
-        (b64-string ""))
-    (when (> 0 num)
-      (setq sign "-")
-      (setq num (abs num)))
-    (if (< num 64)
-        ;; Simply return alphabet[num].
-        (concat sign (char-to-string (aref base64-alphabet num)))
-      ;; 64 or more, now it's complicated.
-      (while (/= 0 num)
-        (let* ((remainder (% num 64))
-               ;; not sure it's necessary to do this interim result, but
-               (integer-dividable-dividend (- num remainder))
-               (quotient (/ integer-dividable-dividend 64)))
-          (setq num quotient)
-          (setq b64-string (concat (char-to-string (aref base64-alphabet remainder))
-                                   b64-string))))
-      (concat sign b64-string))))
-
-(defun base64-to-int (b64-string)
-  "Turn a number expressed as a base-64 string, into a base-10 integer.
-Please note that you most likely want `base64-decode-string'\;
-most uses of base-64 encoding are not meant to be decoded
-mathematically as base-10 numbers, but as arrays of bytes, such
-as strings of UTF-8 characters or binary \"blobs\" like the
-on-disk content of an image file.  A number is A COMPLETELY DIFFERENT
-THING from an array of bytes.  You have been warned."
-  (let ((negative nil))
-    (when (equal "-" (substring b64-string 0 1))
-      (setq b64-string (substring b64-string 1))
-      (setq negative t))
-    (let* ((highest-place (length b64-string))
-           (total (cl-loop
-                   for i from 1 to highest-place
-                   sum (let* ((glyph (char-to-string (aref b64-string (1- i))))
-                              (glyph-value (string-search glyph base64-alphabet))
-                              (place-value (^ 64 (- highest-place i))))
-                         (* glyph-value place-value)))))
-      (if negative
-          (- total)
-        total))))
-
-;; (base64-to-int (int-to-base64 65342334))
-;; (int-to-base64 (base64-to-int "D5Qt+"))
+(provide 'inline-anki)

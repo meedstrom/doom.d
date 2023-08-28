@@ -117,6 +117,8 @@
 ;; - Let - and = be neg. and univ. argument when any prefix argument has been called and awaiting next input
 ;; - Allow typing M-= M-9 M-d, much better than M-= 9 M-t
 
+;; FIXME:  univ-arg and then typing 6 means digit-arg, no way to call a command bound to s-6
+
 (keymap-unset global-map "C-u" t)
 (keymap-unset universal-argument-map "C-u" t)
 
@@ -272,7 +274,7 @@
   (keymap-set eww-bookmark-mode-map "w" #'my-eww-bookmark-copy-url))
 
 (after! vertico
-  (keymap-set global-map "M-<backspace>" (lambda()(interactive)(message "no")))
+  ;; (keymap-set global-map "M-<backspace>" (lambda()(interactive)(message "no")))
   (keymap-unset vertico-map "<backspace>" t) ;; undoom
   (keymap-set vertico-map "M-<backspace>" #'vertico-directory-up)
   (keymap-set vertico-map "<next>" #'scroll-up-command)
@@ -455,7 +457,7 @@
 (keymap-set global-map "C-x C-\;"      (defrepeater #'comment-line))
 (keymap-set global-map "C-0"                        #'hippie-expand)
 (keymap-set global-map "C-1"                        #'switch-to-buffer)
-(keymap-set global-map "C-2"                        #'other-window)
+(keymap-set global-map "C-2"                        #'my-other-window-any-frame-hyprland)
 (keymap-set global-map "C-3"                        #'unexpand-abbrev)
 (keymap-set global-map "C-4"                        #'my-stim)
 (keymap-set global-map "C-5"                        #'my-prev-file-in-dir)

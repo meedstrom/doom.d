@@ -154,6 +154,9 @@
           ("C-c C-c")
           ("C-c C-," . org-mode-map))))
 
+;; (dei-define-super-like-ctl)
+;; (dei-homogenize-all-keymaps)
+
 (use-package! deianira
   :config
   (after! hydra
@@ -176,7 +179,7 @@
   (setopt nameless-prefix "⁓")
   (setopt nameless-private-prefix t)
   (setopt nameless-affect-indentation-and-filling nil)
-  (add-hook 'nameless-mode-hook #'my-adjust-scale-2)
+  ;; (add-hook 'nameless-mode-hook #'my-adjust-scale-2)
   :config
   (set-face-attribute 'nameless-face nil :inherit 'unspecified))
 
