@@ -29,6 +29,32 @@
 (autoload #'objed-ipipe "objed")
 (autoload #'piper "piper")
 
+(defun my-downcase-all-paths-in-file (base)
+  (interactive "MBeginning of string that marks a filename (regexp): ")
+  (if (string-empty-p base)
+      (message "Beginning of string not provided, doing nothing")
+    (save-excursion
+      (goto-char (point-min))
+      (let ((regexp (rx (regexp base) (* (any alnum "/" "-" "_" ".")))))
+        (while (re-search-forward regexp nil t)
+          (message "Downcasing: %s" (buffer-substring (match-beginning 0) (match-end 0)))
+          (downcase-region (match-beginning 0) (match-end 0))))
+      (message "Done downcasing all paths in file"))))
+
+;; TODO: insert a whole Org link, complete with naming it after the node title?
+(defun my-insert-known-url ()
+  "Insert any URL known by the roam-refs database."
+  (interactive)
+  (let* ((urls (--map (substring it 2)
+                      (-flatten (org-roam-db-query
+                                 [:select [ref]
+                                  :from refs
+                                  :left-join nodes
+                                  :on (= refs:node-id nodes:id)]))))
+         (choice (completing-read "Insert at point" urls)))
+    (when choice
+      (insert "https://" choice))))
+
 ;; TODO: craft a hyprctl command that only considers emacs frames (if there are
 ;;       2 emacs frames and 1 firefox frame, stay in emacs).  Remember to
 ;;       discount frames not on the current workspace.

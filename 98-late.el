@@ -16,6 +16,16 @@
 
 (defvar my-stim-collection (my-stim-collection-generate))
 
+
+;; doom (or modern emacs?) already provides
+;; (require 'epa-file)
+;; (epa-file-enable)
+;; (setq epg-pinentry-mode 'loopback)
+(setq epg-debug t)
+;; Ask for a symmetric cipher passphrase by default.  Needed to interop with Beorg.
+(after! epa-file
+  (setq-default epa-file-encrypt-to nil))
+
 (save-place-mode)
 (auto-save-visited-mode)
 (display-battery-mode)

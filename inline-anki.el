@@ -15,7 +15,7 @@
 ;;; Code:
 
 ;; (require 'inline-anki-fork)
-(load "/home/me/.doom.d/inline-anki-fork")
+(load "/home/me/.doom.d/wip/inline-anki-anki-editor-fork")
 
 (defun inline-anki-push-notes ()
   (interactive)

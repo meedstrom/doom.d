@@ -16,7 +16,73 @@
 
 (require 'my-lib-external)
 
+(after! ox-latex
+  (add-to-list 'org-latex-classes
+               '("letter"
+                 "\\documentclass[11pt]{letter}"
+                 ("\\section{%s}" . "\\section*{%s}")
+                 ("\\subsection{%s}" . "\\subsection*{%s}")
+                 ("\\subsubsection{%s}" . "\\subsubsection*{%s}")
+                 ("\\paragraph{%s}" . "\\paragraph*{%s}")
+                 ("\\subparagraph{%s}" . "\\subparagraph*{%s}"))))
+
+(defun my-org-open-at-point (&optional arg)
+  (interactive "P")
+  (if-let ((url (thing-at-point 'url)))
+      ;; TODO: only goto if an actually known reflink
+      (let ((all-refs (org-roam-db-query
+                       [:select [ref id title]
+                        :from refs
+                        :left-join nodes
+                        :on (= refs:node-id nodes:id)])))
+        ;; (org-roam-ref-find url)
+
+        )
+
+    (if arg
+        (org-open-at-point arg)
+      (org-open-at-point))))
+
+;; (defun my-logseq-mode (_))
+;; (defvar-local my-logseq-mode nil)
+
+;; TODO: Maybe this can become a buffer-local mode, if instead of setting faces,
+;; it just removes the faces from the local syntax table.  Or use
+;; `face-remap-add-relative'.
+(defvar my-org-default-faces nil)
+(define-minor-mode my-logseq-mode
+  "De-fontify Org headings.
+Must unfortunately be a global mode because faces cannot be set
+per-buffer."
+  :global t
+  (when (featurep 'org)
+    (if my-logseq-mode
+        (dolist (x '(org-level-1
+                     org-level-2
+                     org-level-3
+                     org-level-4
+                     org-level-5
+                     org-level-6
+                     org-level-7
+                     org-level-8))
+          (setf (alist-get x my-org-default-faces)
+                (cons (face-bold-p x)
+                      (face-foreground x)))
+          (set-face-bold x nil)
+          (set-face-foreground x (face-foreground 'default)))
+      (dolist (x '(org-level-1
+                   org-level-2
+                   org-level-3
+                   org-level-4
+                   org-level-5
+                   org-level-6
+                   org-level-7
+                   org-level-8))
+        (set-face-bold x (car (alist-get x my-org-default-faces)))
+        (set-face-foreground x (cdr (alist-get x my-org-default-faces)))))))
+
 (add-hook 'delve-mode-hook #'delve-compact-view-mode)
+
 ;; (add-hook 'lister-mode-hook #'View-exit)
 (after! delve
   ;; It normally inherits from org-roam-title, which I find too big
@@ -110,7 +176,7 @@
                                     "/home/kept/roam/frozen/"
                                     "/home/kept/roam/grismartin/pages/"
                                     )))
-(setopt org-archive-location "/home/kept/archive/2021-journal/diary.org::datetree/")
+(setopt org-archive-location "/home/kept/roam/archive.org::datetree/")
 (setopt org-archive-save-context-info '(time file itags olpath))
 (setopt org-attach-id-dir "attachments/") ;; doom prolly overrides
 (setopt org-pomodoro-play-sounds nil)

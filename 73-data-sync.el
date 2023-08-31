@@ -35,11 +35,11 @@ to just let-bind a temp variable, so it uses this.")
 (defun my-state-sync ()
   "Write histories and caches to disk.
 This runs many members of `kill-emacs-hook' so we don't have to
-rely on that hook.  You may put this on a repeating timer."
+rely on that hook.  You may put this on a repeating idle timer."
   (setq my-state-sync-hooks
         (seq-intersection
          ;; NOTE: Check your `kill-emacs-hook' in case there's more
-         ;; you want to add here.
+         ;; functions you want to add here.
          #'(bookmark-exit-hook-internal
             savehist-autosave
             transient-maybe-save-history
@@ -53,5 +53,6 @@ rely on that hook.  You may put this on a repeating timer."
   (run-hooks 'my-state-sync-hooks))
 
 ;; Run after 3 minutes of idle.
+;; (Will not repeat until user becomes idle again.)
 (setq my-state-sync-timer
       (run-with-idle-timer (* 3 60) t #'my-state-sync))
