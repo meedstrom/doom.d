@@ -1,5 +1,19 @@
+(defvar my-wlr-idle-tracker nil)
+(setopt eva--idle-secs-fn
+        (defun my-idle-secs-wlr ()
+          (if (process-live-p my-wlr-idle-tracker)
+              (if (file-exists-p "/tmp/idle")
+                  (string-to-number (f-read "/tmp/idle"))
+                0)
+            (message "Restarting the daemon that counts idle-time")
+            (setq my-wlr-idle-tracker
+                  (start-process "~/track-idle2.sh" nil "~/track-idle2.sh"))
+            0)))
+
+;; (start-process "swayidle-eva" nill "swayidle" "timeout" "60" "")
+;; (my-idle-secs-wlr)
 (setopt eva-debug t)
-(setopt eva-fallback-to-emacs-idle t)
+;; (setopt eva-fallback-to-emacs-idle t)
 (setopt eva-init-r nil)
 (setopt eva-user-birthday "1991-12-07")
 (setopt eva-idle-log-path         "/home/kept/self-data/idle.tsv")
