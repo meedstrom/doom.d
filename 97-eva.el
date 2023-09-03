@@ -1,13 +1,19 @@
 (defvar my-wlr-idle-tracker nil)
 (setopt eva--idle-secs-fn
-        (defun my-idle-secs-wlr ()
+        (defun my-idle-secs-wlroots ()
+          "Return idle-time in seconds, rounded to nearest 60.
+Should work for Wayland compositors implementing ext-idle-notify.
+In other words, if the swayidle program works, this should too."
           (if (process-live-p my-wlr-idle-tracker)
               (if (file-exists-p "/tmp/idle")
                   (string-to-number (f-read "/tmp/idle"))
                 0)
             (message "Restarting the daemon that counts idle-time")
             (setq my-wlr-idle-tracker
-                  (start-process "~/track-idle2.sh" nil "~/track-idle2.sh"))
+                  (start-process "~/track-idle2.sh" nil "~/track-idle2.sh")
+                  ;; (file-name-concat (file-name-directory (find-library-name "eva"))
+                  ;;                    "track-idle2.sh")
+                  )
             0)))
 
 ;; (start-process "swayidle-eva" nill "swayidle" "timeout" "60" "")

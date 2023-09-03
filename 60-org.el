@@ -371,7 +371,7 @@ to the new note in the \"timeline\" note."
 ;;           )))
 
 ;; Because capfs don't do what I want in Roam
-(add-hook 'org-mode-hook #'my-corfu-turn-off)
+(add-hook 'org-mode-hook #'my-corfu-turn-off 99)
 
 (after! org
   (unless after-init-time

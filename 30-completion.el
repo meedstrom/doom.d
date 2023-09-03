@@ -97,7 +97,6 @@
   :init
   (setopt corfu-auto t)
   (setopt corfu-auto-delay 0.35)
-  (setopt corfu-excluded-modes '(org-mode))
   (setopt tab-always-indent 'complete) ;; or use M-TAB to complete
   :config
   (setopt completion-cycle-threshold 3)
