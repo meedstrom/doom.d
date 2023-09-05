@@ -50,6 +50,8 @@
 (add-hook 'org-export-before-parsing-functions #'my-add-backlinks)
 (add-hook 'org-export-before-parsing-functions #'my-replace-web-links-with-ref-note-links)
 
+;; TODO: In dailies, insert links to any pages created on that same day, under a "Created pages" heading
+
 (defun my-add-backlinks (&rest _)
   "Add a \"What links here\" subtree at the end.
 Meant to run on `org-export-before-parsing-functions', where it

@@ -22,9 +22,16 @@
 ;; (epa-file-enable)
 ;; (setq epg-pinentry-mode 'loopback)
 (setq epg-debug t)
+(setq epa-file-cache-passphrase-for-symmetric-encryption t)
 ;; Ask for a symmetric cipher passphrase by default.  Needed to interop with Beorg.
 (after! epa-file
   (setq-default epa-file-encrypt-to nil))
+
+;; Workaround a problem in GPG 2.4.1+ where trying to save the file hangs
+;; forever.
+;; https://stackoverflow.com/questions/76388376/emacs-org-encrypt-entry-hangs-when-file-is-modified
+;; https://lists.gnu.org/archive/html/bug-gnu-emacs/2023-08/msg00511.html
+(fset 'epg-wait-for-status 'ignore) ;; Uncertain if there are any side effects.
 
 (save-place-mode)
 (auto-save-visited-mode)
