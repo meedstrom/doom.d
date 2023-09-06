@@ -29,6 +29,12 @@
 (autoload #'objed-ipipe "objed")
 (autoload #'piper "piper")
 
+(defun my-shrink-video (filename)
+  (interactive "fFile: ")
+  (my-exec "ffmpeg" "-i" (concat "file:" filename) "-vf" "scale=iw*.5:-2"
+         (concat "file:shrunk-" filename))
+  )
+
 (defun my-downcase-all-paths-in-file (base)
   (interactive "MBeginning of string that marks a filename (regexp): ")
   (if (string-empty-p base)
@@ -223,7 +229,8 @@ It skips prompting, and inserts the metadata I want."
                            (org-back-to-heading)
                            (when (search-forward ":created: " (org-entry-end-position) t)
                              (prog1 (buffer-substring (point) (line-end-position))
-                               (delete-line))))))
+                               (delete-line)))))
+           (has-tags nil))
       (when (file-exists-p file-path)
         (user-error "%s exists. Aborting" file-path))
       (org-cut-subtree)
@@ -239,7 +246,8 @@ It skips prompting, and inserts the metadata I want."
       (org-roam-promote-entire-buffer)
       (goto-char (point-min))
       (search-forward "#+title")
-      (search-forward "#+filetags" nil t)
+      (when (search-forward "#+filetags" nil t)
+        (setq has-tags t))
       (goto-char (line-beginning-position))
       (delete-char -1)
       (forward-line 1)
@@ -247,6 +255,8 @@ It skips prompting, and inserts the metadata I want."
       (if created-date
           (insert "#+date: " created-date)
         (insert "#+date: [" (format-time-string "%F") "]"))
+      (unless has-tags
+        (org-roam-tag-add '("noexport")))
       (save-buffer))))
 
 (defun my-truncate-buffer-and-move-excess (&optional _string)

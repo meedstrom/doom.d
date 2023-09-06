@@ -33,7 +33,7 @@
 ;; https://lists.gnu.org/archive/html/bug-gnu-emacs/2023-08/msg00511.html
 (fset 'epg-wait-for-status 'ignore) ;; Uncertain if there are any side effects.
 
-(save-place-mode)
+;; (save-place-mode)  ;; doom provides
 (auto-save-visited-mode)
 (display-battery-mode)
 

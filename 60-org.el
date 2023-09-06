@@ -166,17 +166,18 @@ per-buffer."
 ;; (setopt org-agenda-tag-filter-preset '("-exclude"))
 (setopt org-agenda-todo-list-sublevels nil)
 (setopt org-agenda-todo-ignore-scheduled t)
-(setopt org-agenda-files (-filter #'file-exists-p
-                                  '("/home/kept/archive/journal/diary.org"
-                                    ;; to always cache the org-id locations
-                                    "/home/me/.doom.d/elfeed.org"
-                                    "/home/kept/roam/"
-                                    "/home/kept/roam/daily/"
-                                    "/home/kept/roam/refs/"
-                                    "/home/kept/roam/frozen/"
-                                    "/home/kept/roam/grismartin/pages/"
-                                    )))
-(setopt org-archive-location "/home/kept/roam/archive.org::datetree/")
+(setopt org-agenda-dim-blocked-tasks nil) ;; Speed up the agenda
+(setopt org-agenda-use-tag-inheritance '(todo search)) ;; Speed up the agenda
+(setopt org-agenda-files
+        (-filter #'file-exists-p '(
+                                   ;; "/home/kept/roam/"   ;; slowww
+                                   ;; "/home/kept/roam/daily/" ;; sloww
+                                   ;; "/home/kept/roam/refs/"
+                                   ;; "/home/kept/roam/frozen/"
+                                   "/home/kept/roam/grismartin/pages/"
+                                   ;; to always cache the org-id locations
+                                   "/home/me/.doom.d/elfeed.org")))
+(setopt org-archive-location "/home/kept/roam/noagenda/archive.org::datetree/")
 (setopt org-archive-save-context-info '(time file itags olpath))
 (setopt org-attach-id-dir "attachments/") ;; doom prolly overrides
 (setopt org-pomodoro-play-sounds nil)

@@ -142,6 +142,7 @@
        (let ((default-directory repo)
              (basename (shell-quote-argument (file-name-nondirectory repo))))
          (make-process
+          :name "my-memacs-scan-git"
           :command (concat "git rev-list --all --pretty=raw > " tmpdir basename)
           :sentinel
           `(lambda ()
