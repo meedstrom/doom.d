@@ -246,10 +246,10 @@ It skips prompting, and inserts the metadata I want."
       (org-roam-promote-entire-buffer)
       (goto-char (point-min))
       (search-forward "#+title")
+      (goto-char (line-beginning-position))
+      (join-line)
       (when (search-forward "#+filetags" nil t)
         (setq has-tags t))
-      (goto-char (line-beginning-position))
-      (delete-char -1)
       (forward-line 1)
       (open-line 2)
       (if created-date
