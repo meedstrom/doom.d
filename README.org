@@ -6,7 +6,7 @@ Most of the interesting code is in the files starting with a number, like =98-la
 
 ** Undooms
 
-This is a Doom Emacs config, but I undo many Doom features (commented with the term "undoom").  Mind you, I still find Doom to save a lot of effort and well worth it.  Here are some things I undo:
+This is a Doom Emacs config (since May 2020), but I undo many Doom features (commented with the term "undoom").  Mind you, I still find Doom to save a lot of effort and well worth it.  Here are some things I undo:
 
 #+begin_src elisp
 ;; undoom; I want readable backup names since I rename files and directories all

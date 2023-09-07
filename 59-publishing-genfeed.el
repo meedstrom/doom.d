@@ -1,6 +1,4 @@
-
-
-;;; WIP: Make an Atom/RSS feed
+;;; WIP: Make an Atom/RSS feed of my website
 ;; unused for now
 
 ;; see syntax on https://validator.w3.org/feed/docs/atom.html

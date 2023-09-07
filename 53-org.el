@@ -272,22 +272,22 @@ to the new note in the \"timeline\" note."
             (defun my-theme-mod-org ()
               (set-face-attribute 'org-roam-title nil :height 1.5)))
   (my-theme-mod-org)
-  (setopt org-roam-extract-new-file-path "%<%Y-%m-%d>-${slug}.org")
+  (setopt org-roam-extract-new-file-path "${slug}.org")
   (setopt org-roam-capture-templates
         `(("d" "default" plain "%?" :if-new
-           (file+head "%<%Y-%m-%d>-${slug}.org"
+           (file+head "${slug}.org"
                       "#+title: ${title}\n#+filetags: :noexport:stub:\n#+date: \[%<%Y-%m-%d>\]\n")
            :unnarrowed t
            :immediate-finish t
            :jump-to-captured t)
           ("i" "instantly create this node" plain "%?" :if-new
-           (file+head "%<%Y-%m-%d>-${slug}.org"
+           (file+head "${slug}.org"
                       "#+title: ${title}\n#+filetags: :stub:\n#+date: \[%<%Y-%m-%d>\]\n")
            :unnarrowed t
            :immediate-finish t)
           ("a" "acquaintance" plain "%?" :if-new
-           (file+head "%<%Y-%m-%d>-${slug}.org"
-                      ,(lines "#+title: ${title}\n#+filetags: :stub:partner:therapist:acquaintance:\n#+date: \[%<%Y-%m-%d>\]\n"
+           (file+head "${slug}.org"
+                      ,(lines "#+title: ${title}\n#+filetags: :stub:acquaintance:eyes_therapist:\n#+date: \[%<%Y-%m-%d>\]\n"
                               ":noexport:"
                                "- Email :: "
                                "- Phone :: "
@@ -305,7 +305,8 @@ to the new note in the \"timeline\" note."
 (defun my-insert-heading-with-id ()
   (interactive)
   (org-insert-heading)
-  (org-id-get-create))
+  (org-id-get-create)
+  (org-set-property "CREATED" (format-time-string "[%Y-%m-%d]")))
 
 ;; has to happen after load bc doom sets capture templates at load time.
 ;; incidentally also means we cannot use custom-file to config them.
@@ -371,7 +372,7 @@ to the new note in the \"timeline\" note."
 
 ;;           )))
 
-;; Because capfs don't do what I want in Roam
+;; Because CAPFs don't do what I want in Roam
 (add-hook 'org-mode-hook #'my-corfu-turn-off 99)
 
 (after! org
