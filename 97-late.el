@@ -16,7 +16,6 @@
 
 (defvar my-stim-collection (my-stim-collection-generate))
 
-
 ;; doom (or modern emacs?) already provides
 ;; (require 'epa-file)
 ;; (epa-file-enable)
@@ -58,7 +57,10 @@
 (when (version<= "29" emacs-version)
   (pixel-scroll-precision-mode)
   (add-to-list 'default-frame-alist '(alpha-background . 90))
-  ;; (setopt help-enable-variable-value-editing t)
+  ;; (setopt mouse-drag-and-drop-region-cross-program t)
+  (setopt show-paren-context-when-offscreen t)
+  (setopt help-enable-variable-value-editing t)
+  (setopt proced-enable-color-flag t)
   ;; (add-hook 'org-cycle-hook #'org-cycle-display-inline-images)
   )
 ;; From reading Emacs 28 news

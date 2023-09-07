@@ -29,11 +29,22 @@
 (autoload #'objed-ipipe "objed")
 (autoload #'piper "piper")
 
+(defun my-all-recursive-subdirs (dir &optional exclude-dotfiles)
+  (seq-filter #'file-directory-p
+              (directory-files-recursively dir
+                                           (if exclude-dotfiles "^[^.]" "")
+                                           t)))
+
 (defun my-shrink-video (filename)
+  "Shrink a video file to a quarter of its pixel density.
+Save it under the same name prefixed with \"shrunk-\", and leave
+the original file unmodified.
+
+Note that this may take a while on longer videos, but it works
+asynchronously so you can do something else."
   (interactive "fFile: ")
   (my-exec "ffmpeg" "-i" (concat "file:" filename) "-vf" "scale=iw*.5:-2"
-         (concat "file:shrunk-" filename))
-  )
+         (concat "file:shrunk-" filename)))
 
 (defun my-downcase-all-paths-in-file (base)
   (interactive "MBeginning of string that marks a filename (regexp): ")
@@ -47,9 +58,14 @@
           (downcase-region (match-beginning 0) (match-end 0))))
       (message "Done downcasing all paths in file"))))
 
-;; TODO: insert a whole Org link, complete with naming it after the node title?
-(defun my-insert-known-url ()
-  "Insert any URL known by the roam-refs database."
+;; TODO: Suggest this for upstream
+;; WONTFIX: insert a whole Org link, complete with naming it after the node
+;;          title? No, that doesn't make sense, there's the regular org-roam-node-insert
+;;          for that.
+;; TODO: Maybe also look up EWW and firefox bookmarks, but that could be a
+;;       separate command (to which we may dispatch with a prefix command).
+(defun my-roam-insert-known-url ()
+  "Insert at point, any URL known to the roam-refs database."
   (interactive)
   (let* ((urls (--map (substring it 2)
                       (-flatten (org-roam-db-query
@@ -114,6 +130,7 @@
              (slug (-reduce-from #'cl-replace (strip-nonspacing-marks title) pairs)))
         (downcase slug)))))
 
+;; Tests
 ;; (my-slugify "A/B testing")
 ;; (my-slugify "Someday/Maybe whale carcass")
 ;; (my-slugify "No one can feel a probability that small")
@@ -124,8 +141,10 @@
 ;; (my-slugify "Do one thing at a time")
 ;; (my-slugify "Are you losing items in recentf, bookmarks, org-id-locations? Solution: Run kill-emacs-hook periodically.")
 ;; (my-slugify "Slimline/\"pizza box\" computer chassis")
+;; (my-slugify "#emacs")
 
-;; NOTE: not used during my publishing process right now, I just run it manually sometimes
+;; NOTE: not used during my publishing process right now, I just run it manually
+;; sometimes
 (defun my-rename-roam-file-by-title (&optional path title)
   (interactive)
   (unless path
@@ -162,9 +181,9 @@
         (when visiting
           (find-file slugified-path))))))
 
-
+;; TODO: Suggest this for upstream
 (defun my-eww-bookmark-copy-url ()
-  "Kill the current bookmark."
+  "Copy the current bookmark into the kill ring."
   (interactive nil eww-bookmark-mode)
   (let* ((start (line-beginning-position))
          (bookmark (get-text-property start 'eww-bookmark))
@@ -172,8 +191,12 @@
     (unless bookmark
       (user-error "No bookmark on the current line"))
     (forward-line 1)
-    (kill-new url)
-    (message "Copied %s" url)))
+    (if (eq last-command #'my-eww-bookmark-copy-url)
+        (progn
+          (kill-append (concat "\n" url) nil)
+          (message "Appended to last kill: %s" url))
+      (kill-new url)
+      (message "Copied %s" url))))
 
 ;; TODO: would be cool to use the "motion" program and start it watching me right away.
 (defun my-browse-random-lw-post ()
@@ -247,8 +270,10 @@ It skips prompting, and inserts the metadata I want."
       (goto-char (point-min))
       (search-forward "#+title")
       (goto-char (line-beginning-position))
-      (when (looking-back "\n\n")
-        (join-line))
+      ;; (when (looking-back "\n\n")
+        ;; (join-line))
+      ;; emacs 29 alternative to above
+      (ensure-empty-lines 0)
       (when (search-forward "#+filetags" nil t)
         (setq has-tags t))
       (forward-line 1)
@@ -764,6 +789,7 @@ temporarily overridden."
   (unless (member last-command '(my-previous-buffer-of-same-mode
                                  my-next-buffer-of-same-mode))
     (setq my-buffer-ring
+          ;; TODO: use emacas 29 `buffer-match-p' or `match-buffers'
           (cl-loop for buf in (buffer-list)
                    if (eq (buffer-local-value 'major-mode buf) major-mode)
                    collect buf)))

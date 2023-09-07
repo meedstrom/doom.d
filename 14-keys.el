@@ -211,32 +211,28 @@
 
 ;;; Create minor mode maps for modes that lack them
 
-(defvar my-abbrev-minor-mode-map (make-sparse-keymap))
+(defvar-keymap my-abbrev-minor-mode-map)
 (add-to-list 'minor-mode-map-alist (cons 'abbrev-mode my-abbrev-minor-mode-map))
 
-(defvar my-anki-editor-mode-map (make-sparse-keymap))
-(add-to-list 'minor-mode-map-alist (cons 'anki-editor-mode my-anki-editor-mode-map))
+;; (defvar my-anki-editor-mode-map (make-sparse-keymap))
+(defvar-keymap my-anki-editor-mode-map)
+(after! anki-editor
+  (add-to-list 'minor-mode-map-alist (cons 'anki-editor-mode my-anki-editor-mode-map)))
 
 
 ;;; Key translations
 ;; TODO:  move this stuff to kmonad or some such external program
 
-;; Civilize GUI Emacs.  It doesn't always work, see https://debbugs.gnu.org/cgi/bugreport.cgi?bug=58808
-;; TODO: do this in kmonad, but do it only for eamcs, or use exwm simulation keys to turn escape back into a real escape for other apps.
+;; Civilize GUI Emacs.  It doesn't always work, see
+;; https://debbugs.gnu.org/cgi/bugreport.cgi?bug=58808
+;; TODO: Do this in KMonad instead.  Possibilities:
+;; - Translate keys only when emacs is in focus, if possible
+;; - Translate keys globally, and use EXWM simulation keys to translate back
+;;   into a real escape for other apps.
 (define-key function-key-map    (kbd "<escape>") (kbd "C-g"))
 (define-key key-translation-map (kbd "<escape>") (kbd "C-g"))
 (define-key input-decode-map    (kbd "<escape>") (kbd "C-g"))
 (define-key input-decode-map    (kbd "C-g") (kbd "<f35>")) ;; to unlearn it
-
-;; Make my Lenovo Thinkpad like the Dell Latitude I used to have
-(define-key key-translation-map (kbd "<XF86Back>"      ) (kbd "<prior>"))
-(define-key key-translation-map (kbd "C-<XF86Back>"    ) (kbd "C-<prior>"))
-(define-key key-translation-map (kbd "M-<XF86Back>"    ) (kbd "M-<prior>"))
-(define-key key-translation-map (kbd "s-<XF86Back>"    ) (kbd "s-<prior>"))
-(define-key key-translation-map (kbd "<XF86Forward>"   ) (kbd "<next>"))
-(define-key key-translation-map (kbd "C-<XF86Forward>" ) (kbd "C-<next>"))
-(define-key key-translation-map (kbd "M-<XF86Forward>" ) (kbd "M-<next>"))
-(define-key key-translation-map (kbd "s-<XF86Forward>" ) (kbd "s-<next>"))
 
 
 ;;; Main
@@ -463,7 +459,8 @@
 (keymap-set global-map "C-5"                        #'my-prev-file-in-dir)
 (keymap-set global-map "C-6"                        #'my-next-file-in-dir)
 (keymap-set global-map "C-8"                        #'kill-whole-line)
-(keymap-set global-map "C-9"                        #'crux-duplicate-current-line-or-region)
+(keymap-set global-map "C-9"                        #'duplicate-dwim) ;;emacs 29
+;; (keymap-set global-map "C-9"                        #'crux-duplicate-current-line-or-region)
 (keymap-set global-map "M-<backspace>"              #'sp-backward-unwrap-sexp)
 (keymap-set global-map "M-<delete>"                 #'sp-unwrap-sexp)
 (keymap-set global-map "M-<f4>"                     #'kill-current-buffer)

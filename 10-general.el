@@ -270,5 +270,7 @@
 (remove-hook 'doom-first-input-hook #'which-key-mode)
 ;; (add-hook 'after-save-hook #'my-fix-invalid-backup-settings)
 
-;; often it's a binary file, so prevent accidental edits
+;; often it's a binary file, so prevent accidental edits!
+;; NOTE: Emacs 29 no longer recommends `so-long-mode' anyway, so I'm guessing Doom
+;;       will no longer use it.  (see `long-line-optimizations-p').
 (add-hook 'so-long-mode-hook #'read-only-mode)

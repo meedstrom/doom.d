@@ -36,6 +36,23 @@
                ess-r-completion
                ess-r-flymake))
 
+
+(setq timer1 (run-with-idle-timer
+              10 nil (lambda ()
+                       (require 'org-roam)
+                       (cancel-timer timer1))))
+
+(setq timer2 (run-with-idle-timer
+              20 nil (lambda ()
+                       (require 'dired)
+                       (cancel-timer timer2))))
+
+(setq timer3 (run-with-idle-timer
+              30 nil (lambda ()
+                       (require 'eshell)
+                       (cancel-timer timer3))))
+
+
 ;; ;; FIXME: doesn't work
 ;; (named-timer-idle-run
 ;;     'my-first-load 5 nil

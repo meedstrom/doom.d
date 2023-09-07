@@ -1,26 +1,26 @@
-* My Emacs config dir
+* My Emacs config
 
-In development since 2015.  Requires Emacs 28.
+In development since 2015.  Requires Emacs 29+.
 
-Most of the interesting code is in the files starting with a number, like =98-late.el= and =10-general.el=.
+# Most of the interesting code is in the files starting with a number, like =98-late.el= and =10-general.el=.
 
 ** Undooms
 
-This is a Doom Emacs config (since May 2020), but I undo many Doom features (commented with the term "undoom").  Mind you, I still find Doom to save a lot of effort and well worth it.  Here are some things I undo:
+This is a Doom Emacs config (since May 2020, so it's been a while now!).  Though I find Doom saves a lot of effort, *I undo many Doom features* (commented with the term "undoom").  Here are some things I undo:
 
 #+begin_src elisp
 ;; undoom; I want readable backup names since I rename files and directories all
 ;; the time
 (advice-remove #'make-backup-file-name-1 #'doom-make-hashed-backup-file-name-a)
 
-;; undoom; I find customize a handy exploration tool
+;; undoom; I find Customize a handy exploration tool
 (put 'customize-themes 'disabled nil)
 (put 'customize-group 'disabled nil)
 (put 'customize-changed 'disabled nil)
 (put 'customize-face 'disabled nil)
 (put 'customize-variable 'disabled nil)
 
-;; undoom; I actually use the modeline to show present directory
+;; undoom; I use the modeline to show present directory
 (remove-hook 'term-mode-hook #'hide-mode-line-mode)
 
 (remove-hook 'dired-mode-hook #'dired-omit-mode) ;; undoom
