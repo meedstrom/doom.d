@@ -15,23 +15,6 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-;; TODO: give posts an URL hash from their org-id, and let the following slug be
-;; merely a suggestion.
-;;
-;; How? Strip the dashes from the UUID, then convert to base64url.
-;; in JS, like this
-;; var base64String = Buffer.from(hexString, 'hex').toString('base64')
-;; in shell commands, like this
-;; echo "6F0AD0BFEE7D4B478AFED096E03CD80A" | basenc -d --base16 | basenc --base64url
-;;
-;; In `my-prep-fn', put every post in a subfolder named as the above id.  Also
-;; record the id in the Post datatype. DONE
-;;
-;; Then in my frontend code, instead of this:
-;; posts.find((x: Post) => x.slug === slug )
-;; I'll do something like this:
-;; posts.find((x: Post) => x.id === href.substring(0, 10) )
-
 (require 'dash)
 (require 'f)
 
@@ -193,8 +176,7 @@ that org-id links will resolve correctly."
 
   ;; Put the dailies back in
   (copy-directory "/home/kept/roam/daily/" "/tmp/roam/" t)
-  (shell-command "rm -rf /tmp/roam/daily/hide")
-  (shell-command "mv /tmp/roam/daily/share/* /tmp/roam/daily/")
+  (shell-command "mv -t /tmp/roam/  /tmp/roam/daily/*/*")
 
   ;; WIP TODO: Ensure that the final web URLs will contain a stable ID by
   ;; putting the posts in subfolders named by a shortened form of their
@@ -234,12 +216,12 @@ that org-id links will resolve correctly."
   (with-current-buffer (or (find-buffer-visiting filename)
                            (find-file-noselect filename))
     (goto-char (point-min))
-    (let ((title (save-excursion
-                   (when (search-forward "#+title: " nil t)
-                     (buffer-substring (point) (line-end-position)))))
-          (created (save-excursion
-                     (when (search-forward "#+date: [" nil t)
-                       (buffer-substring (point) (+ 10 (point))))))
+    (let ((title (when (search-forward "#+title: " nil t)
+                   (prog1 (buffer-substring (point) (line-end-position))
+                     (goto-char (point-min)))))
+          (created (when (search-forward "#+date: [" nil t)
+                     (prog1 (buffer-substring (point) (+ 10 (point)))
+                       (goto-char (point-min)))))
           (tags (or (sort (org-get-tags) #'string-lessp)
                     '(""))))
 
@@ -337,6 +319,14 @@ that org-id links will resolve correctly."
               (search-forward "</div>")
               (search-forward "</div>")
               (setq content-start (point)))
+
+            ;; From React Router's perspective, the visitor is not in a subdir,
+            ;; so get the hrefs to agree with that idea
+            (goto-char content-start)
+            (while (re-search-forward "<a .*?href=\"" nil t)
+              (and ;; (not (string-search "daily" pub-dir))
+                   (looking-at (rx (literal "../")))
+                   (replace-match "")))
 
             ;; Remove in-document divs since they mess up the look of Bulma
             ;; CSS.  Except for the pages where I will actually style the

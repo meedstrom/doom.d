@@ -160,13 +160,13 @@ asynchronously so you can do something else."
                       (when (search-forward "#+title: " nil t)
                         (buffer-substring (point) (line-end-position))))))))
   (let* ((name (file-name-nondirectory path))
-         (filename-preamble
-          (when (string-match
-                 (rx (= 4 digit) "-" (= 2 digit) "-" (= 2 digit) "-")
-                 name)
-            (match-string 0 name)))
+         ;; (filename-preamble
+         ;;  (when (string-match
+         ;;         (rx (= 4 digit) "-" (= 2 digit) "-" (= 2 digit) "-")
+         ;;         name)
+         ;;    (match-string 0 name)))
          (slugified-path (concat (file-name-directory path)
-                                 filename-preamble
+                                 ;; filename-preamble
                                  (my-slugify title)
                                  ".org"))
          (visiting (find-buffer-visiting path)))
@@ -251,6 +251,7 @@ It skips prompting, and inserts the metadata I want."
            (created-date (save-excursion
                            (org-back-to-heading)
                            (when (search-forward ":created: " (org-entry-end-position) t)
+                             (just-one-space)
                              (prog1 (buffer-substring (point) (line-end-position))
                                (delete-line)))))
            (has-tags nil))
