@@ -89,7 +89,8 @@ will not modify the source file."
                 (insert "\n* What links here"))
             (org-insert-subheading nil)
             (insert "What links here"))
-          (dolist (link (append backlinks reflinks))
+          (dolist (link (--sort (string-lessp (cdr it) (cdr other))
+                                (append backlinks reflinks)))
             (newline)
             (insert "- [[id:" (car link) "]["
                     (replace-regexp-in-string (rx (any "[]")) "" (cdr link))

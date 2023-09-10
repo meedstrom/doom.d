@@ -16,6 +16,9 @@
 
 (require 'my-lib-external)
 
+;; `org-roam-node-find' is super slow now, and it's 75% GC
+(setopt gcmh-high-cons-threshold (* 1024 1024 100))
+
 (after! ox-latex
   (add-to-list 'org-latex-classes
                '("letter"
@@ -186,13 +189,13 @@ per-buffer."
 (setopt org-clock-idle-time 5)
 (setopt org-hide-leading-stars nil)
 (setopt org-clock-mode-line-total 'today)
-(setopt org-clock-auto-clock-resolution 'always)
+(setopt org-clock-auto-clock-resolution t)
 (setopt org-clock-in-resume t)
 (setopt org-catch-invisible-edits 'smart)
 (setopt org-ctrl-k-protect-subtree t)
 (setopt org-agenda-include-diary t)
 (setopt org-cycle-separator-lines 3)
-(setopt org-datetree-add-timestamp t)
+(setopt org-datetree-add-timestamp nil)
 (setopt org-edit-src-content-indentation 0)
 (setopt org-ellipsis "⤵")
 (setopt org-hide-emphasis-markers t) ; hide the *, =, and / markers
