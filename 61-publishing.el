@@ -60,7 +60,32 @@
 (add-hook 'org-export-before-parsing-functions #'my-add-backlinks)
 (add-hook 'org-export-before-parsing-functions #'my-replace-web-links-with-ref-note-links)
 
-;; TODO: In dailies, insert links to any pages created on that same day, under a "Created pages" heading
+;; TODO: In dailies, insert links to any pages created on that same day, under a
+;; "Created pages" heading.  I guess this has to happen after exporting, so I
+;; can query the final JSON of all posts.  Therefore it has to happen in the
+;; frontend code.  Or, I suppose there could be an org-roam-db-query that looks
+;; up the #+DATE property.
+;; Something like this
+;; (org-roam-db-query [:select *
+;;                     :from nodes
+;;                     :where (equal "2020-03-15" (plist-get :date properties))])
+;; Unfortunately, #+DATE is not a property.  So I may have to reformat all my
+;; files so it becomes :DATE:, or more likely :CREATED:.
+;; (org-roam-db-query [:select [title] :from nodes :where (like title '"%How%")])
+(org-roam-db-query [:select * :from nodes
+                    ;; :where (in properties (= CREATED "2023-02-15"))])
+                    ;; :where (= properties:id "be3674fa-870b-4198-9688-a351eba83270")])
+                    :where (in properties (= ID "be3674fa-870b-4198-9688-a351eba83270"))])
+                    ;; :where (in "be3674fa-870b-4198-9688-a351eba83270" properties)])
+                    ;; :where (= (in properties [:select "ID"]) "be3674fa-870b-4198-9688-a351eba83270")])
+                    ;; :where (= (in properties [:select ID]) "be3674fa-870b-4198-9688-a351eba83270")])
+                    ;; :where (like (in properties [:select ["CREATED"]]) '"2023-02-15")])
+                    ;; :where (like [:select ["CREATED"] from properties] '"2023-02-15")])
+;; (org-roam-db-query (concat
+                    ;; "SELECT * FROM nodes n, table(n.properties) p"
+                    ;; ;; " WHERE 'be3674fa-870b-4198-9688-a351eba83270' IN (SELECT id FROM properties)"
+                           ;; ))
+
 
 (defun my-add-backlinks (&rest _)
   "Add a \"What links here\" subtree at the end.
@@ -122,6 +147,9 @@ will not modify the source file."
             (when (and ref
                        ;; ignore if on same page
                        (not (equal (caddr ref) (org-get-title))))
+              ;; TODO: check if the link is already an org-link with a custom
+              ;; description.  Then just modify the url part into an id link,
+              ;; don't overwrite the description also.
               (delete-region (point) (org-element-property :end elem))
               (insert "[[id:" (cadr ref) "]["
                       (replace-regexp-in-string (rx (any "[]")) "" (caddr ref))
