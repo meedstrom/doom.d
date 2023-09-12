@@ -49,7 +49,7 @@
 (keymap-unset global-map "<insert>" t) ;; overwrite-mode
 (keymap-unset global-map "C-SPC" t)
 (keymap-unset global-map "C-\\" t) ;; toggle-input-method
-(keymap-unset global-map "C-o" t) ;; open-line
+;; (keymap-unset global-map "C-o" t) ;; open-line
 (keymap-unset global-map "C-q" t) ;; quoted-insert
 (keymap-unset global-map "C-x (" t)
 (keymap-unset global-map "C-x )" t)

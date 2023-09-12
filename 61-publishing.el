@@ -72,10 +72,10 @@
 ;; Unfortunately, #+DATE is not a property.  So I may have to reformat all my
 ;; files so it becomes :DATE:, or more likely :CREATED:.
 ;; (org-roam-db-query [:select [title] :from nodes :where (like title '"%How%")])
-(org-roam-db-query [:select * :from nodes
+;; (org-roam-db-query [:select * :from nodes
                     ;; :where (in properties (= CREATED "2023-02-15"))])
                     ;; :where (= properties:id "be3674fa-870b-4198-9688-a351eba83270")])
-                    :where (in properties (= ID "be3674fa-870b-4198-9688-a351eba83270"))])
+                    ;; :where (in properties (= ID "be3674fa-870b-4198-9688-a351eba83270"))])
                     ;; :where (in "be3674fa-870b-4198-9688-a351eba83270" properties)])
                     ;; :where (= (in properties [:select "ID"]) "be3674fa-870b-4198-9688-a351eba83270")])
                     ;; :where (= (in properties [:select ID]) "be3674fa-870b-4198-9688-a351eba83270")])
