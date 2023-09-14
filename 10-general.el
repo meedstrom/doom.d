@@ -169,10 +169,12 @@
 (put 'customize-variable 'disabled nil)
 
 (after! recentf
-  (setopt recentf-max-saved-items 1200))
+  (setopt recentf-max-saved-items nil))
 
 ;; FIXME: doom doesn't respect this
 (setopt load-prefer-newer t) ;; don't spend another minute confused by this
+(general-after-init
+  (setopt load-prefer-newer t))
 
 (setopt auth-sources '("~/.authinfo")) ;; https://magit.vc/manual/ghub/Storing-a-Token.html
 (setopt shr-max-image-proportion 0.5)
@@ -271,6 +273,8 @@
 ;; (add-hook 'after-save-hook #'my-fix-invalid-backup-settings)
 
 ;; often it's a binary file, so prevent accidental edits!
-;; NOTE: Emacs 29 no longer recommends `so-long-mode' anyway, so I'm guessing Doom
-;;       will no longer use it.  (see `long-line-optimizations-p').
+
+;; NOTE: Emacs 29 no longer recommends `so-long-mode' anyway, so I'm guessing
+;;       Doom will no longer use it.  (new system is automatic, see
+;;       `long-line-optimizations-p').
 (add-hook 'so-long-mode-hook #'read-only-mode)

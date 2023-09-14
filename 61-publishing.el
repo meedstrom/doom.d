@@ -34,6 +34,7 @@
   (require 'ox-publish)
   (switch-to-buffer "*Messages*") ;; for watching it work
   (delete-other-windows)
+  (load-theme 'adwaita t) ;; to show me this is not a normal emacs
   (cd "/home/kept/roam") ;; for me to quick-search when an id fails to resolve
   (org-publish "my-react-blog" (>= prefix 4)))
 
