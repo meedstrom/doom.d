@@ -208,10 +208,6 @@ that org-id links will resolve correctly."
   (copy-directory "/home/kept/roam/daily/" "/tmp/roam/" t)
   (shell-command "mv -t /tmp/roam/  /tmp/roam/daily/*/*")
 
-  ;; WIP TODO: Ensure that the final web URLs will contain a stable ID by
-  ;; putting the posts in subfolders named by a shortened form of their
-  ;; org-id. REVIEW: does it work?
-  ;; REVIEW: how long do I want the ID to be?? this is hard to change later
   (cl-loop
    with default-directory = "/tmp/roam"
    for path in (directory-files "/tmp/roam" t "\\.org$")
@@ -236,12 +232,25 @@ that org-id links will resolve correctly."
   (fset 'org-id-update-id-locations #'ignore) ;; stop triggering during publish
   )
 
+(defun my-strip-id-from-link-if-file-level (link)
+  (cl-assert (stringp link))
+  (if-let* ((hash-char (string-search "#ID-" link))
+            (org-id-found (with-timeout (10 (error "Org-id took too long"))
+                            (org-id-find (substring link (+ 4 hash-char)))))
+            (file-level? (= (cdr org-id-found) 1)))
+      (substring link 0 hash-char)
+    link))
+
+;; (my-remove-org-id-in-link-maybe "sdfsdf#ID-f8c22bdf-ff89-4a67-b9a9-261fbd49a4ab")
+;; (my-remove-org-id-in-link-maybe "sdfsdf#ID-edb732d1-cc3b-47d0-8097-4c06bb99211a")
+
 ;; Struggled so long looking for a hook that would work like the old
 ;; before-export-hook.  Let this be a lesson: the Emacs hook system exists to
 ;; let you subtly modify a function IN THE MIDDLE of its body. We never actually
 ;; need before-hooks (or after-hooks), since in such a simple case it is always
 ;; possible to use `add-function' or call a wrapper such as this wrapper around
 ;; `org-publish-org-to'.
+
 (defun my-publish-to-blog (plist filename pub-dir)
   (with-current-buffer (or (find-buffer-visiting filename)
                            (find-file-noselect filename))
@@ -255,27 +264,22 @@ that org-id links will resolve correctly."
           (tags (or (sort (org-get-tags) #'string-lessp)
                     '(""))))
 
-      ;; Skip exporting if we wouldn't keep the result
-      (unless (or (when (not title)
-                    (warn "TITLE MISSING: %s" filename)
-                    (kill-buffer (current-buffer))
-                    t)
-                  (when (not created)
-                    (warn "DATE MISSING: %s" filename)
-                    (kill-buffer (current-buffer))
-                    t)
-                  (when (not (org-id-get))
-                    (warn "ID MISSING: %s" filename)
-                    (kill-buffer (current-buffer))
-                    t)
-                  (when (-intersection tags my-outdated-tags)
-                    (warn "OUTDATED TAG FOUND: %s" filename)
-                    (kill-buffer (current-buffer))
-                    t)
-                  (when (-intersection tags my-tags-to-avoid-uploading)
-                    (message "Found exclude-tag, excluding: %s" filename)
-                    (kill-buffer (current-buffer))
-                    t))
+      (cond
+       ;; Skip exporting if we won't use the result
+
+       ((not title)
+        (warn "TITLE MISSING: %s" filename))
+       ((not created)
+        (warn "DATE MISSING: %s" filename))
+       ((-intersection tags my-tags-to-avoid-uploading)
+        (message "Found exclude-tag, excluding: %s" filename))
+       ((-intersection tags my-outdated-tags)
+        (warn "OUTDATED TAG FOUND: %s" filename))
+       ((not (org-id-get))
+        (warn "ID MISSING: %s" filename))
+
+       ;; OK, export
+       (t
 
         ;; The original export-function.  Do thy magic!
         (org-publish-org-to 'html filename "" plist pub-dir)
@@ -350,13 +354,18 @@ that org-id links will resolve correctly."
               (search-forward "</div>")
               (setq content-start (point)))
 
-            ;; From React Router's perspective, the visitor is not in a subdir,
-            ;; so get the hrefs to agree with that idea
             (goto-char content-start)
             (while (re-search-forward "<a .*?href=\"" nil t)
-              (and ;; (not (string-search "daily" pub-dir))
-                   (looking-at (rx (literal "../")))
-                   (replace-match "")))
+              ;; From React Router's perspective, the visitor is not in a
+              ;; subdir, so get the hrefs to agree with that idea
+              (when (looking-at (rx (literal "../")))
+               (replace-match ""))
+              ;; REVIEW: Should remove the lengthy hash-part of the link
+              ;;         (i.e. the bit after the # character in LINK#ORG-ID) if
+              ;;         the org-id points to a file-level id anyway
+              (re-search-forward (rx (* (not "\""))))
+              (replace-match (my-strip-id-from-link-if-file-level (match-string 0)))
+              )
 
             ;; Remove in-document divs since they mess up the look of Bulma
             ;; CSS.  Except for the pages where I will actually style the
@@ -424,7 +433,7 @@ that org-id links will resolve correctly."
                     (content . ,(buffer-string)))))
 
           (when-let ((output-buf (find-buffer-visiting output-path)))
-              (kill-buffer output-buf))
+            (kill-buffer output-buf))
           (with-temp-file output-path
-            (insert (json-encode data-for-json)))
-          (kill-buffer (current-buffer)))))))
+            (insert (json-encode data-for-json))))))
+      (kill-buffer (current-buffer)))))

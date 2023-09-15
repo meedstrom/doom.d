@@ -115,6 +115,7 @@ Functions here have access to the variable
 
 ;;; Base encoding
 
+;; NOTE: see also `org-id-int-to-b36'
 (defun my-base36 (num)
   "Encode NUM as base 36 string.
 This goes z (meaning 0) to a (meaning 25), then 9 (meaning 26) to
