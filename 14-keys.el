@@ -240,6 +240,9 @@
 (setopt doom-leader-alt-key "<f3>")
 (setopt doom-localleader-alt-key "<f4>")
 
+(after! doom-keybinds
+  (keymap-set doom-leader-map "f d" (keymap-lookup doom-leader-map "f D")))
+
 (after! key-chord
   (key-chord-define-global "cd" #'calc-dispatch))
 
