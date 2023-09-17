@@ -278,3 +278,5 @@
 ;;       Doom will no longer use it.  (new system is automatic, see
 ;;       `long-line-optimizations-p').
 (add-hook 'so-long-mode-hook #'read-only-mode)
+
+(remove-hook 'doom-first-file-hook #'global-so-long-mode)
