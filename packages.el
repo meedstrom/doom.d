@@ -96,11 +96,12 @@
 (package! visual-regexp)
 (package! wgrep)
 (package! xr)
-(package! ctrlf :recipe (:host github :repo "radian-software/ctrlf"))
 (package! dired-hist :recipe (:host github :repo "karthink/dired-hist"))
 
 ;; (package! which-key :ignore t)
 ;; (package! github-review :ignore t) ;; causes errors
+
+(package! org-roam)
 
 ;; (package! popper)
 ;; (package! beancount :recipe (:host github :repo "cnsunyour/beancount.el"))

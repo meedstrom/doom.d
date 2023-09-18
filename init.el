@@ -4,6 +4,7 @@
        ;; (helm +childframe +icons)
        (vertico +icons)
        ;; (vertico +childframe +icons)
+       company
 
        :ui
        doom
@@ -22,8 +23,8 @@
        :editor
        fold
        multiple-cursors
-       ;; format ;; check if the upstream started using apheleia
        ;; snippets
+       ;; format ;; check if the upstream started using apheleia
        word-wrap
 
        :emacs
@@ -55,7 +56,7 @@
        json
        ledger
        markdown
-       (org +dragndrop +pomodoro +roam2 +pretty)
+       ;; (org +dragndrop +pomodoro +roam2 +pretty)
        (scheme +guile)
        (sh +fish)
        yaml

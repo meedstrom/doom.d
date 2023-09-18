@@ -93,7 +93,7 @@
 ;; RET -> corfu-insert
 ;; M-g -> corfu-show-location
 ;; M-h -> corfu-show-documentation
-(use-package! corfu
+(use-package! corfu :disabled
   :init
   (setopt corfu-auto t)
   (setopt corfu-auto-delay 0.35)
