@@ -116,8 +116,6 @@
 
 (setopt mediawiki-site-default "WikEmacs")
 
-(fset 'which-key-mode #'ignore)
-
 (after! ws-butler
   ;; Undoom. Was this a Vimism? If this is nil while auto-save-visited-mode is
   ;; active, the result is incredibly annoying.
@@ -178,6 +176,7 @@
 
 (use-package! deianira
   :config
+  ;; (fset 'which-key-mode #'ignore)
   (after! hydra
     (define-key hydra-base-map (kbd "<f5>") #'hydra-repeat))
   (setq asyncloop-debug-level 1)

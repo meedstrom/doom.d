@@ -28,21 +28,21 @@
             (lambda ()
               (message "Processing notes in buffer \"%s\", wait a moment..." (buffer-name))
               (condition-case-unless-debug err
-                  (anki-editor--push-note (anki-editor-note-at-point))
+                  (inline-anki--push-note (inline-anki-note-at-point))
                 (error
                  ;; (cl-incf failed)
                  (message "Note at point %d failed: %s" (point) (error-message-string err)))))))))))
 
-(defvar inline-anki-default-tags '("from-emacs"))
+(defvar inline-anki-default-tags '("from_emacs"))
 
 (defun inline-anki-note-at-point ()
   "Construct an alist representing a note from current entry."
   (let* ((org-trust-scanner-tags t)
-         (deck (or (org-entry-get-with-inheritance anki-editor-prop-deck)
+         (deck (or (org-entry-get-with-inheritance inline-anki-prop-deck)
                    inline-anki-deck))
-         (note-id (inline-anki-thing-id))
+         (note-id (string-to-number (inline-anki-thing-id)))
          (note-type (car inline-anki-note-type))
-         (tags (seq-union inline-anki-default-tags (org-get-tags-at)))
+         (tags (append inline-anki-default-tags (org-get-tags) (list (format-time-string "%F"))))
          (begin (org-element-property :contents-begin (org-element-at-point)))
          (end (save-excursion
                 (goto-char (org-element-property :contents-end (org-element-at-point)))
@@ -58,14 +58,14 @@
     (unless fields (error "Missing fields"))
 
     `((deck . ,deck)
-      (note-id . ,(if note-id
-                      (base64-to-int note-id)
-                    -1))
+      (note-id . ,(if (= 0 note-id)
+                      -1
+                    note-id))
       (note-type . ,note-type)
       (tags . ,tags)
       (fields . ,fields))))
 
-(defun anki-editor--set-note-id (id)
+(defun inline-anki--set-note-id (id)
   (unless id
     (error "Note creation failed for unknown reason"))
   (goto-char (line-beginning-position))
@@ -73,19 +73,10 @@
   (when (looking-at-p "[[:digit:]]+?}[[:space:]]*?$")
     (error "Attempted to create note for note already with ID"))
   (when (looking-at-p "anki}[[:space:]]*?$")
-    (insert id)))
+    (insert (number-to-string id))
+    (delete-char 4)))
 
 (defvar inline-anki-note-type '("Cloze" "Text"))
-
-;; Unused
-(defcustom inline-anki-flag ""
-  "A string for flagging a paragraph or list item as a flashcard.
-I recommend this string to be quite unique, so if you change your
-mind you can confidently search-replace across all your files.
-If you were to set this to a common string like \"#\", you will
-need more effort to migrate from it.  To also have it compact,
-the trick is to pick some Unicode symbol you never use otherwise,
-like this card emoji: 🃏.")
 
 (defun inline-anki-thing-id ()
   (goto-char (line-beginning-position))
@@ -98,27 +89,30 @@ like this card emoji: 🃏.")
                (save-excursion
                  (org-forward-paragraph)
                  (1- (point))))))
-    (re-search-forward (rx (literal inline-anki-flag) (or "_" "^") "{" (group (*? nonl)) "}") end)
+    ;; (rx "@" (or "_" "^" "anki"))
+    (re-search-forward (rx "@" (or "_" "^") "{" (group (*? nonl)) "}") end)
     (let ((id-maybe (match-string 1)))
       (if (equal id-maybe "")
-          ;; No ID yet
-          nil
+          (error "id empty")
         id-maybe))))
 
+;; the anki note ID is always a 13-digit number.
 (defun inline-anki-map-note-things (func)
-  (let ((ctr 0)
-        (start-of-item-rx (rx bol (*? space) (any "+-") (+? space) (literal inline-anki-flag) (?? (or "^" "_")) "{" (group (*? nonl)) "}"))
-        (eol-rx "[[:graph:]][_^]{\\(.*?\\)}$"))
-    (goto-char (point-min))
-    (while (re-search-forward eol-rx nil t)
-      (forward-char -1)
-      (cl-incf ctr)
-      (funcall func))
-    (goto-char (point-min))
-    (while (re-search-forward start-of-item-rx nil t)
-      (forward-char -1)
-      (cl-incf ctr)
-      (funcall func))
+  (let* ((ctr 0)
+         (list-bullet (rx (or (any "-+*") (seq (*? digit) (any ".)")))))
+         (card@item-start&has-id  (rx bol (*? space) (regexp list-bullet) (+? space) "@" (any "_^") "{" (= 13 digit) "}"))
+         (card@item-start&new (rx bol (*? space) (regexp list-bullet) (+? space) "@anki"))
+         (card@eol&has-id (rx (? "@") (any "_^") "{" (= 13 digit) "}" (*? space) eol))
+         (card@eol&new (rx (or "@anki" "_{anki}" "^{anki}") (*? space) eol)))
+    (dolist (regexp '(card@item-start&has-id
+                      card@item-start&new
+                      card@eol&has-id
+                      card@eol&new))
+      (goto-char (point-min))
+      (while (re-search-forward regexp nil t)
+        ;; (forward-char -1)
+        (cl-incf ctr)
+        (funcall func)))
     ctr))
 
 (defcustom inline-anki-emphasis-type '(bold)

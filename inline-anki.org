@@ -1,78 +1,97 @@
-#+TITLE: Inline Anki 
+#+TITLE: Inline Anki
 
-A dream from before I was a programmer, that I couldn't turn into reality until now.
+For nearly a decade I've daydreamed of writing [[https://en.wikipedia.org/wiki/Spaced_repetition#Software][SRS]] flashcards as if they were body text, flowing as part of any text I write in any of my files, so that the same text could serve as a single-source-of-truth.
 
-For years I've daydreamed of writing [[https://en.wikipedia.org/wiki/Spaced_repetition#Software][SRS]] flashcards as if they were body text, part of the flowing text of anything else I am writing, so that the same text could serve as a single-source-of-truth.
+The other SRS programs in the Emacs ecosystem (org-fc, org-drill, pamparam, anki-editor) all share what I see as an unacceptable design flaw: *they separate the flashcards from normal text* by way of shoving them under a dedicated headline.
 
-Put another way, I didn't just want to store flashcards in plaintext form... nor just awkwardly append them to the end of an Org-mode section as a kind of paraphrasis or summary of that section... but let the flashcards serve /as/ paragraphs in their own right! 
+I don't want to awkwardly append flashcards to the end of an Org section as a kind of paraphrasis or summary of that section, but to let the flashcards serve /as/ paragraphs in their own right!  When I heard "flashcards in Emacs", that was always the idea!  The dream!  The reason you would even bother!  Right?
 
-We have many SRS programs in the Emacs ecosystem (org-fc, org-drill, pamparam, anki-editor, not to mention the predecessor to Anki itself, flashcard.el)... but for some strange reason, all made the design decision of *separating the flashcards from normal text* by way of shoving them under a dedicated headline.
+In my opinion, three non-negotiable features in a SRS program:
 
-Why?!
+1. let me store flashcards as plaintext inside my other text files on the same topics
+2. let me write flashcards as if they were just paragraphs in those notes
+3. let me study those flashcards on-the-go, on a mobile device
 
-I don't understand the point of integrating with Org if it's gonna be like this.  They are effectively as locked-away as if they lived in a SQL database.  Perhaps not technically, but psychologically, which is just as real a barrier.
+All packages only fulfil #1, except for anki-editor which fulfils #1 and #3.  Now inline-anki fulfils #1, #2 and #3!
 
-This shows you how it's empowering to know Emacs Lisp.  All I had to do was fork anki-editor and make some small changes.  Now I can write as follows!
+I only know of *three flaws:*
+
+- Like anki-editor, inline-anki does not let you study inside Emacs.  You have to whip out your phone and study there.
+  - To me this is a non-issue since the bus is the only place I want to study anyway.
+- The format is constrained -- you can't express every kind of flashcard Anki supports.  More on that later.
+  - For me this is a good trade, because flashcards weren't part of my life to begin witha due to clumsy systems.   Better simple flashcards than no flashcards.
+- You cannot edit the notes from Anki.
+  - This means you can't make small edits on-the-fly while studying.  Sure, it's a bit annoying, but at least you don't have to deal with sync conflicts.
 
 * Demonstration
 ** As list items
-Four Anki notes can be found below.
+Here are four Anki cloze notes, expressed in just four list items:
 
-- (100000421) DRY is short for *Don't Repeat Yourself*
-- (100000404) 🇫🇷 *legerdemain*  🇬🇧 *sleight-of-hand*
-- (100000402) 🇫🇷 *maison*  🇬🇧 *house*
-- (100000403) 🇫🇷 *reunion*  🇬🇧 *meeting*
+- @^{169000421} DRY is short for *Don't Repeat Yourself*
+- @^{169000404} 🇫🇷 *legerdemain*  🇬🇧 *sleight-of-hand*
+- @^{169000402} 🇫🇷 *maison*  🇬🇧 *house*
+- @^{169000403} 🇫🇷 *reunion*  🇬🇧 *meeting*
+
+The starting @^{number} uniquely identifies the note.  Think of @ as containing an "a" for "Anki". ;-)
+
+There are no hidden property drawers, ever.
 
 ** As list items, with the anki note ID at the end
-Four Anki notes can be found below.
+You have the freedom to place the note ID either at the beginning /or/ the end of a list item.  If it's at the end, you don't need the @ glyph.  I find it more aesthetic for lists that aren't a pure list of flashcards, and mix in non-flashcard items.
 
-- When a muscle feels tight after exercise, DON'T *stretch*.^{1000000201}
-- Good relationships aren't built on two halves, but two *wholes*.^{1000000210}
-- Most people are willing to bet money in the lab that they are superior to *most people* on most desirable traits.^{1000000013}
+- When a muscle feels tight after exercise, DON'T *stretch*.^{1690000201}
+- Good relationships aren't built on two halves, but two *wholes*.^{1690000210}
+- Most people are willing to bet money in the lab that they are superior to *most people* on most desirable traits.^{1690000013}
 - Here is a non-card...
   - Just some text unrelated to anki...
-    - Favorite trick of fitness program gurus: babysit *genetic freaks* and bask in their performance.^{100000001}
+    - Favorite trick of fitness program gurus: babysit *genetic freaks* and bask in their performance.^{1690006401}
   
 ** As running paragraphs
-Two Anki notes can be found below.
+The following two paragraphs express two Anki cloze notes.
 
-In English, we have the word-pair truth and lying.  We also have the word-pair *rational* and rationalization.  It's as if lying was called *truthization*.^{1000000021}
+A gotcha for inline-anki: you must use =visual-line-mode= or some other *soft-wrap*.  If you hard-wrap a multiline paragraph, inline-anki will only grab *the last line* (because that line is where it finds the note ID).^{1690986753420}
 
-No matter how much you want to, you cannot make rational an idea that wasn't originated *in a rational way*.^{100000034}
+In English, we have the word-pair truth and lying.  We also have the word-pair *rational* and rationalization: it's as if lying was called *truthization*.^{16900030021}
 
 ** As drawers (for multiline flashcards) :noexport:
-One Anki note can be found below.  Note that this is source Org syntax; when exporting to HTML, such as this rendered readme you're probably reading, the drawer boundaries elegantly disappear.
+One Anki note can be found below.  If you're reading this in a browser, note that this is source Org syntax; normally when exporting to HTML, the drawer boundaries disappear.
 
-: :anki-100232020:
+: :anki-169232020:
 : TODO
 : :end:
 
 * Usage
 
-Be aware: this is a LESS CAPABLE version of anki-editor:
+Be aware: this fork of anki-editor REMOVES some features you might've expected:
 
 - It uses only one deck ("Default")
-- It uses only one note type ("Cloze"), presuming only one field ("Text")
-- Tags cannot be set per individual card, but they are inherited from the context (so the Org subtree tags will carry over)
-  - Note that Anki tags have lost much of their organizational purpose if all your notes live in Org files anyway -- you'll be organizing from within Org-roam or the like, not from within Anki.  However, at least two use cases remain:
+- It uses only one note type ("Cloze"), with only one field ("Text")
+- Tags cannot be set per individual card, but they are inherited from the subtree
+  - Note that Anki tags have lost much of their organizational purpose if all your notes live in Org files anyway -- you'll be organizing from within Org-roam or the like, not from within Anki.  Let this balm the fact you can't edit the notes from Anki.  However, at least two use cases of tags remain:
     - The tags can be displayed inside cards as a contextual hint (if you code this in the card template)
     - The tags can be used for Custom Study sessions on a filtered subset of notes
+- It does not sync back a =marked= tag when you flag a card in Anki
 
 Syntax of a flashcard:
 
-- To identify a flashcard, this package looks for one of the following things:
-  - a magic string at the *end of a line*: =_{anki}= or =^{anki}=, or the same with the letters *replaced by a number* (the number is the auto-assigned Anki note ID).  This works with paragraphs as well as list items.
-  - a magic string at the *start* of a *list item*: =(anki)=, or the same with the letters *replaced by a number* (the number is the auto-assigned Anki note ID).
-  - a drawer named =:anki:=, which is renamed to something like =:anki-10000001:= when the Anki note ID has been assigned.
-- DOES NOT WORK IF YOU HARD-WRAP -- you MUST use soft-wrapping solutions like visual-line-mode or somesuch.  If you hard-wrap, it'll only capture one line, not the whole paragraph or list item.
-- Clozes are marked by *bold text*.
-  - You can, if necessary, write Anki's regular ={{c1::}}= syntax directly.  Mainly useful for writing math equations.  For now, if you do this, please avoid having any bold text!
+- To identify a flashcard, inline-anki looks for one of the following things:
+  - a magic string at the *start* of a *list item*: =@anki=, or a =@= glyph followed by a 13-digit number in subscript or superscript, like this: =@_{1693535436701}=.
+    - The number is the auto-assigned Anki note ID.
+  - a magic string at the *end of a line*: =@anki=, =_{anki}=, or =^{anki}=, -- or a 13-digit number in subscript or superscript, like this: =_{1693535436701}=.  This works with paragraphs as well as list items.
+    - note that even if you comment it out, it will still be picked up.
+- Clozes are marked by *bold text*, or you can configure =inline-anki-emphasis-type= if you prefer italic or underline.
+  - You can, if necessary, write Anki's regular ={{c1::}}= syntax directly.  Mainly useful for writing math equations.
+#  - a drawer named =:anki:=, which is renamed to something like =:anki-16900001:= when the Anki note ID has been assigned.
 
 To push cards:
 
 1. Make sure Anki has the AnkiConnect addon installed
 2. Make sure Anki is running in the background
 3. Visit an Org file that contains some inline-anki cards, and type =M-x inline-anki-push-notes RET=
+
+When you update a note, it overwrites what was previously in that note in Anki, but Anki still has the scheduling info.
+- In Anki, run "Check database..." every now and then because when you remove a cloze field you've previously studied, there will be an empty card (not a big deal)
+- If a note has 3 cloze fields, and you study it a bit, and later you remove the first cloze, the second and third will *inherit the scheduling of the first and second fields*, and the third field will be an empty card (which you clean up with "Check database..." in Anki).  So the scheduling can technically become off.
 
 Config variables:
 
@@ -81,12 +100,3 @@ Config variables:
 - =inline-anki-emphasis-type=
   - Default =(bold)=.  Can be set to either =(italic)= or =(underline)= instead.
 
-* Lighter than air
-
-You know the lighter-than-air feeling when you finally have a reasonable way of doing things?
-
-An example the target crowd will recognize...  before I got into Org-roam/zettelkasten, I had a history of leaving notes all over the filesystem and forgetting about them.  Time and again I got the sense I need some sort of personal wiki system, but trying to implement it in various ways such as with Org radio target links, never was good enough.
-
-Once I got over the hump with Org-roam, I built enough critical mass that now it's my only system, and it cuts down on forgetting and duplicating, and I'm never at a loss as to where to write anything.  It unlocked a new stage of life; I leveled up!
-
-I think of inline-anki the same way.  I couldn't stick with spaced-repetition software, but all along the missing link for me was logistical.  Why *shouldn't* it be as easy as typing "(anki)" next to *any sort of paragraph anywhere on your filesystem!?*  There's no such thing as a trivial inconvenience.
