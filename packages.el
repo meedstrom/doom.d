@@ -30,6 +30,7 @@
 (package! copy-as-format)
 (package! smart-tabs-mode)
 (package! anki-editor)
+(package! org-anki)
 (package! app-launcher :recipe (:host github :repo "SebastienWae/app-launcher"))
 (package! artbollocks-mode)
 (package! backup-walker)
@@ -56,7 +57,6 @@
 (package! esup)
 (package! asyncloop :recipe (:host github :repo "meedstrom/asyncloop"))
 (package! deianira :recipe (:host github :repo "meedstrom/deianira"))
-(package! kbd-mode :recipe (:host github :repo "kmonad/kbd-mode"))
 (package! exwm)
 (package! exwm-edit)
 (package! exwm-firefox :recipe (:host github :repo "ieure/exwm-firefox"))
@@ -80,11 +80,11 @@
 (package! nov)
 (package! objed) ;; for objed-ipipe
 (package! org-drill)
-(package! org-recent-headings)
-(package! org-roam-bibtex) ;; yes still relevant for org 9.5
-(package! org-roam-ui)
-(package! org-transclusion)
-(package! org-tanglesync)
+;; (package! org-recent-headings)
+;; (package! org-roam-bibtex) ;; yes still relevant for org 9.5
+;; (package! org-roam-ui)
+;; (package! org-transclusion)
+;; (package! org-tanglesync)
 (package! peep-dired)
 (package! prism)
 (package! shelldon)

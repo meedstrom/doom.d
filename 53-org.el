@@ -100,7 +100,14 @@ per-buffer."
 (fset 'doom-docs--toggle-read-only-h #'ignore)
 
 (after! org
-  (org-recent-headings-mode)
+  (use-package! org-recent-headings :disabled
+    :config
+    (org-recent-headings-mode))
+  ;; temporarily not using doom's org
+  (use-package! org-indent
+    :config
+    (add-hook 'org-mode-hook #'org-indent-mode)
+    )
   ;; (setopt org-startup-folded 'fold)
   ;; Undoom. Having exactly two states makes for comfy toggling.
   (setopt org-todo-keywords '((sequence "TODO" "DONE"))))
