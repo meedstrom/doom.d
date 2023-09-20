@@ -4,14 +4,14 @@
        ;; (helm +childframe +icons)
        (vertico +icons)
        ;; (vertico +childframe +icons)
-       company
+       ;; company
 
        :ui
        doom
        unicode
        (emoji +unicode)
        ;; doom-dashboard
-       modeline
+       ;; modeline
        hl-todo
        ;; (ligatures +extra)
        ligatures
@@ -34,7 +34,7 @@
        :term
        vterm
        ;; eshell
-       shell
+       ;; shell
        term
 
        :checkers
@@ -43,13 +43,12 @@
        ;; spell
 
        :lang
-       data
        emacs-lisp
+       data
        ess
-       (go +lsp +tree-sitter)
-       web
        nix
-       ;; (web +tree-sitter)
+       (go +lsp +tree-sitter)
+       (web +tree-sitter +lsp)
        ;; javascript
        (javascript +lsp +tree-sitter)   ;; tsserver freezes Emacs, maybe edit tide-server-max-response-length
        rust
@@ -65,15 +64,14 @@
        mu4e
 
        :app
-       calendar
-       (rss +org)
+       ;; (rss +org)
        ;; everywhere ;; try this if im on neither exwm nor wayland
 
        :tools
-       biblio
+       ;; biblio
        (magit +forge)
-       (lsp +eglot)
-       ;; lsp
+       ;; (lsp +eglot)
+       lsp
        tree-sitter
        pdf
 

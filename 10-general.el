@@ -15,6 +15,7 @@
 ;; along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 (add-load-path! "/home/kept/emacs/key-seqs-finder/"
+                "/home/kept/emacs/inline-anki/"
                 "/home/kept/emacs/twee-mode/")
 
 ;; Backups have saved my skin in 2015, 2016, 2018, and 2020.
