@@ -13,6 +13,7 @@
 (package! persist)
 (package! bui)
 (package! ts)
+(package! flycheck-package)
 (package! package-lint)
 (package! buttercup)
 (package! nameless)
@@ -57,6 +58,7 @@
 (package! esup)
 (package! asyncloop :recipe (:host github :repo "meedstrom/asyncloop"))
 (package! deianira :recipe (:host github :repo "meedstrom/deianira"))
+(package! inline-anki :recipe (:host github :repo "meedstrom/inline-anki"))
 (package! exwm)
 (package! exwm-edit)
 (package! exwm-firefox :recipe (:host github :repo "ieure/exwm-firefox"))
@@ -64,7 +66,7 @@
 (package! gif-screencast)
 (package! git-messenger)
 (package! goggles)
-(package! golden-ratio)
+;; (package! golden-ratio)
 (package! hacker-typer)
 ;; (package! helm-selector)
 (package! help-find)
@@ -73,11 +75,11 @@
 (package! iscroll)
 (package! key-assist)
 (package! key-chord)
-(package! keyfreq)
+;; (package! keyfreq)
 (package! mediawiki)
 (package! mw-thesaurus)
-(package! ox-rss)
-(package! nov)
+;; (package! ox-rss)
+;; (package! nov)
 (package! objed) ;; for objed-ipipe
 (package! org-drill)
 ;; (package! org-recent-headings)
@@ -101,7 +103,7 @@
 ;; (package! which-key :ignore t)
 ;; (package! github-review :ignore t) ;; causes errors
 
-(package! org-roam)
+;; (package! org-roam)
 
 ;; (package! popper)
 ;; (package! beancount :recipe (:host github :repo "cnsunyour/beancount.el"))

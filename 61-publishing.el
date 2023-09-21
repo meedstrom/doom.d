@@ -34,12 +34,11 @@
   (require 'ox-publish)
   (switch-to-buffer "*Messages*") ;; for watching it work
   (delete-other-windows)
-  (load-theme 'adwaita t) ;; to show me this is not a normal emacs
   (cd "/home/kept/roam") ;; for me to quick-search when an id fails to resolve
-  (org-publish "my-react-blog" (>= prefix 4)))
+  (org-publish "my-slipbox-blog" (>= prefix 4)))
 
 (setopt org-publish-project-alist
-        `(("my-react-blog"
+        `(("my-slipbox-blog"
            :base-directory "/tmp/roam/"
            :publishing-directory "/home/kept/pub/posts/"
            :publishing-function my-publish-to-blog
@@ -171,7 +170,7 @@ filenames, and the `org-id-locations' table modified likewise, so
 that org-id links will resolve correctly."
   (setopt org-mode-hook nil) ;; speeds up publishing
   (setopt org-export-use-babel nil)
-  (setopt org-export-with-drawers '(not "LOGBOOK" "logbook" "NOEXPORT" "noexport"))
+  (setopt org-export-with-drawers '(not "logbook" "noexport")) ;; case-insensitive btw
   (setopt org-export-with-broken-links nil) ;; links would disappear, error instead
   (setopt org-export-with-smart-quotes nil)
   (setopt org-html-checkbox-type 'unicode)
@@ -181,26 +180,14 @@ that org-id links will resolve correctly."
   ;; (setopt org-html-extension "")
    ;; Love it, but doesn't apply to every datestamp on the site; inconsistent
   (setopt org-display-custom-times nil)
+  (toggle-debug-on-error)
+  (toggle-debug-on-quit)
 
-  ;; Syntax-highlight source blocks in a way that looks OK on the web
-
-  ;; I'm starting to realize some facts about themes.
-  ;; - if you have a high-DPI monitor, no reason not to italicize comments
-  ;; - with prism-mode, none of the faces should be grey
-  ;; - with prism-mode, none of the faces should be much darker than the rest
-  ;;   
-
-
-  ;; Good WITH prism-desaturations
-  ;; (load-theme 'monokai-pro)
-  ;; (load-theme 'doom-storage-tube)
-
-  ;; Good sans prism-desaturations
-  ;; (load-theme 'Iosvkem)
-  ;; (load-theme 'doom-solarized-dark-high-contrast)
+  ;; Switch theme for 2 reasons
+  ;; 1. Show me that this is not a normal Emacs
+  ;; 2. Syntax-highlight source blocks in a way that looks OK on the web
   (load-theme 'doom-rouge)
-
-  (add-hook 'prog-mode-hook #'prism-mode)
+  (fset 'rainbow-delimiters-mode #'prism-mode)
 
   ;; Ensure that this subordinate emacs syncs nothing to disk
   (cancel-timer my-state-sync-timer)
@@ -209,7 +196,7 @@ that org-id links will resolve correctly."
   (setopt org-roam-db-location "/tmp/org-roam.db")
   (org-roam-db-autosync-mode 0)
 
-  ;; Duplicate the files to /tmp to work from there
+  ;; Copy the files to /tmp to work from there
   (shell-command "rm -rf /tmp/roam/")
   (copy-directory "/home/kept/roam/" "/tmp/" t)
   (shell-command "rm -rf /tmp/roam/daily/") ;; will put them back in later
@@ -242,7 +229,8 @@ that org-id links will resolve correctly."
         (mkdir compact-id)
         (rename-file path (concat compact-id "/"))))
 
-  ;; Tell `org-id-locations' and the org-roam DB about the duplicate directory.
+  ;; Tell `org-id-locations' and the org-roam DB about the new directory.
+  (require 'org-archive) ;; workaround upstream bug that calls `org-add-archive-files' before it's loaded
   (setopt org-roam-directory "/tmp/roam/")
   (setopt org-agenda-files '("/tmp/roam/"))
   (unless my-publish-ran-already
@@ -252,17 +240,15 @@ that org-id links will resolve correctly."
   (fset 'org-id-update-id-locations #'ignore) ;; stop triggering during publish
   )
 
+;; FIXME
 (defun my-strip-id-from-link-if-file-level (link)
   (cl-assert (stringp link))
-  (if-let* ((hash-char (string-search "#ID-" link))
-            (org-id-found (with-timeout (10 (error "Org-id took too long"))
-                            (org-id-find (substring link (+ 4 hash-char)))))
+  (if-let* ((hash-pos (string-search "#ID-" link))
+            ;; Freezes forever at 100% CPU
+            (org-id-found (org-id-find (substring link (+ 4 hash-pos))))
             (file-level? (= (cdr org-id-found) 1)))
-      (substring link 0 hash-char)
+      (substring link 0 hash-pos)
     link))
-
-;; (my-remove-org-id-in-link-maybe "sdfsdf#ID-f8c22bdf-ff89-4a67-b9a9-261fbd49a4ab")
-;; (my-remove-org-id-in-link-maybe "sdfsdf#ID-edb732d1-cc3b-47d0-8097-4c06bb99211a")
 
 ;; Struggled so long looking for a hook that would work like the old
 ;; before-export-hook.  Let this be a lesson: the Emacs hook system exists to
@@ -378,13 +364,14 @@ that org-id links will resolve correctly."
             (while (re-search-forward "<a .*?href=\"" nil t)
               ;; From React Router's perspective, the visitor is not in a
               ;; subdir, so get the hrefs to agree with that idea
+              ;; NOTE: Breaks Svelte's router
               (when (looking-at (rx (literal "../")))
                (replace-match ""))
               ;; REVIEW: Should remove the lengthy hash-part of the link
               ;;         (i.e. the bit after the # character in LINK#ORG-ID) if
               ;;         the org-id points to a file-level id anyway
-              (re-search-forward (rx (* (not "\""))))
-              (replace-match (my-strip-id-from-link-if-file-level (match-string 0)))
+              ;; (re-search-forward (rx (* (not "\""))))
+              ;; (replace-match (my-strip-id-from-link-if-file-level (match-string 0)))
               )
 
             ;; Remove in-document divs since they mess up the look of Bulma

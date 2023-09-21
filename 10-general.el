@@ -85,22 +85,38 @@
 ;; -----------------------------------------------------------------------------
 
 
-(setq doom-theme 'doom-pine)
+;; (setq doom-theme 'doom-pine)
 ;; (setq doom-theme 'doom-one)
 ;; (setq doom-theme 'doom-tomorrow-night)
 ;; (setq doom-theme 'doom-dark+)
 ;; (setq doom-theme 'doom-manegarm)
 ;; (setq doom-theme 'doom-storage-tube-amber-2)
-;; (setq doom-theme 'doom-Iosvkem)
+(setq doom-theme 'doom-Iosvkem)
 ;; (setq doom-theme 'doom-zenburn)
 ;; (setq doom-theme 'doom-outrun-electric)
 ;; (setq doom-theme 'doom-badger)
 ;; (setq doom-theme 'doom-rouge)
 ;; (setq doom-theme 'doom-dracula)
-(setq doom-theme 'modus-vivendi)
 
-;; Recommended for a modus theme
+;; I'm starting to realize some facts about themes.
+;; - if you have a high-DPI monitor, may as well italicize comments
+;;   - but if you see a theme with italic comments, it's likely this theme
+;;     designer also saw fit to italicize other things & I don't like that
+;; - with prism-mode, none of the faces should be grey
+;; - with prism-mode, none of the faces should be much darker than the rest
+
+;; Good WITH prism-desaturations
+;; (load-theme 'monokai-pro)
+;; (load-theme 'doom-storage-tube)
+
+;; Good sans prism-desaturations
+;; (load-theme 'Iosvkem)
+;; (load-theme 'doom-solarized-dark-high-contrast)
+;; (load-theme 'doom-rouge)
+
+(setq doom-theme 'modus-vivendi)
 (general-after-init
+  ;; Recommended for a modus theme
   (prism-set-colors
     :desaturations (cl-loop for i from 0 below 16 collect (* i 2.5))
     :lightens (cl-loop for i from 0 below 16 collect (* i 2.5))

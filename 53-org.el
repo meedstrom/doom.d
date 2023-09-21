@@ -19,6 +19,14 @@
 ;; `org-roam-node-find' is super slow now, and it's 75% GC
 (setopt gcmh-high-cons-threshold (* 1024 1024 100))
 
+(setopt org-emphasis-alist '(("*" bold)
+                           ("/" italic)
+                           ("_" underline)
+                           ("=" org-verbatim verbatim)
+                           ("~" org-code verbatim)
+                           ("+" (:strike-through t))
+                           ("&" bold)))
+
 (after! ox-latex
   (add-to-list 'org-latex-classes
                '("letter"

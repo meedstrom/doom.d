@@ -21,7 +21,7 @@
        ;; (emoji +github +unicode)
 
        :editor
-       fold
+       ;; fold
        multiple-cursors
        ;; snippets
        ;; format ;; check if the upstream started using apheleia
@@ -31,15 +31,15 @@
        dired
        vc
 
-       :term
-       vterm
+       ;; :term
+       ;; vterm
        ;; eshell
        ;; shell
-       term
+       ;; term
 
-       :checkers
+       ;; :checkers
        ;; syntax
-       grammar
+       ;; grammar
        ;; spell
 
        :lang
@@ -49,13 +49,14 @@
        nix
        (go +tree-sitter +lsp)
        (web +tree-sitter +lsp)
-       ;; javascript
        (javascript +tree-sitter +lsp)   ;; tsserver freezes Emacs, maybe edit tide-server-max-response-length
+       ;; javascript
        rust
        json
        ledger
        markdown
        ;; (org +dragndrop +pomodoro +roam2 +pretty)
+       (org +roam2)
        (scheme +guile)
        (sh +fish)
        yaml
@@ -63,18 +64,13 @@
        :email
        mu4e
 
-       :app
-       ;; (rss +org)
-       ;; everywhere ;; try this if im on neither exwm nor wayland
-
        :tools
        ;; biblio
        (magit +forge)
-       ;; (lsp +eglot)
-       lsp
+       (lsp +eglot)
+       ;; lsp
        tree-sitter
        pdf
 
        :config
-       (default +bindings +smartparens)
-       )
+       (default +bindings +smartparens))
