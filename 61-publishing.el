@@ -182,6 +182,26 @@ that org-id links will resolve correctly."
    ;; Love it, but doesn't apply to every datestamp on the site; inconsistent
   (setopt org-display-custom-times nil)
 
+  ;; Syntax-highlight source blocks in a way that looks OK on the web
+
+  ;; I'm starting to realize some facts about themes.
+  ;; - if you have a high-DPI monitor, no reason not to italicize comments
+  ;; - with prism-mode, none of the faces should be grey
+  ;; - with prism-mode, none of the faces should be much darker than the rest
+  ;;   
+
+
+  ;; Good WITH prism-desaturations
+  ;; (load-theme 'monokai-pro)
+  ;; (load-theme 'doom-storage-tube)
+
+  ;; Good sans prism-desaturations
+  ;; (load-theme 'Iosvkem)
+  ;; (load-theme 'doom-solarized-dark-high-contrast)
+  (load-theme 'doom-rouge)
+
+  (add-hook 'prog-mode-hook #'prism-mode)
+
   ;; Ensure that this subordinate emacs syncs nothing to disk
   (cancel-timer my-state-sync-timer)
   (setopt kill-emacs-hook nil)

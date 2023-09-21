@@ -203,21 +203,25 @@
 
 ;; try to fix JS/TS buffers freezing.  Seems the issue is that prism-mode collides badly with RJSX mode.
 ;; (setq tide-server-max-response-length )
-(after! rjsx-mode
-  (remove-hook 'rjsx-mode-hook #'rainbow-delimiters-mode))
+;; (after! rjsx-mode
+  ;; (remove-hook 'rjsx-mode-hook #'rainbow-delimiters-mode))
 
 (after! typescript-mode
   ;; NOTE: typescript-tsx-mode is actually defined in ~/doomemacs/modules/lang/javascript/config.el
   (remove-hook 'typescript-tsx-mode-hook #'rainbow-delimiters-mode))
 
-;; (use-package! prism
-;;   :init
-;;   (setopt prism-parens t)
-;;   (setopt prism-desaturations '(0 20 60))
-;;   :config
-;;   ;; Replace rainbow-delimiters (it's on a dozen hooks in Doom so this is easiest).
-;;   (fset 'rainbow-delimiters-mode #'prism-mode)
-;;   (add-hook 'doom-load-theme-hook #'prism-set-colors))
+(use-package! prism
+  :config
+  (setopt prism-comments nil)
+  ;; The default (40 50 60) is disorienting when turning prism on and off.
+  (setopt prism-desaturations '(0 20 60))
+  ;; note, another odd default is that (in lisp) the parens enclosing a sexp are
+  ;; a diff color from the symbols inside -- people arent used to this either
+
+  ;; Replace rainbow-delimiters (it's on a dozen hooks in Doom, so this is easiest).
+  (fset 'rainbow-delimiters-mode #'prism-mode)
+  ;; (add-hook 'doom-load-theme-hook #'prism-set-colors)
+  )
 
 (use-package! elfeed
   :defer

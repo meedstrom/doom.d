@@ -96,7 +96,31 @@
 ;; (setq doom-theme 'doom-outrun-electric)
 ;; (setq doom-theme 'doom-badger)
 ;; (setq doom-theme 'doom-rouge)
-(setq doom-theme 'doom-dracula)
+;; (setq doom-theme 'doom-dracula)
+(setq doom-theme 'modus-vivendi)
+
+;; Recommended for a modus theme
+(general-after-init
+  (prism-set-colors
+    :desaturations (cl-loop for i from 0 below 16 collect (* i 2.5))
+    :lightens (cl-loop for i from 0 below 16 collect (* i 2.5))
+    :colors (modus-themes-with-colors
+              (list fg-main
+                    magenta
+                    cyan-cooler
+                    magenta-cooler
+                    blue
+                    magenta-warmer
+                    cyan-warmer
+                    red-cooler
+                    green
+                    fg-main
+                    cyan
+                    yellow
+                    blue-warmer
+                    red-warmer
+                    green-cooler
+                    yellow-faint))))
 
 
 ;;; Debugging

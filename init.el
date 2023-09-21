@@ -47,10 +47,10 @@
        data
        ess
        nix
-       (go +lsp +tree-sitter)
+       (go +tree-sitter +lsp)
        (web +tree-sitter +lsp)
        ;; javascript
-       (javascript +lsp +tree-sitter)   ;; tsserver freezes Emacs, maybe edit tide-server-max-response-length
+       (javascript +tree-sitter +lsp)   ;; tsserver freezes Emacs, maybe edit tide-server-max-response-length
        rust
        json
        ledger
