@@ -18,8 +18,9 @@
 (require 'dash)
 (require 'f)
 
-(defvar my-outdated-tags '("partner" "friends-eyes" "therapist" "eyes-partner" "eyes-therapist" "eyes-diana" "eyes-friend"))
-(defvar my-tags-to-avoid-uploading (append my-outdated-tags '("noexport" "ARCHIVE" "private" "censor" "drill" "fc" "anki")))
+;; Keep in mind that case-fold-search t doesn't affect `equal' or `-intersection'
+(defvar my-extinct-tags '("drill"  "fc" "anki" "partner" "friends-eyes" "therapist" "eyes-partner" "eyes-therapist" "eyes-diana" "eyes-friend"))
+(defvar my-tags-to-avoid-uploading (append my-extinct-tags '("noexport" "archive" "private" "censor")))
 
 (defun my-org-file-id (file)
     (with-temp-buffer
@@ -47,8 +48,8 @@
            :body-only t
            :with-toc nil
            :section-numbers nil
-           ;; NOTE: this works only for subtrees, so we also check at file-level
-           ;; in `my-publish-to-blog'.
+           ;; NOTE: this works only for subtrees, so we also check file-level
+           ;; tag in `my-publish-to-blog'.
            :exclude-tags ,my-tags-to-avoid-uploading)))
 
 ;; Give h2...h6 headings an ID from the source org-id, if it has one,
@@ -170,7 +171,7 @@ filenames, and the `org-id-locations' table modified likewise, so
 that org-id links will resolve correctly."
   (setopt org-mode-hook nil) ;; speeds up publishing
   (setopt org-export-use-babel nil)
-  (setopt org-export-with-drawers '(not "logbook" "noexport")) ;; case-insensitive btw
+  (setopt org-export-with-drawers '(not "logbook" "noexport")) ;; case-insensitive
   (setopt org-export-with-broken-links nil) ;; links would disappear, error instead
   (setopt org-export-with-smart-quotes nil)
   (setopt org-html-checkbox-type 'unicode)
@@ -186,7 +187,8 @@ that org-id links will resolve correctly."
   ;; Switch theme for 2 reasons
   ;; 1. Show me that this is not a normal Emacs
   ;; 2. Syntax-highlight source blocks in a way that looks OK on the web
-  (load-theme 'doom-rouge)
+  ;; (load-theme 'doom-rouge)
+  (load-theme 'doom-monokai-machine)
   (fset 'rainbow-delimiters-mode #'prism-mode)
 
   ;; Ensure that this subordinate emacs syncs nothing to disk
@@ -220,17 +222,11 @@ that org-id links will resolve correctly."
    for path in (directory-files "/tmp/roam" t "\\.org$")
    as uuid = (my-org-file-id path)
    when uuid
-   do (let* ((hex (upcase (string-replace "-" "" uuid)))
-             (base64 (shell-command-to-string
-                      (concat "echo "
-                              hex
-                              " | basenc -d --base16 | basenc --base64url")))
-             (compact-id (substring base64 0 7)))
-        (mkdir compact-id)
-        (rename-file path (concat compact-id "/"))))
+   do (let ((permalink (substring (my-uuid-to-base62 path 7) -7)))
+        (mkdir permalink)
+        (rename-file path (concat permalink "/"))))
 
   ;; Tell `org-id-locations' and the org-roam DB about the new directory.
-  (require 'org-archive) ;; workaround upstream bug that calls `org-add-archive-files' before it's loaded
   (setopt org-roam-directory "/tmp/roam/")
   (setopt org-agenda-files '("/tmp/roam/"))
   (unless my-publish-ran-already
@@ -240,7 +236,8 @@ that org-id links will resolve correctly."
   (fset 'org-id-update-id-locations #'ignore) ;; stop triggering during publish
   )
 
-;; FIXME
+;; FIXME there's actually no need to visit any file.  just convert the hash part
+;; to base62 as above, then check if the hash matches the permalink!
 (defun my-strip-id-from-link-if-file-level (link)
   (cl-assert (stringp link))
   (if-let* ((hash-pos (string-search "#ID-" link))
@@ -277,12 +274,12 @@ that org-id links will resolve correctly."
         (warn "TITLE MISSING: %s" filename))
        ((not created)
         (warn "DATE MISSING: %s" filename))
-       ((-intersection tags my-tags-to-avoid-uploading)
-        (message "Found exclude-tag, excluding: %s" filename))
-       ((-intersection tags my-outdated-tags)
-        (warn "OUTDATED TAG FOUND: %s" filename))
        ((not (org-id-get))
         (warn "ID MISSING: %s" filename))
+       ((-intersection tags my-extinct-tags #'string-equal-ignore-case)
+        (warn "OUTDATED TAG FOUND: %s" filename))
+       ((-intersection tags my-tags-to-avoid-uploading #'string-equal-ignore-case)
+        (message "Found exclude-tag, excluding: %s" filename))
 
        ;; OK, export
        (t
@@ -331,19 +328,23 @@ that org-id links will resolve correctly."
                (data-for-json nil))
           (with-temp-buffer
             (goto-char (point-min))
+
+            ;; This special tag means wrap in special div for special styling
+            ;; (only applies to a few posts)
             (when (member "logseq" tags)
               (insert "<div class=\"logseq\">"))
+
             (insert "<h1 id=\"title\">" title "</h1>")
 
-            ;; Insert the roam_refs before the post body
+            ;; Insert roam_refs before the post body
             (when refs
               (insert "<p>Ref: "  )
               (dolist (ref (split-string refs))
-                (setq ref (string-replace "\"" "" ref)) ;; just in case I wrapped it in quotes
+                (setq ref (string-replace "\"" "" ref)) ;; in case I wrapped it in quotes
                 (insert " <a href=\"" ref "f\">" (replace-regexp-in-string "http.?://" "" ref) "</a> "))
               (insert "</p>"))
 
-            ;; Insert all the HTML that Org generated
+            ;; Insert the post body: the HTML produced by Org-export
             (insert-file-contents output-path)
 
             ;; Close the tag we may have added earlier
@@ -360,6 +361,7 @@ that org-id links will resolve correctly."
               (search-forward "</div>")
               (setq content-start (point)))
 
+            ;; Manipulate links
             (goto-char content-start)
             (while (re-search-forward "<a .*?href=\"" nil t)
               ;; From React Router's perspective, the visitor is not in a
@@ -415,6 +417,7 @@ that org-id links will resolve correctly."
                 (insert "</p>")))
 
             ;; Count # of backlinks
+            ;; NOTE: I'm no longer using this data
             (goto-char (point-max))
             (when (search-backward ">What links here</" nil t)
               (setq backlinks (cl-loop while (search-forward "<li>" nil t)

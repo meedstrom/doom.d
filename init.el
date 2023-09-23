@@ -56,7 +56,7 @@
        ledger
        markdown
        ;; (org +dragndrop +pomodoro +roam2 +pretty)
-       (org +roam2)
+       ;; (org +roam2)
        (scheme +guile)
        (sh +fish)
        yaml

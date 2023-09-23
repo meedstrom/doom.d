@@ -30,8 +30,8 @@
 (package! apheleia)
 (package! copy-as-format)
 (package! smart-tabs-mode)
-(package! anki-editor)
-(package! org-anki)
+;; (package! anki-editor)
+;; (package! org-anki)
 (package! app-launcher :recipe (:host github :repo "SebastienWae/app-launcher"))
 (package! artbollocks-mode)
 (package! backup-walker)
@@ -85,7 +85,7 @@
 ;; (package! org-recent-headings)
 ;; (package! org-roam-bibtex) ;; yes still relevant for org 9.5
 ;; (package! org-roam-ui)
-;; (package! org-transclusion)
+(package! org-transclusion)
 ;; (package! org-tanglesync)
 (package! peep-dired)
 (package! prism)
@@ -103,7 +103,7 @@
 ;; (package! which-key :ignore t)
 ;; (package! github-review :ignore t) ;; causes errors
 
-;; (package! org-roam)
+(package! org-roam)
 
 ;; (package! popper)
 ;; (package! beancount :recipe (:host github :repo "cnsunyour/beancount.el"))
@@ -142,17 +142,17 @@
            :repo "meedstrom/eva"
            :files (:defaults "assets" "renv" "*.R" "*.gnuplot")))
 
-(package! taxy
-  :recipe (:host github
-           :repo "alphapapa/taxy.el"
-           :files (:defaults "deffy.el" "*.el")))
+;(package! taxy
+;  :recipe (:host github
+;           :repo "alphapapa/taxy.el"
+;           :files (:defaults "deffy.el" "*.el")))
 
 ;; Not tried out
 
 ;; (package! org-timeline)
 ;; (package! embrace)
 ;; (package! pulseaudio-control)
-(package! delve :recipe (:host github :repo "publicimageltd/delve"))
+;; (package! delve :recipe (:host github :repo "publicimageltd/delve"))
 ;; (package! hyperbole)
 ;; (package! suggest)
 ;; (package! sly)
@@ -166,4 +166,4 @@
 ;; (package! sx)
 
 ;; another alternative to feebleline!
-(package! awesome-tray :recipe (:host github :repo "manateelazycat/awesome-tray"))
+;; (package! awesome-tray :recipe (:host github :repo "manateelazycat/awesome-tray"))

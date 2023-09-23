@@ -16,16 +16,11 @@
 
 (require 'my-lib-external)
 
-;; `org-roam-node-find' is super slow now, and it's 75% GC
-(setopt gcmh-high-cons-threshold (* 1024 1024 100))
+(require 'org-archive) ;; workaround upstream bug that calls `org-add-archive-files' before it's loaded
 
-(setopt org-emphasis-alist '(("*" bold)
-                           ("/" italic)
-                           ("_" underline)
-                           ("=" org-verbatim verbatim)
-                           ("~" org-code verbatim)
-                           ("+" (:strike-through t))
-                           ("&" bold)))
+;; `org-roam-node-find' is super slow now, and even with Doom's high GC limit,
+;; 75% of the time is spent on GC.  I feel like something is broken.
+(setopt gcmh-high-cons-threshold (* 1024 1024 100)) ;; 100 MiB
 
 (after! ox-latex
   (add-to-list 'org-latex-classes

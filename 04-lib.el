@@ -29,6 +29,38 @@
 (autoload #'objed-ipipe "objed")
 (autoload #'piper "piper")
 
+(defun my-uuid-to-base62 (uuid &optional length)
+  (my-int-to-base62 (string-to-number (string-replace "-" "" uuid) 16) length))
+
+(defun my-int-to-base62 (integer &optional length)
+  "Convert an INTEGER to a base-62 number represented as a string.
+The returned string is padded with leading zeros to LENGTH if necessary."
+  (let ((s "")
+        (i integer))
+    (while (> i 0)
+      (setq s (concat (char-to-string
+                       (my-int-to-base62-one-digit (mod i 62))) s)
+            i (/ i 62)))
+    (setq length (max 1 (or length 1)))
+    (if (< (length s) length)
+        (setq s (concat (make-string (- length (length s)) ?0) s)))
+    s))
+
+(defun my-int-to-base62-one-digit (integer)
+  "Convert INTEGER between 0 and 61 into a single character 0..9, A..Z, a..z."
+  ;; Uses chars ?0, ?a, ?A off the ASCII table.  For reference,
+  ;; 0-9 has codes 48 thru 57
+  ;; A-Z has codes 65 thru 90
+  ;; a-z has codes 97 thru 122
+  ;; It's important to realize there are gaps between the character sets.
+  ;; Why compose chars to construct the final base62 string?  It's either that
+  ;; or you make a lookup string "0123456789abcdefg...", and chars are faster.
+  (cond
+   ((< integer 10) (+ ?0 integer))
+   ((< integer 36) (+ ?a integer -10))
+   ((< integer 61) (+ ?A integer -36))
+   (t (error "Larger than 61"))))
+
 (defun my-all-recursive-subdirs (dir &optional exclude-dotfiles)
   (seq-filter #'file-directory-p
               (directory-files-recursively dir
@@ -483,13 +515,18 @@ To start using it, evaluate the following.
 
 (defun my-tab-command ()
   (interactive)
-  (call-interactively (if (equal (point)
-                                 (save-mark-and-excursion
-                                   (forward-char)
-                                   (beginning-of-defun)
-                                   (point)))
-                          #'+fold/toggle
-                        #'indent-for-tab-command)))
+
+      (call-interactively
+       (if (fboundp #'fold/toggle)
+           (if (equal (point)
+                                     (save-mark-and-excursion
+                                       (forward-char)
+                                       (beginning-of-defun)
+                                       (point)))
+                              #'+fold/toggle
+                            #'indent-for-tab-command)
+         #'indent-for-tab-command)
+    ))
 
 (defun my-shell-command-replace-region ()
   "Run `shell-command-on-region' as if you had supplied a prefix
