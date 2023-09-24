@@ -16,7 +16,8 @@
 
 (require 'my-lib-external)
 
-(require 'org-archive) ;; workaround upstream bug that calls `org-add-archive-files' before it's loaded
+(after! org
+  (require 'org-archive)) ;; workaround upstream bug that calls `org-add-archive-files' before it's loaded
 
 ;; `org-roam-node-find' is super slow now, and even with Doom's high GC limit,
 ;; 75% of the time is spent on GC.  I feel like something is broken.

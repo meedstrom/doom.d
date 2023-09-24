@@ -172,14 +172,14 @@ that org-id links will resolve correctly."
   (setopt org-mode-hook nil) ;; speeds up publishing
   (setopt org-export-use-babel nil)
   (setopt org-export-with-drawers '(not "logbook" "noexport")) ;; case-insensitive
-  (setopt org-export-with-broken-links nil) ;; links would disappear, error instead
+  (setopt org-export-with-broken-links nil) ;; links would disappear quietly
   (setopt org-export-with-smart-quotes nil)
   (setopt org-html-checkbox-type 'unicode)
   (setopt org-html-html5-fancy t)
   (setopt case-fold-search t) ;; for all the searches in `my-publish-to-blog'
   (setopt org-inhibit-startup t) ;; from org-publish-org-to
   ;; (setopt org-html-extension "")
-   ;; Love it, but doesn't apply to every datestamp on the site; inconsistent
+  ;; Love it, but won't apply to every datestamp on the site
   (setopt org-display-custom-times nil)
   (toggle-debug-on-error)
   (toggle-debug-on-quit)
@@ -236,15 +236,18 @@ that org-id links will resolve correctly."
   (fset 'org-id-update-id-locations #'ignore) ;; stop triggering during publish
   )
 
-;; FIXME there's actually no need to visit any file.  just convert the hash part
-;; to base62 as above, then check if the hash matches the permalink!
-(defun my-strip-id-from-link-if-file-level (link)
+;; test: (my-strip-id-hash-from-link-if-file-level "0vwRV27mRVLFd6yoyUM0PI/some-slug#ID-10b59a2a-bf95-4f20-9b4f-f27e23e51f46")
+;; test: (my-strip-id-hash-from-link-if-file-level "../0vwRV27mRVLFd6yoyUM0PI/some-slug#ID-10b59a2a-bf95-4f20-9b4f-f27e23e51f46")
+(defvar my-id-regexp (rx (? "/") (group (= 22 alnum)) (? "/")))
+(defun my-strip-id-hash-from-link-if-file-level (link)
   (cl-assert (stringp link))
   (if-let* ((hash-pos (string-search "#ID-" link))
-            ;; Freezes forever at 100% CPU
-            (org-id-found (org-id-find (substring link (+ 4 hash-pos))))
-            (file-level? (= (cdr org-id-found) 1)))
+            (hash-as-permalink (my-uuid-to-base62 (substring link (+ 4 hash-pos)) 22))
+            (actual-permalink (string-match my-id-regexp link))
+            (same (equal hash-as-permalink (match-string 1 link))))
+      ;; Cut off the hash
       (substring link 0 hash-pos)
+    ;; Keep the hash
     link))
 
 ;; Struggled so long looking for a hook that would work like the old
@@ -310,7 +313,6 @@ that org-id links will resolve correctly."
                             (if (re-search-forward "^[^#:\n]" nil t)
                                 (count-words (1- (point)) (point-max))
                               0)))
-               (backlinks 0)
                (links 0)
                (subheading-refs (save-excursion
                                   (let (alist)
@@ -372,9 +374,29 @@ that org-id links will resolve correctly."
               ;; REVIEW: Should remove the lengthy hash-part of the link
               ;;         (i.e. the bit after the # character in LINK#ORG-ID) if
               ;;         the org-id points to a file-level id anyway
-              ;; (re-search-forward (rx (* (not "\""))))
-              ;; (replace-match (my-strip-id-from-link-if-file-level (match-string 0)))
-              )
+              (re-search-forward (rx (* (not "\""))))
+              (replace-match (my-strip-id-hash-from-link-if-file-level (match-string 0))))
+
+            ;; TODO: Implement collapsible sections.  We'll probably have to
+            ;; undo the subsequent removal of divs.  The method I extrapolate
+            ;; from
+            ;; https://www.digitalocean.com/community/tutorials/css-collapsible
+            ;; as follows: Add an input type='checkbox' element before the
+            ;; heading.  Org already wraps the following content in a div, so
+            ;; CSS can just find the div that follows a checkbox and heading.
+            ;; NOTE: Interweave.js and such safety HTML filterers will remove
+            ;; the <input> element!
+            (goto-char content-start)
+            (let ((n 0))
+              (while (re-search-forward "=\"outline-[[:digit:]]\"" nil t)
+                (let ((id (concat "collapse-" (number-to-string (cl-incf n))))))
+                (search-backward "<")
+                (insert "<input id=\"" id "\" class=\"collapser\" type=\"checkbox\">")
+                (search-forward ">")
+                (insert "<label for=\" id\">")
+                (search-forward "</h")
+                (goto-char (match-beginning 0))
+                (insert "</label>")))
 
             ;; Remove in-document divs since they mess up the look of Bulma
             ;; CSS.  Except for the pages where I will actually style the
@@ -402,7 +424,9 @@ that org-id links will resolve correctly."
             (while (search-forward "<table " nil t)
               (insert "class=\"is-narrow is-striped is-bordered\""))
 
-            ;; TODO: add roam refs for each subheading that has one.  How? I guess make an alist of headings and refs, then refer to that.
+            ;; REVIEW: This should add roam refs for each subheading that has one.
+            ;; How? We made an alist of headings and refs, then refer to that.
+            ;; Why? Mainly because of the lw-concept-graph post.
             (while subheading-refs
               (let* ((cell (pop subheading-refs))
                      (heading (car cell))
@@ -416,18 +440,23 @@ that org-id links will resolve correctly."
                   (insert " <a href=\"" ref "f\">" (replace-regexp-in-string "http.?://" "" ref) "</a> "))
                 (insert "</p>")))
 
-            ;; Count # of backlinks
-            ;; NOTE: I'm no longer using this data
-            (goto-char (point-max))
-            (when (search-backward ">What links here</" nil t)
-              (setq backlinks (cl-loop while (search-forward "<li>" nil t)
-                                       count t)))
-
             ;; Count # of total links (except links to external sites)
             (goto-char content-start)
             (setq links (cl-loop while (re-search-forward "<a .*?href=." nil t)
                                  unless (looking-at-p "http")
                                  count t))
+
+            ;; REVIEW: this should add 🔗links to headings that have an id
+            (goto-char content-start)
+            (while (re-search-forward (rx "<h" (group digit)) nil t)
+              (when-let ((id (save-match-data
+                               (and (search-forward "id=\"ID-" nil t)
+                                    (re-search-forward (rx (not "\"")))
+                                    (match-string 0))))
+                         (digit (match-string 1))))
+              (search-forward (concat "</h" digit ">"))
+              (goto-char (match-beginning 0))
+              (insert (concat "<a class=\"easylink\" href=\"#ID-" id "\"> 🔗</a>")))
 
             (setq data-for-json
                   `((slug . ,slug)
@@ -436,7 +465,7 @@ that org-id links will resolve correctly."
                     (created . ,created)
                     (updated . ,updated)
                     (wordcount . ,wordcount)
-                    (backlinks . ,backlinks)
+                    (backlinks . 0) ;; no longer using this data
                     (links . ,links)
                     (refs . ,refs)
                     (tags . ,tags)

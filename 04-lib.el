@@ -58,7 +58,7 @@ The returned string is padded with leading zeros to LENGTH if necessary."
   (cond
    ((< integer 10) (+ ?0 integer))
    ((< integer 36) (+ ?a integer -10))
-   ((< integer 61) (+ ?A integer -36))
+   ((< integer 62) (+ ?A integer -36))
    (t (error "Larger than 61"))))
 
 (defun my-all-recursive-subdirs (dir &optional exclude-dotfiles)
