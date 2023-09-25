@@ -223,7 +223,7 @@
 
 ;; Emulate my Dired "b" key for going up one directory.
 (defun eshell/b (&optional _args)
-  (let ((default-directory (expand-file-name "..")))
+  (let ((default-directory (file-name-parent-directory default-directory)))
     (my-eshell-here)))
 
 ;; undoom

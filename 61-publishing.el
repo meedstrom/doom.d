@@ -22,12 +22,14 @@
 (defvar my-extinct-tags '("drill"  "fc" "anki" "partner" "friends-eyes" "therapist" "eyes-partner" "eyes-therapist" "eyes-diana" "eyes-friend"))
 (defvar my-tags-to-avoid-uploading (append my-extinct-tags '("noexport" "archive" "private" "censor")))
 
+
 (defun my-org-file-id (file)
-    (with-temp-buffer
-      (insert-file-contents-literally file)
-      (and (search-forward "#+title" nil t)
-           (search-backward ":id: " nil t)
-           (buffer-substring (+ 5 (point)) (line-end-position)))))
+  (with-temp-buffer
+    ;; faster than `org-get-id'
+    (insert-file-contents-literally file)
+    (and (search-forward "#+title" nil t)
+         (search-backward ":id: " nil t)
+         (buffer-substring (+ 5 (point)) (line-end-position)))))
 
 (defun my-publish (&optional prefix)
   "A single command I can use in a child emacs."
@@ -56,6 +58,7 @@
 ;; instead of e.g. "org953031".  That way, hash-links such as
 ;; #ID-e10bbdfe-1ffb-4c54-9228-2818afdfc5ba will make the web browser jump to
 ;; that heading.
+;; The kind of tools you get thanks to org-roam!
 (after! ox (require 'org-roam-export))
 
 (add-hook 'org-export-before-parsing-functions #'my-add-backlinks)
@@ -86,7 +89,6 @@
                     ;; "SELECT * FROM nodes n, table(n.properties) p"
                     ;; ;; " WHERE 'be3674fa-870b-4198-9688-a351eba83270' IN (SELECT id FROM properties)"
                            ;; ))
-
 
 (defun my-add-backlinks (&rest _)
   "Add a \"What links here\" subtree at the end.
@@ -122,6 +124,9 @@ will not modify the source file."
                     (replace-regexp-in-string (rx (any "[]")) "" (cdr link))
                     "]]")))))))
 
+;; cache-variable
+(defvar my-all-refs nil)
+
 (defun my-replace-web-links-with-ref-note-links (&rest _)
   "For every URL found in this page, if there exists an Org-roam
 note elsewhere with the same exact URL in its :ROAM_REFS:
@@ -135,23 +140,29 @@ my note first.
 Meant to run on `org-export-before-parsing-functions', where it
 will not modify the source file."
   (when (ignore-errors (org-roam-node-at-point))
-    (let ((all-refs (org-roam-db-query
-                     [:select [ref id title]
-                      :from refs
-                      :left-join nodes
-                      :on (= refs:node-id nodes:id)])))
-      (save-excursion
-        (while (not (equal "No further link found" (quiet! (org-next-link))))
-          (let* ((elem (org-element-context))
-                 (link (org-element-property :path elem))
-                 (ref (assoc link all-refs)))
-            (when (and ref
-                       ;; ignore if on same page
-                       (not (equal (caddr ref) (org-get-title))))
-              ;; TODO: check if the link is already an org-link with a custom
-              ;; description.  Then just modify the url part into an id link,
-              ;; don't overwrite the description also.
-              (delete-region (point) (org-element-property :end elem))
+    ;; let ((all-refs (org-roam-db-query
+    ;;                 [:select [ref id title]
+    ;;                  :from refs
+    ;;                  :left-join nodes
+    ;;                  :on (= refs:node-id nodes:id)])))
+    (save-excursion
+      (while (not (equal "No further link found" (quiet! (org-next-link))))
+        (let* ((elem (org-element-context))
+               (link (org-element-property :path elem))
+               (ref (assoc link my-all-refs))
+               (end (org-element-property :end elem)))
+          (when (and ref
+                     ;; ignore if referring to same page we're on
+                     (not (equal (caddr ref) (org-get-title))))
+            ;; REVIEW: check if the link is already an org-link with a custom
+            ;; description.  Then just modify the url part into an id link,
+            ;; don't overwrite the description also.
+            (if (search-forward "][" end t)
+                ;; has a custom description
+                (progn
+                  (delete-region (match-beginning 0) (point))
+                  (insert "[[id:" (cadr ref) "]["))
+              (delete-region (point) end)
               (insert "[[id:" (cadr ref) "]["
                       (replace-regexp-in-string (rx (any "[]")) "" (caddr ref))
                       "]]"))))))))
@@ -222,7 +233,7 @@ that org-id links will resolve correctly."
    for path in (directory-files "/tmp/roam" t "\\.org$")
    as uuid = (my-org-file-id path)
    when uuid
-   do (let ((permalink (substring (my-uuid-to-base62 path 7) -7)))
+   do (let ((permalink (substring (my-uuid-to-base62 uuid 22) -7)))
         (mkdir permalink)
         (rename-file path (concat permalink "/"))))
 
@@ -234,6 +245,12 @@ that org-id links will resolve correctly."
     (org-roam-db-sync)
     (setq my-publish-ran-already t))
   (fset 'org-id-update-id-locations #'ignore) ;; stop triggering during publish
+
+  (setq my-all-refs (org-roam-db-query
+                     [:select [ref id title]
+                      :from refs
+                      :left-join nodes
+                      :on (= refs:node-id nodes:id)]))
   )
 
 ;; test: (my-strip-id-hash-from-link-if-file-level "0vwRV27mRVLFd6yoyUM0PI/some-slug#ID-10b59a2a-bf95-4f20-9b4f-f27e23e51f46")
@@ -258,35 +275,55 @@ that org-id links will resolve correctly."
 ;; `org-publish-org-to'.
 
 (defun my-publish-to-blog (plist filename pub-dir)
-  (with-current-buffer (or (find-buffer-visiting filename)
-                           (find-file-noselect filename))
-    (goto-char (point-min))
-    (let ((title (when (search-forward "#+title: " nil t)
-                   (prog1 (buffer-substring (point) (line-end-position))
-                     (goto-char (point-min)))))
-          (created (when (search-forward "#+date: [" nil t)
-                     (prog1 (buffer-substring (point) (+ 10 (point)))
-                       (goto-char (point-min)))))
-          (tags (or (sort (org-get-tags) #'string-lessp)
-                    '(""))))
+  ;; Fast early check that avoids loading org-mode
+  (let (title id created tags)
+    (with-temp-buffer
+      (insert-file-contents-literally filename)
+      (forward-line 7)
+      (delete-region (point) (point-max)) ;; should be enough to grab the metadata
 
-      (cond
-       ;; Skip exporting if we won't use the result
+      (goto-char (point-min))
+      (setq title (when (search-forward "#+title: " nil t)
+                    (delete-horizontal-space)
+                    (buffer-substring (point) (line-end-position))))
 
-       ((not title)
-        (warn "TITLE MISSING: %s" filename))
-       ((not created)
-        (warn "DATE MISSING: %s" filename))
-       ((not (org-id-get))
-        (warn "ID MISSING: %s" filename))
-       ((-intersection tags my-extinct-tags #'string-equal-ignore-case)
-        (warn "OUTDATED TAG FOUND: %s" filename))
-       ((-intersection tags my-tags-to-avoid-uploading #'string-equal-ignore-case)
-        (message "Found exclude-tag, excluding: %s" filename))
+      (goto-char (point-min))
+      (setq id (when (search-forward ":id:")
+                 (delete-horizontal-space)
+                 (buffer-substring (point) (line-end-position))))
 
-       ;; OK, export
-       (t
+      (goto-char (point-min))
+      (setq created (when (search-forward "#+date: [" nil t)
+                      (buffer-substring (point) (+ 10 (point)))))
 
+      (goto-char (point-min))
+      (setq tags (if (search-forward "#+filetags: ")
+                     (thread-first (buffer-substring (point) (line-end-position))
+                                   (string-trim)
+                                   (string-split ":")
+                                   (sort #'string-lessp))
+                   '(""))))
+    
+    (cond
+     ;; Skip exporting if we won't use the result
+
+     ((not title)
+      (warn "TITLE MISSING: %s" filename))
+     ((not created)
+      (warn "DATE MISSING: %s" filename))
+     ((not id)
+      (warn "ID MISSING: %s" filename))
+     ((cl-intersection tags my-extinct-tags
+                       :test #'string-equal-ignore-case)
+      (warn "OUTDATED TAG FOUND: %s" filename))
+     ((cl-intersection tags my-tags-to-avoid-uploading
+                       :test #'string-equal-ignore-case)
+      (message "Found exclude-tag, excluding: %s" filename))
+
+     ;; OK, export
+     (t
+      (with-current-buffer (or (find-buffer-visiting filename)
+                               (find-file-noselect filename))
         ;; The original export-function.  Do thy magic!
         (org-publish-org-to 'html filename "" plist pub-dir)
 
@@ -300,13 +337,11 @@ that org-id links will resolve correctly."
                     ;; For dailies, the whole path is necessary
                     (concat "daily/" slug)
                   ;; For other posts, the subdir is its unique id
-                  (car (last (split-string pub-dir "/" t)))
-                  ;; (file-name-parent-directory output-path)
-                  ))
+                  (-last-item (split-string pub-dir "/" t))))
                (updated (format-time-string "%F" (f-modification-time filename)))
                (refs (save-excursion
                        (when (search-forward ":roam_refs: " nil t)
-                         ;; Only top level ref, not from a subheading
+                         ;; Only top level ref, not those from a subheading
                          (unless (search-backward "\n*" nil t)
                            (buffer-substring (point) (line-end-position))))))
                (wordcount (save-excursion
@@ -370,7 +405,7 @@ that org-id links will resolve correctly."
               ;; subdir, so get the hrefs to agree with that idea
               ;; NOTE: Breaks Svelte's router
               (when (looking-at (rx (literal "../")))
-               (replace-match ""))
+                (replace-match ""))
               ;; REVIEW: Should remove the lengthy hash-part of the link
               ;;         (i.e. the bit after the # character in LINK#ORG-ID) if
               ;;         the org-id points to a file-level id anyway
@@ -386,17 +421,17 @@ that org-id links will resolve correctly."
             ;; CSS can just find the div that follows a checkbox and heading.
             ;; NOTE: Interweave.js and such safety HTML filterers will remove
             ;; the <input> element!
+            ;; NOTE: Actually there is a pure HTML method: <details> and
+            ;; <summary>.
             (goto-char content-start)
-            (let ((n 0))
-              (while (re-search-forward "=\"outline-[[:digit:]]\"" nil t)
-                (let ((id (concat "collapse-" (number-to-string (cl-incf n))))))
-                (search-backward "<")
-                (insert "<input id=\"" id "\" class=\"collapser\" type=\"checkbox\">")
-                (search-forward ">")
-                (insert "<label for=\" id\">")
-                (search-forward "</h")
-                (goto-char (match-beginning 0))
-                (insert "</label>")))
+            (insert "<details>")
+            (while (re-search-forward "<h[123456]" nil t)
+              (search-backward "<")
+              (insert "</details><details open><summary>")
+              (re-search-forward "</h[123456]>")
+              (insert "</summary>"))
+            (goto-char (point-max))
+            (insert "</details>")
 
             ;; Remove in-document divs since they mess up the look of Bulma
             ;; CSS.  Except for the pages where I will actually style the
@@ -449,14 +484,15 @@ that org-id links will resolve correctly."
             ;; REVIEW: this should add 🔗links to headings that have an id
             (goto-char content-start)
             (while (re-search-forward (rx "<h" (group digit)) nil t)
-              (when-let ((id (save-match-data
-                               (and (search-forward "id=\"ID-" nil t)
-                                    (re-search-forward (rx (not "\"")))
-                                    (match-string 0))))
-                         (digit (match-string 1))))
-              (search-forward (concat "</h" digit ">"))
-              (goto-char (match-beginning 0))
-              (insert (concat "<a class=\"easylink\" href=\"#ID-" id "\"> 🔗</a>")))
+              (when-let ((id (save-excursion
+                               (save-match-data
+                                 (and (search-forward "id=\"ID-" nil t)
+                                      (re-search-forward (rx (not "\"")))
+                                      (match-string 0)))))
+                         (digit (match-string 1)))
+                (search-forward (concat "</h" digit ">"))
+                (goto-char (match-beginning 0))
+                (insert (concat "<a class=\"easylink\" href=\"#ID-" id "\"> 🔗</a>"))))
 
             (setq data-for-json
                   `((slug . ,slug)
@@ -465,7 +501,6 @@ that org-id links will resolve correctly."
                     (created . ,created)
                     (updated . ,updated)
                     (wordcount . ,wordcount)
-                    (backlinks . 0) ;; no longer using this data
                     (links . ,links)
                     (refs . ,refs)
                     (tags . ,tags)
@@ -475,4 +510,4 @@ that org-id links will resolve correctly."
             (kill-buffer output-buf))
           (with-temp-file output-path
             (insert (json-encode data-for-json))))))
-      (kill-buffer (current-buffer)))))
+     (kill-buffer (current-buffer)))))

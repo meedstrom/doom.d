@@ -33,9 +33,16 @@
     <content type=\"html\">" content "</content>
   </entry>"))
 
-    ;; TODO: down the line, maybe also insert standalone entries for new pages I
-    ;; deem particularly "bloggable".  These would also be linked inside the monthly
-    ;; news pages, so whoever doesn't use the feed can still see them pointed out there.
+    ;; TODO: down the line, maybe also insert standalone feed items for new
+    ;; pages I deem particularly "bloggable".  These would additionally be
+    ;; linked inside the monthly news pages, so whoever doesn't use the feed can
+    ;; still see them pointed out there.
+
+    ;; TODO: Maybe the changelog could group new posts by which pseudo-tag they
+    ;; belong to, so the visitor from Emacs-land can see all my new Emacs posts?
+    ;; Or should they just visit my #Emacs page and see a date-ordered list?
+    ;; Then, I should definitely insert the creation date in the "What links
+    ;; here" section.
 
     (insert "
 </feed>")))

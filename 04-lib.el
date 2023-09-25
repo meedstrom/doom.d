@@ -30,7 +30,10 @@
 (autoload #'piper "piper")
 
 (defun my-uuid-to-base62 (uuid &optional length)
-  (my-int-to-base62 (string-to-number (string-replace "-" "" uuid) 16) length))
+  (let ((hex (string-to-number (string-replace "-" "" uuid) 16)))
+    (if (= 0 hex)
+        (error "Sure this is an UUID? %s" uuid)
+      (my-int-to-base62 hex length))))
 
 (defun my-int-to-base62 (integer &optional length)
   "Convert an INTEGER to a base-62 number represented as a string.
@@ -68,15 +71,15 @@ The returned string is padded with leading zeros to LENGTH if necessary."
                                            t)))
 
 (defun my-shrink-video (filename)
-  "Shrink a video file to a quarter of its pixel density.
+  "Shrink a video at FILENAME to a quarter of its pixel density.
 Save it under the same name prefixed with \"shrunk-\", and leave
-the original file unmodified.
+the original file unmodified.  Requires ffmpeg.
 
-Note that this may take a while on longer videos, but it works
+Note that this may take a while on long videos, but it works
 asynchronously so you can do something else."
   (interactive "fFile: ")
   (my-exec "ffmpeg" "-i" (concat "file:" filename) "-vf" "scale=iw*.5:-2"
-         (concat "file:shrunk-" filename)))
+           (concat "file:shrunk-" filename)))
 
 (defun my-downcase-all-paths-in-file (base)
   (interactive "MBeginning of string that marks a filename (regexp): ")
@@ -116,9 +119,10 @@ asynchronously so you can do something else."
   (interactive)
   (unless (equal (window-frame)
                  (window-frame (next-window nil 'skip-minibuf 'visible)))
-      (my-exec "hyprctl" "dispatch" "cyclenext"))
+    (my-exec "hyprctl" "dispatch" "cyclenext"))
   (other-window 1))
 
+;; bloggable
 ;; Modified version of `org-roam-node-slug'
 (defun my-slugify (title)
   (let ((slug-trim-chars '(;; Combining Diacritical Marks https://www.unicode.org/charts/PDF/U0300.pdf
@@ -175,43 +179,80 @@ asynchronously so you can do something else."
 ;; (my-slugify "Slimline/\"pizza box\" computer chassis")
 ;; (my-slugify "#emacs")
 
-;; NOTE: not used during my publishing process right now, I just run it manually
-;; sometimes
-(defun my-rename-roam-file-by-title (&optional path title)
+;; bloggable
+;; REVIEW: this version uses the upstream `org-roam-node-slug' -- and should
+;; cope well with overrides on that method
+(defun my-rename-roam-file-by-title (&optional path)
   (interactive)
   (unless path
     (setq path (buffer-file-name)))
   (unless (equal "org" (file-name-extension path))
-    (error "Unexpected that file doesn't end in .org, halting on: %s" path))
-  (unless title
-    (with-temp-buffer
-      (insert-file-contents path)
-      (let ((case-fold-search t))
-        (setq title (save-excursion
-                      (goto-char (point-min))
-                      (when (search-forward "#+title: " nil t)
-                        (buffer-substring (point) (line-end-position))))))))
-  (let* ((name (file-name-nondirectory path))
-         ;; (filename-preamble
-         ;;  (when (string-match
-         ;;         (rx (= 4 digit) "-" (= 2 digit) "-" (= 2 digit) "-")
-         ;;         name)
-         ;;    (match-string 0 name)))
-         (slugified-path (concat (file-name-directory path)
-                                 ;; filename-preamble
-                                 (my-slugify title)
-                                 ".org"))
-         (visiting (find-buffer-visiting path)))
-    (unless (equal slugified-path path)
+    (user-error "File doesn't end in .org: %s" path))
+  (let* ((visiting (find-buffer-visiting path))
+         (on-window (and visiting (get-buffer-window visiting)))
+         (slug
+          (with-current-buffer (or visiting (find-file-noselect path))
+            (goto-char (point-min))
+            (let ((node (org-roam-node-at-point t)))
+              (unless (org-roam-node-title node)
+                (user-error "Node not yet known to org-roam DB"))
+              (org-roam-node-slug node))))
+         (new-path (expand-file-name (concat slug ".org")
+                                     (file-name-directory path))))
+    (if (equal path new-path)
+        (message "Filename already correct: %s" path)
+      (if (and visiting (buffer-modified-p visiting))
+          (message "Unsaved file, letting it be: %s" path)
+        (unless (file-writable-p path)
+          (error "No permissions to rename file: %s" path))
+        (unless (file-writable-p new-path)
+          (error "No permissions to write a new file at: %s" new-path))
+        ;; Kill buffer before renaming, to be safe
+        (when visiting
+          (kill-buffer visiting))
+        (rename-file path new-path)
+        (prog1 (message "File %s renamed to %s"
+                        (file-name-nondirectory path)
+                        (file-name-nondirectory new-path))
+          ;; Visit the file again if you had it open
+          (when visiting
+            (let ((buf (find-file-noselect new-path)))
+              (when on-window
+                (set-window-buffer on-window buf)))))))))
+
+;; bloggable
+;; NOTE: not used during my publishing process right now, I just run it manually
+;; sometimes
+(defun my-rename-roam-file-by-title (&optional path)
+  (interactive)
+  (unless path
+    (setq path (buffer-file-name)))
+  (unless (equal "org" (file-name-extension path))
+    (error "File doesn't end in .org: %s" path))
+  (let* ((title (org-get-title))
+         (name (file-name-nondirectory path))
+         (new-path (concat (file-name-directory path)
+                               (my-slugify title)
+                               ".org"))
+         (visiting (find-buffer-visiting path))
+         (visiting-and-visible (and visiting
+                                    (get-buffer-window visiting))))
+    (if (equal new-path path)
+        (message "Filename already correct: %s" (file-name-nondirectory path))
       (if (and visiting (buffer-modified-p visiting))
           (message "Unsaved file, letting it be: %s" path)
         (when visiting
           (kill-buffer visiting))
         (and (file-writable-p path)
-             (file-writable-p slugified-path)
-             (rename-file path slugified-path))
-        (when visiting
-          (find-file slugified-path))))))
+             (file-writable-p new-path)
+             (rename-file path new-path)
+             (message "File %s renamed to %s"
+                      (file-name-nondirectory path)
+                      (file-name-nondirectory new-path)))
+        (if visiting-and-visible
+            (find-file new-path)
+          (when visiting
+            (find-file-noselect new-path)))))))
 
 ;; TODO: Suggest this for upstream
 (defun my-eww-bookmark-copy-url ()
@@ -304,7 +345,7 @@ It skips prompting, and inserts the metadata I want."
       (search-forward "#+title")
       (goto-char (line-beginning-position))
       ;; (when (looking-back "\n\n")
-        ;; (join-line))
+      ;; (join-line))
       ;; emacs 29 alternative to above
       (ensure-empty-lines 0)
       (when (search-forward "#+filetags" nil t)
@@ -318,6 +359,7 @@ It skips prompting, and inserts the metadata I want."
         (org-roam-tag-add '("noexport")))
       (save-buffer))))
 
+;; bloggable
 (defun my-truncate-buffer-and-move-excess (&optional _string)
   "A substitute for `comint-truncate-buffer'.
 Instead of deleting, move the excess lines to a buffer named
@@ -333,6 +375,7 @@ Instead of deleting, move the excess lines to a buffer named
         (append-to-buffer (concat "*comint-excess: " (buffer-name) "*") beg end)
         (delete-region beg end)))))
 
+;; bloggable
 (defmacro my-hook-once (hook &rest body)
   "Add temporary actions to HOOK to run only once.
 BODY is wrapped in a function run the next time HOOK is
@@ -516,17 +559,17 @@ To start using it, evaluate the following.
 (defun my-tab-command ()
   (interactive)
 
-      (call-interactively
-       (if (fboundp #'fold/toggle)
-           (if (equal (point)
-                                     (save-mark-and-excursion
-                                       (forward-char)
-                                       (beginning-of-defun)
-                                       (point)))
-                              #'+fold/toggle
-                            #'indent-for-tab-command)
+  (call-interactively
+   (if (fboundp #'fold/toggle)
+       (if (equal (point)
+                  (save-mark-and-excursion
+                    (forward-char)
+                    (beginning-of-defun)
+                    (point)))
+           #'+fold/toggle
          #'indent-for-tab-command)
-    ))
+     #'indent-for-tab-command)
+   ))
 
 (defun my-shell-command-replace-region ()
   "Run `shell-command-on-region' as if you had supplied a prefix
@@ -538,6 +581,7 @@ arg. In addition, use fish if available."
                            shell-file-name)))
     (call-interactively #'shell-command-on-region)))
 
+;; bloggable
 (defun my-fill-unfill-respect-double-space ()
   "Toggle filling/unfilling of the current region, or current
     paragraph if no region is active.  Also pretend that
@@ -626,7 +670,7 @@ stand (instead of overwriting it).  This allows a workflow without
 `append-next-kill' for those not inclined to plan ahead.  However,
 the result will be in reverse order compared to if you had used
 `append-next-kill' on every item and yanked once.  When that's a
-problem, `my-reverse-yanks' can help."
+problem, try `my-reverse-region-dwim' to fix it."
   (interactive)
   (let ((pos (point)))
     (if (or (equal real-last-command this-command)
@@ -702,11 +746,11 @@ packages in some situations."
         (end (match-string 3 input))
         (closer (match-string 4 input)))
     (let ((lower-inequality (if (string-match-p "\\[" opener)
-                           " \\le "
-                         " < "))
+                                " \\le "
+                              " < "))
           (upper-inequality (if (string-match-p "\\]" closer)
-                           " \\le " ;; or unicode ≤ ?
-                         " < ")))
+                                " \\le " ;; or unicode ≤ ?
+                              " < ")))
       (insert (concat start lower-inequality var upper-inequality end)))))
 
 (defmacro my-exec (program &rest program-args)
@@ -784,6 +828,7 @@ until the program finishes."
         (find-file first-relevant-file)
       (message "No more files in directory"))))
 
+;; bloggable
 (defun my-next-file-in-dir (&optional literally)
   (interactive "p")
   (let* ((remainder (cdr (member (buffer-file-name)
@@ -808,6 +853,7 @@ until the program finishes."
           (find-file first-relevant-file))
       (message "No more files in directory"))))
 
+;; bloggable
 (defun my-compile-and-drop ()
   "Compile buffer to check for errors, but don't write an .elc.
 Original inspiration was to catch malformed sexps like
@@ -827,7 +873,7 @@ temporarily overridden."
   (unless (member last-command '(my-previous-buffer-of-same-mode
                                  my-next-buffer-of-same-mode))
     (setq my-buffer-ring
-          ;; TODO: use emacas 29 `buffer-match-p' or `match-buffers'
+          ;; TODO: use emacs 29 `buffer-match-p' or `match-buffers'
           (cl-loop for buf in (buffer-list)
                    if (eq (buffer-local-value 'major-mode buf) major-mode)
                    collect buf)))
@@ -1181,10 +1227,6 @@ training wheel."
   (if mark-active (exchange-point-and-mark)
     (exchange-point-and-mark 4)))
 
-(defun my-org-demarcate-block ()
-  ;; like org-babel-demarcate-block but for QUOTE etc
-  )
-
 (defun my-hippie-expand-or-org-cycle (&optional arg)
   "On Org headline or table do `org-cycle', else `hippie-expand'.
 Great on the TAB key!  As an atlernative, you can use corfu
@@ -1236,7 +1278,7 @@ instead of hippie-expand and set `tab-always-indent' to
 (defun my-minibuffer-setup ()
   (set (make-local-variable 'face-remapping-alist)
        `((default :foreground ,(face-foreground 'mode-line)
-           :background ,(face-background 'mode-line)))))
+          :background ,(face-background 'mode-line)))))
 
 (defun my-minibuffer-setup* ()
   (set (make-local-variable 'face-remapping-alist)
@@ -1347,15 +1389,16 @@ is that your initfiles put everything in your preferred
 Note that the command is only ever meant to be called on one
 buffer.  While calling it elsewhere to undo the
 changes (i.e. \"abnormalize\" your settings) will successfully
-undo global modes such as CUA (see function `cua-mode'), the
+undo global modes such as CUA (see command `cua-mode'), the
 local settings in the buffer where it was first called will not
 be fixed.
 
-This is meant for a single text buffer to act as
-a chat between a deaf and hearing person.  As a workaround, call
-\\[my-normie:normalize] on every buffer you want to work together
-on.  Note that after that, even calling \\[my-normie:abnormalize]
-on each buffer involved may not fully restore settings."
+This is originally meant for a single text buffer to act as a
+chat between a deaf and hearing person.  For multiple buffers,
+call \\[my-normie:normalize] on every buffer you want to
+collaborate on.  Note that after that, even calling
+\\[my-normie:abnormalize] on each buffer involved may not fully
+restore settings."
   (interactive)
   (if my-normie-p
       (my-normie:abnormalize)
@@ -1452,7 +1495,7 @@ See `my-normie-toggle' for explanation."
 
 (defface my-unimportant-latex-face
   '((t :height 0.7
-       :inherit font-lock-comment-face))
+     :inherit font-lock-comment-face))
   "Face used on less relevant math commands."
   :group 'my-faces)
 
@@ -1462,12 +1505,12 @@ See `my-normie-toggle' for explanation."
   (font-lock-add-keywords
    mode
    `((,(rx (and "\\" (or (any ",.!;\\]\[()")
-  (and (or "left" "right"
-           ;; "left\\lbrace" "right\\lbrace"
-           "big" "Big" "bigg" "Bigg"
-           "text" "textrm"
-           "begin" "end")
-       symbol-end))))
+                         (and (or "left" "right"
+                                  ;; "left\\lbrace" "right\\lbrace"
+                                  "big" "Big" "bigg" "Bigg"
+                                  "text" "textrm"
+                                  "begin" "end")
+                              symbol-end))))
       0 'my-unimportant-latex-face prepend))
    'end))
 
