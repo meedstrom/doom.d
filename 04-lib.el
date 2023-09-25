@@ -29,15 +29,29 @@
 (autoload #'objed-ipipe "objed")
 (autoload #'piper "piper")
 
-(defun my-uuid-to-base62 (uuid &optional length)
-  (let ((hex (string-to-number (string-replace "-" "" uuid) 16)))
-    (if (= 0 hex)
+;; Faster than using `org-get-id' because it doesn't need to activate org-mode
+(defun my-org-file-id (file)
+  (with-temp-buffer
+    (insert-file-contents-literally file nil 0 300)
+    (and (search-forward "#+title" nil t)
+         (search-backward ":id: " nil t)
+         (progn
+           (goto-char (match-end 0))
+           (delete-horizontal-space)
+           (buffer-substring (point) (line-end-position))))))
+
+(defun my-uuid-to-base62 (uuid)
+  (let ((decimal (string-to-number (string-replace "-" "" uuid) 16)))
+    (if (or (= 0 decimal) (/= 36 (length uuid)))
         (error "Sure this is an UUID? %s" uuid)
-      (my-int-to-base62 hex length))))
+      ;; The highest UUID (ffffffff-ffff-ffff-ffff-ffffffffffff) makes a base62
+      ;; string 22 chars long.
+      (my-int-to-base62 decimal 22))))
 
 (defun my-int-to-base62 (integer &optional length)
   "Convert an INTEGER to a base-62 number represented as a string.
-The returned string is padded with leading zeros to LENGTH if necessary."
+The returned string is padded with leading zeroes up to to LENGTH
+if necessary, so that the result is always at least LENGTH long."
   (let ((s "")
         (i integer))
     (while (> i 0)
@@ -49,13 +63,14 @@ The returned string is padded with leading zeros to LENGTH if necessary."
         (setq s (concat (make-string (- length (length s)) ?0) s)))
     s))
 
+;; Workhorse for `my-int-to-base62'
 (defun my-int-to-base62-one-digit (integer)
   "Convert INTEGER between 0 and 61 into a single character 0..9, A..Z, a..z."
-  ;; Uses chars ?0, ?a, ?A off the ASCII table.  For reference,
+  ;; Uses chars ?0, ?A, ?a off the ASCII table.  It's important to realize there
+  ;; are gaps between the character sets:
   ;; 0-9 has codes 48 thru 57
   ;; A-Z has codes 65 thru 90
   ;; a-z has codes 97 thru 122
-  ;; It's important to realize there are gaps between the character sets.
   ;; Why compose chars to construct the final base62 string?  It's either that
   ;; or you make a lookup string "0123456789abcdefg...", and chars are faster.
   (cond

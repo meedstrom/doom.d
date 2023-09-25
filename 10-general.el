@@ -110,33 +110,33 @@
 ;; (load-theme 'doom-storage-tube)
 
 ;; Good sans prism-desaturations
-;; (load-theme 'Iosvkem)
+;; (load-theme 'doom-Iosvkem)
 ;; (load-theme 'doom-solarized-dark-high-contrast)
 ;; (load-theme 'doom-rouge)
 
-(setq doom-theme 'modus-vivendi)
-(general-after-init
-  ;; Recommended for a modus theme
-  (prism-set-colors
-    :desaturations (cl-loop for i from 0 below 16 collect (* i 2.5))
-    :lightens (cl-loop for i from 0 below 16 collect (* i 2.5))
-    :colors (modus-themes-with-colors
-              (list fg-main
-                    magenta
-                    cyan-cooler
-                    magenta-cooler
-                    blue
-                    magenta-warmer
-                    cyan-warmer
-                    red-cooler
-                    green
-                    fg-main
-                    cyan
-                    yellow
-                    blue-warmer
-                    red-warmer
-                    green-cooler
-                    yellow-faint))))
+;; (setq doom-theme 'modus-vivendi)
+;; (general-after-init
+;;   ;; Recommended for a modus theme
+;;   (prism-set-colors
+;;     :desaturations (cl-loop for i from 0 below 16 collect (* i 2.5))
+;;     :lightens (cl-loop for i from 0 below 16 collect (* i 2.5))
+;;     :colors (modus-themes-with-colors
+;;               (list fg-main
+;;                     magenta
+;;                     cyan-cooler
+;;                     magenta-cooler
+;;                     blue
+;;                     magenta-warmer
+;;                     cyan-warmer
+;;                     red-cooler
+;;                     green
+;;                     fg-main
+;;                     cyan
+;;                     yellow
+;;                     blue-warmer
+;;                     red-warmer
+;;                     green-cooler
+;;                     yellow-faint))))
 
 
 ;;; Debugging

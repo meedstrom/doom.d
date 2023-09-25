@@ -18,27 +18,22 @@
 (require 'dash)
 (require 'f)
 
-;; Keep in mind that case-fold-search t doesn't affect `equal' or `-intersection'
+;; Keep in mind that case-fold-search doesn't affect `equal', and therefore
+;; neither list-comparisons such as `-intersection'!
 (defvar my-extinct-tags '("drill"  "fc" "anki" "partner" "friends-eyes" "therapist" "eyes-partner" "eyes-therapist" "eyes-diana" "eyes-friend"))
 (defvar my-tags-to-avoid-uploading (append my-extinct-tags '("noexport" "archive" "private" "censor")))
 
+;; cache-variable
+(defvar my-all-refs nil)
 
-(defun my-org-file-id (file)
-  (with-temp-buffer
-    ;; faster than `org-get-id'
-    (insert-file-contents-literally file)
-    (and (search-forward "#+title" nil t)
-         (search-backward ":id: " nil t)
-         (buffer-substring (+ 5 (point)) (line-end-position)))))
-
-(defun my-publish (&optional prefix)
+(defun my-publish ()
   "A single command I can use in a child emacs."
-  (interactive "p")
+  (interactive)
   (require 'ox-publish)
   (switch-to-buffer "*Messages*") ;; for watching it work
-  (delete-other-windows)
+  (split-window) ;; in case the Warnings buffer appears
   (cd "/home/kept/roam") ;; for me to quick-search when an id fails to resolve
-  (org-publish "my-slipbox-blog" (>= prefix 4)))
+  (org-publish "my-slipbox-blog" t))
 
 (setopt org-publish-project-alist
         `(("my-slipbox-blog"
@@ -54,132 +49,13 @@
            ;; tag in `my-publish-to-blog'.
            :exclude-tags ,my-tags-to-avoid-uploading)))
 
-;; Give h2...h6 headings an ID from the source org-id, if it has one,
-;; instead of e.g. "org953031".  That way, hash-links such as
-;; #ID-e10bbdfe-1ffb-4c54-9228-2818afdfc5ba will make the web browser jump to
-;; that heading.
-;; The kind of tools you get thanks to org-roam!
-(after! ox (require 'org-roam-export))
-
-(add-hook 'org-export-before-parsing-functions #'my-add-backlinks)
-(add-hook 'org-export-before-parsing-functions #'my-replace-web-links-with-ref-note-links)
-
-;; TODO: In dailies, insert links to any pages created on that same day, under a
-;; "Created pages" heading.  I guess this has to happen after exporting, so I
-;; can query the final JSON of all posts.  Therefore it has to happen in the
-;; frontend code.  Or, I suppose there could be an org-roam-db-query that looks
-;; up the #+DATE property.
-;; Something like this
-;; (org-roam-db-query [:select *
-;;                     :from nodes
-;;                     :where (equal "2020-03-15" (plist-get :date properties))])
-;; Unfortunately, #+DATE is not a property.  So I may have to reformat all my
-;; files so it becomes :DATE:, or more likely :CREATED:.
-;; (org-roam-db-query [:select [title] :from nodes :where (like title '"%How%")])
-;; (org-roam-db-query [:select * :from nodes
-                    ;; :where (in properties (= CREATED "2023-02-15"))])
-                    ;; :where (= properties:id "be3674fa-870b-4198-9688-a351eba83270")])
-                    ;; :where (in properties (= ID "be3674fa-870b-4198-9688-a351eba83270"))])
-                    ;; :where (in "be3674fa-870b-4198-9688-a351eba83270" properties)])
-                    ;; :where (= (in properties [:select "ID"]) "be3674fa-870b-4198-9688-a351eba83270")])
-                    ;; :where (= (in properties [:select ID]) "be3674fa-870b-4198-9688-a351eba83270")])
-                    ;; :where (like (in properties [:select ["CREATED"]]) '"2023-02-15")])
-                    ;; :where (like [:select ["CREATED"] from properties] '"2023-02-15")])
-;; (org-roam-db-query (concat
-                    ;; "SELECT * FROM nodes n, table(n.properties) p"
-                    ;; ;; " WHERE 'be3674fa-870b-4198-9688-a351eba83270' IN (SELECT id FROM properties)"
-                           ;; ))
-
-(defun my-add-backlinks (&rest _)
-  "Add a \"What links here\" subtree at the end.
-Meant to run on `org-export-before-parsing-functions', where it
-will not modify the source file."
-  (let ((this-node (ignore-errors (org-roam-node-at-point)))
-        (backlinks nil)
-        (reflinks nil))
-    (when this-node
-      (dolist (obj (org-roam-backlinks-get this-node :unique t))
-        (let ((node (org-roam-backlink-source-node obj)))
-          (cl-pushnew (cons (org-roam-node-id node)
-                            (org-roam-node-title node))
-                      backlinks)))
-      (dolist (obj (org-roam-reflinks-get this-node))
-        (let ((node (org-roam-reflink-source-node obj)))
-          (unless (equal node this-node)
-            (cl-pushnew (cons (org-roam-node-id node)
-                              (org-roam-node-title node))
-                        reflinks))))
-      (when (or backlinks reflinks)
-        (save-excursion 
-          (if (bobp)
-              (progn
-                (goto-char (point-max))
-                (insert "\n* What links here"))
-            (org-insert-subheading nil)
-            (insert "What links here"))
-          (dolist (link (--sort (string-lessp (cdr it) (cdr other))
-                                (append backlinks reflinks)))
-            (newline)
-            (insert "- [[id:" (car link) "]["
-                    (replace-regexp-in-string (rx (any "[]")) "" (cdr link))
-                    "]]")))))))
-
-;; cache-variable
-(defvar my-all-refs nil)
-
-(defun my-replace-web-links-with-ref-note-links (&rest _)
-  "For every URL found in this page, if there exists an Org-roam
-note elsewhere with the same exact URL in its :ROAM_REFS:
-property, then replace that URL in this page with an id-link to
-that Org-roam note.
-
-This visitor can still go find the original web link because I
-will expose it inside that note.  This just makes the visitor see
-my note first.
-
-Meant to run on `org-export-before-parsing-functions', where it
-will not modify the source file."
-  (when (ignore-errors (org-roam-node-at-point))
-    ;; let ((all-refs (org-roam-db-query
-    ;;                 [:select [ref id title]
-    ;;                  :from refs
-    ;;                  :left-join nodes
-    ;;                  :on (= refs:node-id nodes:id)])))
-    (save-excursion
-      (while (not (equal "No further link found" (quiet! (org-next-link))))
-        (let* ((elem (org-element-context))
-               (link (org-element-property :path elem))
-               (ref (assoc link my-all-refs))
-               (end (org-element-property :end elem)))
-          (when (and ref
-                     ;; ignore if referring to same page we're on
-                     (not (equal (caddr ref) (org-get-title))))
-            ;; REVIEW: check if the link is already an org-link with a custom
-            ;; description.  Then just modify the url part into an id link,
-            ;; don't overwrite the description also.
-            (if (search-forward "][" end t)
-                ;; has a custom description
-                (progn
-                  (delete-region (match-beginning 0) (point))
-                  (insert "[[id:" (cadr ref) "]["))
-              (delete-region (point) end)
-              (insert "[[id:" (cadr ref) "]["
-                      (replace-regexp-in-string (rx (any "[]")) "" (caddr ref))
-                      "]]"))))))))
-
 ;; (defconst my-date-regexp (rx (= 4 digit) "-" (= 2 digit) "-" (= 2 digit)))
 (defvar my-publish-ran-already nil)
 (defun my-prep-fn (_)
-  "Prepare Emacs for publishing my website.
+  "Prepare Emacs and temp files for publishing my website.
 Since I intend to run `org-publish' in a subordinate Emacs, this
 function is where I can make destructive env changes that I don't
-want in my main Emacs.
-
-A biggie: I'd like the final URLs on my website to exclude the
-date slug in the org-roam filenames.  So prepare to work from a
-/tmp/roam/ copy of the org-roam dir, with the dates stripped from
-filenames, and the `org-id-locations' table modified likewise, so
-that org-id links will resolve correctly."
+want in my main Emacs."
   (setopt org-mode-hook nil) ;; speeds up publishing
   (setopt org-export-use-babel nil)
   (setopt org-export-with-drawers '(not "logbook" "noexport")) ;; case-insensitive
@@ -190,6 +66,7 @@ that org-id links will resolve correctly."
   (setopt case-fold-search t) ;; for all the searches in `my-publish-to-blog'
   (setopt org-inhibit-startup t) ;; from org-publish-org-to
   ;; (setopt org-html-extension "")
+  (setopt org-html-container-element "ul")
   ;; Love it, but won't apply to every datestamp on the site
   (setopt org-display-custom-times nil)
   (toggle-debug-on-error)
@@ -233,7 +110,7 @@ that org-id links will resolve correctly."
    for path in (directory-files "/tmp/roam" t "\\.org$")
    as uuid = (my-org-file-id path)
    when uuid
-   do (let ((permalink (substring (my-uuid-to-base62 uuid 22) -7)))
+   do (let ((permalink (substring (my-uuid-to-base62 uuid) -7)))
         (mkdir permalink)
         (rename-file path (concat permalink "/"))))
 
@@ -253,32 +130,171 @@ that org-id links will resolve correctly."
                       :on (= refs:node-id nodes:id)]))
   )
 
+
+;; Give each h2...h6 heading an ID attribute that matches its source org-id, if
+;; it has one, instead of e.g. "org953031".  That way, hash-links such as
+;; #ID-e10bbdfe-1ffb-4c54-9228-2818afdfc5ba will make the web browser jump to
+;; that heading.  Thanks org-roam for this convenience!
+;; TODO: after export, replace ID-uuids throughout the document with just the
+;;       base62 translation, stripping the "ID-" prefix (html5 permits ids to
+;;       start with a number so don't worry).  This would permit me to later
+;;       configure the frontend app's router to look for a page with the same id
+;;       if I've since exported a section to its own page.
+(after! ox (require 'org-roam-export))
+
+;; Change some things about the Org files before org-export does its thing.
+(add-hook 'org-export-before-parsing-functions #'my-add-backlinks)
+(add-hook 'org-export-before-parsing-functions #'my-replace-web-links-with-ref-note-links)
+
+(defun my-add-backlinks (&rest _)
+  "Add a \"What links here\" subtree at the end.
+Meant to run on `org-export-before-parsing-functions', where it
+will not modify the source file."
+  (let ((this-node (ignore-errors (org-roam-node-at-point)))
+        (backlinks nil)
+        (reflinks nil))
+    (when this-node
+      (dolist (obj (org-roam-backlinks-get this-node :unique t))
+        (let ((node (org-roam-backlink-source-node obj)))
+          (cl-pushnew (cons (org-roam-node-id node)
+                            (org-roam-node-title node))
+                      backlinks)))
+      (dolist (obj (org-roam-reflinks-get this-node))
+        (let ((node (org-roam-reflink-source-node obj)))
+          (unless (equal node this-node)
+            (cl-pushnew (cons (org-roam-node-id node)
+                              (org-roam-node-title node))
+                        reflinks))))
+      (when (or backlinks reflinks)
+        (save-excursion 
+          (if (bobp)
+              (progn
+                (goto-char (point-max))
+                (insert "\n* What links here"))
+            (org-insert-subheading nil)
+            (insert "What links here"))
+          (dolist (link (--sort (string-lessp (cdr it) (cdr other))
+                                (append backlinks reflinks)))
+            (newline)
+            (insert "- [[id:" (car link) "]["
+                    (replace-regexp-in-string (rx (any "[]")) "" (cdr link))
+                    "]]")))))))
+
+(defun my-replace-web-links-with-ref-note-links (&rest _)
+  "For every URL found in this page, if there exists an Org-roam
+note elsewhere with the same exact URL in its :ROAM_REFS:
+property, then replace that URL in this page with an id-link to
+that Org-roam note.
+
+This visitor can still go find the original web link because I
+will expose it inside that note.  This just makes the visitor see
+my note first.
+
+Meant to run on `org-export-before-parsing-functions', where it
+will not modify the source file."
+  (when (ignore-errors (org-roam-node-at-point))
+    (save-excursion
+      ;; TODO: use org-link-any-re
+      (while (not (equal "No further link found" (quiet! (org-next-link))))
+        (let* ((elem (org-element-context))
+               (link (org-element-property :path elem))
+               (ref (assoc link my-all-refs))
+               (end (org-element-property :end elem)))
+          (when (and ref
+                     ;; ignore if referring to same page we're on
+                     (not (equal (caddr ref) (org-get-title))))
+            ;; REVIEW: check if the link is already an org-link with a custom
+            ;; description.  Then just modify the url part into an id link,
+            ;; don't overwrite the description also.
+            (if (search-forward "][" end t)
+                ;; has a custom description
+                (progn
+                  (delete-region (match-beginning 0) (point))
+                  (insert "[[id:" (cadr ref) "]["))
+              (delete-region (point) end)
+              (insert "[[id:" (cadr ref) "]["
+                      (replace-regexp-in-string (rx (any "[]")) "" (caddr ref))
+                      "]]"))))))))
+
+;; TODO: In dailies, insert links to any pages created on that same day, under a
+;; "Created pages" heading.  I guess this has to happen after exporting, so I
+;; can query the final JSON of all posts.  Therefore it has to happen in the
+;; frontend code.  Or, I suppose there could be an org-roam-db-query that looks
+;; up the #+DATE property.
+;; Something like this
+;; (org-roam-db-query [:select *
+;;                     :from nodes
+;;                     :where (equal "2020-03-15" (plist-get :date properties))])
+;; Unfortunately, #+DATE is not a property.  So I may have to reformat all my
+;; files so it becomes :DATE:, or more likely :CREATED:.
+;; (org-roam-db-query [:select [title] :from nodes :where (like title '"%How%")])
+;; (org-roam-db-query [:select * :from nodes
+                    ;; :where (in properties (= CREATED "2023-02-15"))])
+                    ;; :where (= properties:id "be3674fa-870b-4198-9688-a351eba83270")])
+                    ;; :where (in properties (= ID "be3674fa-870b-4198-9688-a351eba83270"))])
+                    ;; :where (in "be3674fa-870b-4198-9688-a351eba83270" properties)])
+                    ;; :where (= (in properties [:select "ID"]) "be3674fa-870b-4198-9688-a351eba83270")])
+                    ;; :where (= (in properties [:select ID]) "be3674fa-870b-4198-9688-a351eba83270")])
+                    ;; :where (like (in properties [:select ["CREATED"]]) '"2023-02-15")])
+                    ;; :where (like [:select ["CREATED"] from properties] '"2023-02-15")])
+;; (org-roam-db-query (concat
+                    ;; "SELECT * FROM nodes n, table(n.properties) p"
+                    ;; ;; " WHERE 'be3674fa-870b-4198-9688-a351eba83270' IN (SELECT id FROM properties)"
+                           ;; ))
+
+
+
 ;; test: (my-strip-id-hash-from-link-if-file-level "0vwRV27mRVLFd6yoyUM0PI/some-slug#ID-10b59a2a-bf95-4f20-9b4f-f27e23e51f46")
 ;; test: (my-strip-id-hash-from-link-if-file-level "../0vwRV27mRVLFd6yoyUM0PI/some-slug#ID-10b59a2a-bf95-4f20-9b4f-f27e23e51f46")
-(defvar my-id-regexp (rx (? "/") (group (= 22 alnum)) (? "/")))
+(defvar my-base62-id-regexp (rx (? "/") (group (= 7 alnum)) (? "/")))
+
+;; (defun my-strip-id-hash-from-link-if-file-level (link)
+;;   (cl-assert (stringp link))
+;;   (if-let* ((hash-pos (string-search "#ID-" link))
+;;             (hash-as-permalink
+;;              (substring (my-uuid-to-base62 (substring link (+ 4 hash-pos)))
+;;                         -7))
+;;             (actual-permalink (string-match my-base62-id-regexp link))
+;;             (same (equal hash-as-permalink (match-string 1 link))))
+;;       ;; Cut off the hash
+;;       (substring link 0 hash-pos)
+;;     ;; Keep the whole link
+;;     link))
+
+;; overly safe regexp, got a bit carried away
+(defvar my-id-re
+  (rx (or (seq "<h" (*? (not ">")) " id=\"")
+          (seq "<a " (*? (not ">")) " href=\"" (*? alnum) "#")))
+  "Regexp to find everywhere a hash-link appears in a HTML
+buffer (in which case the regexp ends at the # character), or the
+headings those hash-links may refer to, in which case the regexp
+ends inside the id=\"\" HTML attribute.")
+
+;; TODO: Use this once we rewrite all uuids to base62
 (defun my-strip-id-hash-from-link-if-file-level (link)
-  (cl-assert (stringp link))
-  (if-let* ((hash-pos (string-search "#ID-" link))
-            (hash-as-permalink (my-uuid-to-base62 (substring link (+ 4 hash-pos)) 22))
-            (actual-permalink (string-match my-id-regexp link))
-            (same (equal hash-as-permalink (match-string 1 link))))
+  (if-let* ((hash-pos (string-search "#" link))
+            (hash-part (substring link (1+ hash-pos)))
+            (base-part (substring link 0 hash-pos))
+            (permalink (when (string-match my-base62-id-regexp base-part)
+                         (match-string 1 base-part)))
+            (same (equal hash-part permalink)))
       ;; Cut off the hash
-      (substring link 0 hash-pos)
-    ;; Keep the hash
+      base-part
+    ;; Keep the whole link
     link))
 
 ;; Struggled so long looking for a hook that would work like the old
 ;; before-export-hook.  Let this be a lesson: the Emacs hook system exists to
-;; let you subtly modify a function IN THE MIDDLE of its body. We never actually
-;; need before-hooks (or after-hooks), since in such a simple case it is always
-;; possible to use `add-function' or call a wrapper such as this wrapper around
-;; `org-publish-org-to'.
+;; let you subtly modify a function IN THE MIDDLE of its body.  We never
+;; actually need simple before-hooks nor after-hooks, since in such a simple
+;; case it is always possible to use `add-function' or write a wrapper such as
+;; the following wrapper around `org-publish-org-to'.
 
 (defun my-publish-to-blog (plist filename pub-dir)
   ;; Fast early check that avoids loading org-mode
   (let (title id created tags)
     (with-temp-buffer
-      (insert-file-contents-literally filename)
+      (insert-file-contents filename)
       (forward-line 7)
       (delete-region (point) (point-max)) ;; should be enough to grab the metadata
 
@@ -288,7 +304,7 @@ that org-id links will resolve correctly."
                     (buffer-substring (point) (line-end-position))))
 
       (goto-char (point-min))
-      (setq id (when (search-forward ":id:")
+      (setq id (when (search-forward ":id:" nil t)
                  (delete-horizontal-space)
                  (buffer-substring (point) (line-end-position))))
 
@@ -297,16 +313,15 @@ that org-id links will resolve correctly."
                       (buffer-substring (point) (+ 10 (point)))))
 
       (goto-char (point-min))
-      (setq tags (if (search-forward "#+filetags: ")
+      (setq tags (if (search-forward "#+filetags: " nil t)
                      (thread-first (buffer-substring (point) (line-end-position))
                                    (string-trim)
-                                   (string-split ":")
+                                   (string-split ":" t)
                                    (sort #'string-lessp))
                    '(""))))
     
     (cond
      ;; Skip exporting if we won't use the result
-
      ((not title)
       (warn "TITLE MISSING: %s" filename))
      ((not created)
@@ -329,12 +344,10 @@ that org-id links will resolve correctly."
 
         ;; Customize the resulting HTML file and wrap it in a JSON object
         (let* ((output-path (org-export-output-file-name "" nil pub-dir))
-               ;; (relative-path (string-replace pub-dir "" output-path))
-               ;; (slug (-last-item (split-string relative-path "/")))
                (slug (string-replace pub-dir "" output-path))
                (permalink
                 (if (string-search "daily" pub-dir)
-                    ;; For dailies, the whole path is necessary
+                    ;; For dailies, the slug is part of permalink
                     (concat "daily/" slug)
                   ;; For other posts, the subdir is its unique id
                   (-last-item (split-string pub-dir "/" t))))
@@ -349,19 +362,20 @@ that org-id links will resolve correctly."
                                 (count-words (1- (point)) (point-max))
                               0)))
                (links 0)
-               (subheading-refs (save-excursion
-                                  (let (alist)
-                                    (while (search-forward ":roam_refs: " nil t)
-                                      (let ((here (point))
-                                            (ref (buffer-substring (point) (line-end-position))))
-                                        ;; not a file-level ref
-                                        (when (search-backward "\n*" nil t)
-                                          (search-forward " ")
-                                          (push (cons (buffer-substring (point) (line-end-position))
-                                                      ref)
-                                                alist)
-                                          (goto-char here))))
-                                    alist)))
+               (subheadings-refs
+                (save-excursion
+                  (let (alist)
+                    (while (search-forward ":roam_refs: " nil t)
+                      (let ((here (point))
+                            (ref (buffer-substring (point) (line-end-position))))
+                        ;; not a file-level ref
+                        (when (search-backward "\n*" nil t)
+                          (search-forward " ")
+                          (push (cons (buffer-substring (point) (line-end-position))
+                                      ref)
+                                alist)
+                          (goto-char here))))
+                    alist)))
                (data-for-json nil))
           (with-temp-buffer
             (goto-char (point-min))
@@ -398,82 +412,133 @@ that org-id links will resolve correctly."
               (search-forward "</div>")
               (setq content-start (point)))
 
+            ;; Replace all UUIDv4 with truncated base62 translations.
+            (goto-char content-start)
+            (while (re-search-forward (rx (regexp my-id-re) "ID-") nil t)
+              (let* ((beg (point))
+                     (end (1- (save-excursion (search-forward "\""))))
+                     (uuid (buffer-substring beg end)))
+                (delete-region (- beg 3) end)
+                (insert (substring (my-uuid-to-base62 uuid) -7))))
+
             ;; Manipulate links
             (goto-char content-start)
             (while (re-search-forward "<a .*?href=\"" nil t)
               ;; From React Router's perspective, the visitor is not in a
               ;; subdir, so get the hrefs to agree with that idea
               ;; NOTE: Breaks Svelte's router
-              (when (looking-at (rx (literal "../")))
-                (replace-match ""))
+              ;; (when (looking-at (rx (literal "../")))
+              ;; (replace-match ""))
               ;; REVIEW: Should remove the lengthy hash-part of the link
               ;;         (i.e. the bit after the # character in LINK#ORG-ID) if
               ;;         the org-id points to a file-level id anyway
-              (re-search-forward (rx (* (not "\""))))
-              (replace-match (my-strip-id-hash-from-link-if-file-level (match-string 0))))
+              ;; NOTE: This way of doing it (the following two lines) caused a
+              ;; heisenbug when org-publish got to thef bayesian-methods file!
+              ;; Point jumped back from
+              ;; href="montgomeryDesignAnalysisExperiments2013.html#ID-5f08672c-c0a6-4871-8c37-2104f6db366e"
+              ;; to after the first "<div" and inserted the replacement there!
+              ;; So then the while-loop became infinite.
+              ;; (re-search-forward (rx (* (not "\""))))
+              ;; (replace-match (my-strip-id-hash-from-link-if-file-level (match-string 0)))
+              (let* ((beg (point))
+                     (end (1- (save-excursion (search-forward "\""))))
+                     (link (buffer-substring beg end)))
+                (delete-region beg end)
+                (insert (my-strip-id-hash-from-link-if-file-level link)))
+              )
 
-            ;; TODO: Implement collapsible sections.  We'll probably have to
-            ;; undo the subsequent removal of divs.  The method I extrapolate
-            ;; from
-            ;; https://www.digitalocean.com/community/tutorials/css-collapsible
-            ;; as follows: Add an input type='checkbox' element before the
-            ;; heading.  Org already wraps the following content in a div, so
-            ;; CSS can just find the div that follows a checkbox and heading.
-            ;; NOTE: Interweave.js and such safety HTML filterers will remove
-            ;; the <input> element!
-            ;; NOTE: Actually there is a pure HTML method: <details> and
-            ;; <summary>.
-            (goto-char content-start)
-            (insert "<details>")
-            (while (re-search-forward "<h[123456]" nil t)
-              (search-backward "<")
-              (insert "</details><details open><summary>")
-              (re-search-forward "</h[123456]>")
-              (insert "</summary>"))
-            (goto-char (point-max))
-            (insert "</details>")
-
-            ;; Remove in-document divs since they mess up the look of Bulma
-            ;; CSS.  Except for the pages where I will actually style the
-            ;; divs to help visual structure (big collections of links with
-            ;; many nested headings, or pages with Logseq-style outlining).
-            (when (member "logseq" tags)
-              ;; TODO: Turn logseq export into ul/li.  See old revision of this
-              ;; file for some prior art.
-              (progn
-                (goto-char content-start)
-                (while (re-search-forward "<h[[:digit:]]" nil t)
-                  (replace-match "<p"))
-                (goto-char content-start)
-                (while (re-search-forward "</h[[:digit:]]" nil t)
-                  (replace-match "</p"))))
-            (unless (or (member "logseq" tags)
-                        (member "outline" tags))
+            ;; Implement collapsible sections
+            ;; I wonder if `org-html-container-element' provides a way to do that?
+            (unless (member "logseq" tags)
               (goto-char content-start)
-              (while (re-search-forward "</?div.*?>" nil t)
-                (replace-match "")))
+              (let ((iterations 0))
+                (while (re-search-forward "<h[23456]" nil t)
+                  (search-backward "<")
+                  (when (/= iterations 0)
+                    (insert "</details>"))
+                  (insert "<details open><summary>")
+                  (re-search-forward "</h[23456]>")
+                  (insert "</summary>")
+                  (cl-incf iterations)))
+              (goto-char (point-max))
+              (insert "</details>")
 
-            ;; Bulma CSS makes too airy tables (per the modern trend of
-            ;; design-porn over ease-of-use); compact them
-            (goto-char (point-min))
-            (while (search-forward "<table " nil t)
-              (insert "class=\"is-narrow is-striped is-bordered\""))
+              ;; https://developer.mozilla.org/en-US/docs/Web/HTML/Element/summary
+              ;; Screen readers cannot find headings wrapped in <summary>, since
+              ;; the ARIA-role changes to "button", so revert the role.  It's
+              ;; more important to know that they are headings, than that they
+              ;; are clickable.
+              (goto-char content-start)
+              (while (re-search-forward (rx "<h" (group (any "23456"))) nil t)
+                (let* ((pos (point))
+                       (digit (match-string 1))
+                       (new-attributes
+                        (concat " role=\"heading\" aria-level=\"" digit "\" ")))
+                  (search-backward "<summary")
+                  (goto-char (match-end 0))
+                  (insert new-attributes)
+                  (goto-char (+ pos (length new-attributes)))))
 
-            ;; REVIEW: This should add roam refs for each subheading that has one.
-            ;; How? We made an alist of headings and refs, then refer to that.
-            ;; Why? Mainly because of the lw-concept-graph post.
-            (while subheading-refs
-              (let* ((cell (pop subheading-refs))
-                     (heading (car cell))
-                     (ref (cdr cell)))
-                (goto-char content-start)
-                (search-forward (concat ">" heading "</") nil)
-                (search-forward ">" nil)
-                (insert "<p>Ref: ")
-                (dolist (ref (split-string refs))
-                  (setq ref (string-replace "\"" "" ref)) ;; just in case I wrapped it in quotes
-                  (insert " <a href=\"" ref "f\">" (replace-regexp-in-string "http.?://" "" ref) "</a> "))
-                (insert "</p>")))
+              ;; Remove all in-document divs
+              (goto-char content-start)
+              (while (re-search-forward "</?div.*?>" nil t) ;; hope no > in attrs
+                (replace-match ""))
+
+              )
+
+            ;; ;; TODO: I use a different formatting in my Logseq-synced pages, so
+            ;; ;; they need special treatment.  I've had problems just setting
+            ;; ;; `org-html-container-element' to "ul", so how to convert div to
+            ;; ;; ul/li manually?  The org export makes divs classed as outline-N
+            ;; ;; and outline-text-N, and you might think outline-text-3 is wrapped
+            ;; ;; inside outline-3 divs, but not so.  Both are direct children of
+            ;; ;; an outline-2 div, and an outline-text- div never contains another
+            ;; ;; div itself. So the way to convert to ul/li: first remove all
+            ;; ;; outline-text- divs, and let all the other divs become <li>.
+            ;; ;; Then, from a given outline-2, search for the first outline-3 (in
+            ;; ;; other words, search for level N+1) and prepend an <ul> there,
+            ;; ;; making sure not to search over a </li>.  Finally, the closing
+            ;; ;; tags can be inserted by simply searching </li></li> and turning
+            ;; ;; those into </li></ul></li>, and moving point to where you
+            ;; ;; inserted the </ul> in case there's a triplet or more.  Strip away
+            ;; ;; all newlines first!  Finally, wrap it all in a grand starting and
+            ;; ;; closing <ul>.
+            ;; (when (member "logseq" tags)
+            ;;   (goto-char content-start)
+            ;;   (insert "<ul>")
+            ;;   (while (re-search-forward "<div .*?class=\"outline-text-.\".*?>" nil t)
+            ;;     (replace-match "")
+            ;;     (search-forward "</div>")
+            ;;     (replace-match ""))
+            ;;   (goto-char content-start)
+            ;;   (while (re-search-forward "div .*?class=\"outline-[23456]" nil t)
+            ;;     (goto-char (match-beginning 0))
+            ;;     (delete-char 3)
+            ;;     (insert "li"))
+            ;;   (goto-char content-start)
+            ;;   (while (search-forward "</div>" nil t)
+            ;;     (replace-match "</li>"))
+            ;;   (goto-char content-start)
+            ;;   (while (re-search-forward "li .*?class=\"outline-\\([23456]\\)" nil t)
+            ;;     (let* ((n (match-string 1))
+            ;;            (n+1 (number-to-string (1+ (string-to-number n))))
+            ;;            (next-closing-tag-pos (save-excursion
+            ;;                                    (save-match-data
+            ;;                                      (search-forward "</li>")))))
+            ;;       (when (re-search-forward (concat "<li .*?class=\"outline-" n+1)
+            ;;                                next-closing-tag-pos
+            ;;                                t)
+            ;;         (goto-char (match-beginning 0))
+            ;;         (insert "<ul>"))))
+            ;;   (goto-char content-start)
+            ;;   (while (search-forward "</li>" nil t)
+            ;;     (delete-blank-lines))
+            ;;   (goto-char content-start)
+            ;;   (while (search-forward "</li></li>" nil t)
+            ;;     (backward-char 5)
+            ;;     (insert "</ul>"))
+            ;;   (goto-char (point-max))
+            ;;   (insert "</ul>"))
 
             ;; Count # of total links (except links to external sites)
             (goto-char content-start)
@@ -483,11 +548,14 @@ that org-id links will resolve correctly."
 
             ;; REVIEW: this should add 🔗links to headings that have an id
             (goto-char content-start)
-            (while (re-search-forward (rx "<h" (group digit)) nil t)
-              (when-let ((id (save-excursion
+            (while (re-search-forward (rx "<h" (group (any "23456"))) nil t)
+              (when-let ((end (save-excursion
+                                (save-match-data
+                                  (search-forward "</h"))))
+                         (id (save-excursion
                                (save-match-data
-                                 (and (search-forward "id=\"ID-" nil t)
-                                      (re-search-forward (rx (not "\"")))
+                                 (and (search-forward "id=\"ID-" end t)
+                                      (re-search-forward (rx (* (not "\""))))
                                       (match-string 0)))))
                          (digit (match-string 1)))
                 (search-forward (concat "</h" digit ">"))

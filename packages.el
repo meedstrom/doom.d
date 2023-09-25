@@ -81,11 +81,10 @@
 ;; (package! ox-rss)
 ;; (package! nov)
 (package! objed) ;; for objed-ipipe
-(package! org-drill)
+;; (package! org-drill)
 ;; (package! org-recent-headings)
 ;; (package! org-roam-bibtex) ;; yes still relevant for org 9.5
 ;; (package! org-roam-ui)
-(package! org-transclusion)
 ;; (package! org-tanglesync)
 (package! peep-dired)
 (package! prism)
@@ -104,6 +103,8 @@
 ;; (package! github-review :ignore t) ;; causes errors
 
 (package! org-roam)
+(package! org-transclusion)
+(package! htmlize)
 
 ;; (package! popper)
 ;; (package! beancount :recipe (:host github :repo "cnsunyour/beancount.el"))

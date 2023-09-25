@@ -506,7 +506,7 @@
 (keymap-set global-map "M-s r"                      #'isearch-backward)
 (keymap-set global-map "M-s s"                      #'isearch-forward)
 (keymap-set global-map "M-|"                        #'my-shell-command-replace-region)
-(keymap-set global-map "TAB"                        #'my-tab-command)
+;; (keymap-set global-map "TAB"                        #'my-tab-command)
 (keymap-set help-map "M"                 #'describe-mode)
 (keymap-set help-map "m"                 #'consult-minor-mode-menu)
 (keymap-set isearch-mode-map "<down>"    #'isearch-repeat-forward)
