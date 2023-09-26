@@ -66,7 +66,6 @@ want in my main Emacs."
   (setopt case-fold-search t) ;; for all the searches in `my-publish-to-blog'
   (setopt org-inhibit-startup t) ;; from org-publish-org-to
   ;; (setopt org-html-extension "")
-  (setopt org-html-container-element "ul")
   ;; Love it, but won't apply to every datestamp on the site
   (setopt org-display-custom-times nil)
   (toggle-debug-on-error)
@@ -244,11 +243,11 @@ will not modify the source file."
 
 
 
-;; test: (my-strip-id-hash-from-link-if-file-level "0vwRV27mRVLFd6yoyUM0PI/some-slug#ID-10b59a2a-bf95-4f20-9b4f-f27e23e51f46")
-;; test: (my-strip-id-hash-from-link-if-file-level "../0vwRV27mRVLFd6yoyUM0PI/some-slug#ID-10b59a2a-bf95-4f20-9b4f-f27e23e51f46")
+;; test: (my-strip-hashlink-if-same-as-permalink "0vwRV27mRVLFd6yoyUM0PI/some-slug#ID-10b59a2a-bf95-4f20-9b4f-f27e23e51f46")
+;; test: (my-strip-hashlink-if-same-as-permalink "../0vwRV27mRVLFd6yoyUM0PI/some-slug#ID-10b59a2a-bf95-4f20-9b4f-f27e23e51f46")
 (defvar my-base62-id-regexp (rx (? "/") (group (= 7 alnum)) (? "/")))
 
-;; (defun my-strip-id-hash-from-link-if-file-level (link)
+;; (defun my-strip-hashlink-if-same-as-permalink (link)
 ;;   (cl-assert (stringp link))
 ;;   (if-let* ((hash-pos (string-search "#ID-" link))
 ;;             (hash-as-permalink
@@ -270,14 +269,15 @@ buffer (in which case the regexp ends at the # character), or the
 headings those hash-links may refer to, in which case the regexp
 ends inside the id=\"\" HTML attribute.")
 
-;; TODO: Use this once we rewrite all uuids to base62
-(defun my-strip-id-hash-from-link-if-file-level (link)
+(defun my-strip-hashlink-if-same-as-permalink (link)
   (if-let* ((hash-pos (string-search "#" link))
             (hash-part (substring link (1+ hash-pos)))
             (base-part (substring link 0 hash-pos))
-            (permalink (when (string-match my-base62-id-regexp base-part)
-                         (match-string 1 base-part)))
-            (same (equal hash-part permalink)))
+            (same (string-search hash-part base-part))
+            ;; (permalink (when (string-match (rx (group (= 7 alnum)) "/") base-part)
+                         ;; (match-string 1 base-part)))
+            ;; (same (equal hash-part permalink))
+            )
       ;; Cut off the hash
       base-part
     ;; Keep the whole link
@@ -295,8 +295,8 @@ ends inside the id=\"\" HTML attribute.")
   (let (title id created tags)
     (with-temp-buffer
       (insert-file-contents filename)
-      (forward-line 7)
-      (delete-region (point) (point-max)) ;; should be enough to grab the metadata
+      (forward-line 7)  ;; should be enough to grab the metadata
+      (delete-region (point) (point-max))
 
       (goto-char (point-min))
       (setq title (when (search-forward "#+title: " nil t)
@@ -440,52 +440,47 @@ ends inside the id=\"\" HTML attribute.")
               ;; to after the first "<div" and inserted the replacement there!
               ;; So then the while-loop became infinite.
               ;; (re-search-forward (rx (* (not "\""))))
-              ;; (replace-match (my-strip-id-hash-from-link-if-file-level (match-string 0)))
+              ;; (replace-match (my-strip-hashlink-if-same-as-permalink (match-string 0)))
               (let* ((beg (point))
                      (end (1- (save-excursion (search-forward "\""))))
                      (link (buffer-substring beg end)))
                 (delete-region beg end)
-                (insert (my-strip-id-hash-from-link-if-file-level link)))
+                (insert (my-strip-hashlink-if-same-as-permalink link)))
               )
 
-            ;; Implement collapsible sections
-            ;; I wonder if `org-html-container-element' provides a way to do that?
-            (unless (member "logseq" tags)
-              (goto-char content-start)
-              (let ((first t))
-                (while (re-search-forward "<h[23456]" nil t)
-                  (search-backward "<")
-                  (unless first
-                    (insert "</details>")
-                    (setq first nil))
-                  (insert "<details open><summary>")
-                  (re-search-forward "</h[23456]>")
-                  (insert "</summary>")))
-              (goto-char (point-max))
-              (insert "</details>")
+            ;; Remove all in-document divs
+            (goto-char content-start)
+            (while (re-search-forward "</?div.*?>" nil t) ;; hope no > in attrs
+              (replace-match ""))
 
-              ;; https://developer.mozilla.org/en-US/docs/Web/HTML/Element/summary
-              ;; Screen readers cannot find headings wrapped in <summary>, since
-              ;; the ARIA-role changes to "button", so revert the role.  It's
-              ;; more important to know that they are headings, than that they
-              ;; are clickable.
-              (goto-char content-start)
+            ;; REVIEW
+            ;; Implement collapsible sections
+            ;;
+            ;; https://developer.mozilla.org/en-US/docs/Web/HTML/Element/summary
+            ;; Screen readers cannot find headings wrapped in <summary>, since
+            ;; the aria role changes to "button", so revert the role.  It's
+            ;; more important to know that they are headings, than that they
+            ;; are clickable.
+            (goto-char content-start)
+            (let ((first t))
               (while (re-search-forward (rx "<h" (group (any "23456"))) nil t)
-                (let* ((pos (point))
-                       (digit (match-string 1))
+                (let* ((digit (match-string 1))
                        (new-attributes
                         (concat " role=\"heading\" aria-level=\"" digit "\" ")))
-                  (search-backward "<summary")
-                  (goto-char (match-end 0))
-                  (insert new-attributes)
-                  (goto-char (+ pos (length new-attributes)))))
+                  (search-backward "<")
+                  (when (not first)
+                    (insert "</details>"))
+                  (setq first nil)
+                  (insert "<details class=\"outline-"
+                          digit
+                          "\" "
+                          new-attributes
+                          " open><summary>")
+                  (re-search-forward "</h[23456]>")
+                  (insert "</summary>"))))
+            (goto-char (point-max))
+            (insert "</details>")
 
-              ;; Remove all in-document divs
-              (goto-char content-start)
-              (while (re-search-forward "</?div.*?>" nil t) ;; hope no > in attrs
-                (replace-match ""))
-
-              )
 
             ;; ;; TODO: I use a different formatting in my Logseq-synced pages, so
             ;; ;; they need special treatment.  I've had problems just setting
@@ -550,18 +545,19 @@ ends inside the id=\"\" HTML attribute.")
             ;; REVIEW: this should add 🔗links to headings that have an id
             (goto-char content-start)
             (while (re-search-forward (rx "<h" (group (any "23456"))) nil t)
-              (when-let ((end (save-excursion
-                                (save-match-data
-                                  (search-forward "</h"))))
+              (when-let ((digit (match-string 1))
+                         (beg (match-beginning 0))
+                         (bound (save-excursion
+                                  (save-match-data
+                                    (search-forward ">"))))
                          (id (save-excursion
                                (save-match-data
-                                 (and (search-forward "id=\"ID-" end t)
+                                 (and (search-forward "id=\"" bound t)
                                       (re-search-forward (rx (* (not "\""))))
-                                      (match-string 0)))))
-                         (digit (match-string 1)))
+                                      (match-string 0))))))
                 (search-forward (concat "</h" digit ">"))
                 (goto-char (match-beginning 0))
-                (insert (concat "<a class=\"easylink\" href=\"#ID-" id "\"> 🔗</a>"))))
+                (insert (concat "<a class=\"easylink\" href=\"#" id "\"> 🔗</a>"))))
 
             (setq data-for-json
                   `((slug . ,slug)
