@@ -31,7 +31,7 @@
   (interactive)
   (require 'ox-publish)
   (switch-to-buffer "*Messages*") ;; for watching it work
-  (split-window) ;; in case the Warnings buffer appears
+  ;; (split-window) ;; in case the Warnings buffer appears
   (cd "/home/kept/roam") ;; for me to quick-search when an id fails to resolve
   (org-publish "my-slipbox-blog" t))
 
@@ -414,7 +414,8 @@ ends inside the id=\"\" HTML attribute.")
 
             ;; Replace all UUIDv4 with truncated base62 translations.
             (goto-char content-start)
-            (while (re-search-forward (rx (regexp my-id-re) "ID-") nil t)
+            ;; (while (re-search-forward (rx (regexp my-id-re) "ID-") nil t)
+            (while (re-search-forward "[\"#]ID-" nil t)
               (let* ((beg (point))
                      (end (1- (save-excursion (search-forward "\""))))
                      (uuid (buffer-substring beg end)))
@@ -451,15 +452,15 @@ ends inside the id=\"\" HTML attribute.")
             ;; I wonder if `org-html-container-element' provides a way to do that?
             (unless (member "logseq" tags)
               (goto-char content-start)
-              (let ((iterations 0))
+              (let ((first t))
                 (while (re-search-forward "<h[23456]" nil t)
                   (search-backward "<")
-                  (when (/= iterations 0)
-                    (insert "</details>"))
+                  (unless first
+                    (insert "</details>")
+                    (setq first nil))
                   (insert "<details open><summary>")
                   (re-search-forward "</h[23456]>")
-                  (insert "</summary>")
-                  (cl-incf iterations)))
+                  (insert "</summary>")))
               (goto-char (point-max))
               (insert "</details>")
 
