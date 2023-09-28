@@ -15,17 +15,17 @@
 ;; along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 (add-load-path! "/home/kept/emacs/key-seqs-finder/"
-                "/home/kept/emacs/inline-anki/"
+                ;; "/home/kept/emacs/inline-anki/"
                 "/home/kept/emacs/twee-mode/")
 
 ;; Backups have saved my skin in 2015, 2016, 2018, and 2020.
 ;; So I should not stop using them until 2030 or so, given no more incidents.
 ;; I put them in the unusual path /home/backups/ to prevent cluttered rg output.
-(setq
+(setopt
  backup-directory-alist `(("." . "/home/backups"))
  delete-old-versions t ;; nil led to Emacs appearing broken for newbie-me
  vc-make-backup-files t ;; I don't commit regularly in every project
- make-backup-files t ;; WHY did Doom disable it
+ make-backup-files t ;; Why did Doom disable it
  version-control t)
 
 ;; undoom; I want readable backup names since I rename files and directories all
@@ -37,6 +37,9 @@
   (error "Disabling backups because can't write to: /home/backups/")
   (setq backup-directory-alist nil)
   (setq make-backup-files nil))
+
+;; Learned a lesson
+(add-hook 'after-save-hook #'my-fix-invalid-backup-settings)
 
 ;; Doom puts eww-bookmarks in doomemacs/.local/cache, which I find dangerous
 ;; since I may unthinkingly wipe it.  Put it where I won't delete it.
@@ -98,11 +101,13 @@
 ;; (setq doom-theme 'doom-rouge)
 ;; (setq doom-theme 'doom-dracula)
 
-;; I'm starting to realize some facts about themes.
-;; - if you have a high-DPI monitor, may as well italicize comments
-;;   - but if you see a theme with italic comments, it's likely this theme
-;;     designer also saw fit to italicize other things & I don't like that
-;; - with prism-mode, none of the faces should be grey
+;; Some quick rules of thumb to select a theme
+;; - if you have a high-DPI monitor, no need to be allergic to italics
+;;   - but I prefer italics on comments ONLY
+;;     - counterintuitively, if I see a theme with italic comments, I should
+;;       avoid it bc it's likely this theme designer also saw fit to italicize
+;;       other things
+;; - with prism-mode, none of the faces should be grey !!!
 ;; - with prism-mode, none of the faces should be much darker than the rest
 
 ;; Good WITH prism-desaturations
@@ -212,7 +217,7 @@
 (after! recentf
   (setopt recentf-max-saved-items nil))
 
-;; FIXME: doom doesn't respect this
+;; FIXME: doom doesn't respect this during init
 (setopt load-prefer-newer t) ;; don't spend another minute confused by this
 (general-after-init
   (setopt load-prefer-newer t))
@@ -223,7 +228,7 @@
 (setopt save-interprogram-paste-before-kill t)
 (setopt select-enable-primary t)
 (setopt custom-safe-themes t)
-(setopt suggest-key-bindings nil)
+;; (setopt suggest-key-bindings nil)
 (setopt kill-read-only-ok t)
 (setopt kill-ring-max 600)
 ;; (setopt byte-compile-warnings '(not free-vars))
@@ -255,24 +260,30 @@
 
 ;;; Calendar...
 ;; Modern phones do calendar, but it's less aggravating to add and remove many
-;; events at once here (to my knowledge, neither iPhone nor Android expose
-;; anything remotely as convenient as xfconf or even a yaml/toml file).  Emacs
-;; provides a neat solution: since Org takes these into the agenda, and the app
-;; Beorg can sync all agenda stuff onto the actual phone calendar, adding it
-;; here adds it there.  Magic.
+;; events at once here (if only iOS or Android exposed a yaml/toml file for
+;; system settings, that'd be another story).  Emacs provides a neat solution:
+;; since org-agenda integrates holiday.el info, and the app Beorg can sync all
+;; agenda stuff into the actual iOS calendar, adding it here adds it there.
+;; Magic.
 
-(setopt calendar-chinese-all-holidays-flag t)
 (setopt holiday-bahai-holidays nil)
 (setopt holiday-hebrew-holidays nil)
+(setopt holiday-islamic-holidays nil)
+(setopt holiday-oriental-holidays nil)
+(setopt calendar-view-holidays-initially-flag t)
 
-;; Add some Swedish holidays
+;; Some holidays per the Swedish calendar (the default is American).
+;; Can't easily calculate Easter, but Emacs uses `holiday-easter-etc'.
 (setopt holiday-general-holidays
         '((holiday-fixed 1 1 "New Year's Day")
           (holiday-fixed 2 14 "Valentine's Day")
+          (holiday-fixed 3 8 "International Women's Day")
           (holiday-fixed 4 1 "April Fools' Day")
           (holiday-float 5 0 -1 "Mother's Day")
           (holiday-float 11 0 2 "Father's Day")
-          (holiday-fixed 10 31 "Halloween")))
+          (holiday-fixed 10 31 "Halloween")
+          (holiday-fixed 12 13 "Lucia")
+          (holiday-fixed 12 24 "Christmas Eve")))
 
 ;; Add personal holidays
 (setopt holiday-other-holidays
@@ -280,18 +291,36 @@
           (holiday-fixed 3 8 "Clarence's birthday")
           (holiday-fixed 4 1 "Karin's birthday")
           (holiday-fixed 4 11 "Griselda's birthday")
+          (holiday-fixed 4 11 "Lena D's birthday")
           (holiday-fixed 6 18 "Rickard's birthday")
-          ;; (holiday-fixed 7 18 "Nath's birthday") ;; when was it exactly
           (holiday-fixed 6 27 "Yang Yu Ting's birthday")
-          (holiday-fixed 9 24 "Lena's birthday")
+          (holiday-fixed 7 1 "Ignaz Semmelweis Day")
+          (holiday-fixed 7 5 "Nath's birthday")
+          (holiday-fixed 9 13 "Tuyana's birthday")
+          (holiday-fixed 9 24 "Lena A's birthday")
           (holiday-fixed 9 26 "Petrov Day")
           (holiday-fixed 10 27 "Arkhipov Day")
           (holiday-fixed 12 10 "Simon's birthday")))
 
+;; add these birthdays
+;; - Ann-Julie
+;; - Cristina
+;; - Griselda's parents?
+;; - Jesus
+;; - Laia (the nutritionist)
+;; - Marc-Antoine
+;; - Mirela
+;; - Sammer
+;; - Seda
+;; - Tim
+;; - Thor & Emil
+
 
 ;;; Some hooks
 
-(add-hook! (special-mode prog-mode text-mode) #'my-hippie-config)
+(add-hook 'special-mode-hook #'my-hippie-config)
+(add-hook 'prog-mode-hook #'my-hippie-config)
+(add-hook 'text-mode-hook #'my-hippie-config)
 (add-hook 'after-save-hook #'my-compile-and-drop)
 (add-hook 'after-save-hook #'executable-make-buffer-file-executable-if-script-p)
 (add-hook 'doom-load-theme-hook #'my-fix-pdf-midnight-colors)
@@ -300,24 +329,25 @@
                             (setq c-basic-offset 4
                                   tab-width 4)))
 
-;; Hl-line-mode doesn't play along well when paren-mode is combined with certain
-;; themes (maybe fixed when prism-mode is used in place of paren-mode).  Also
-;; interferes with the trick of calling M-x describe-face to discover which face
-;; is under point.  But this is more appropriately fixed with a command
-;; "describe-face-at-point" or maybe a vertico/consult hack. Later...
+;; ;; FIXME
+;; ;; Try to fix the interference from hl-line-mode that deprives us of the trick
+;; ;; of calling M-x describe-face to discover which face is under point.
+;; (defun my-turn-off-hl-line-mode (&rest args)
+;;   (hl-line-mode 0))
+;; (defun my-turn-on-hl-line-mode (&rest args)
+;;   (hl-line-mode 1))
+;; (advice-add 'describe-face :before #'my-turn-off-hl-line-mode)
+;; (advice-add 'describe-face :after #'my-turn-on-hl-line-mode)
 (remove-hook 'doom-first-buffer-hook #'global-hl-line-mode)
 
 ;; undoom
 (remove-hook 'term-mode-hook #'hide-mode-line-mode)
 
-(remove-hook 'doom-first-input-hook #'which-key-mode)
-;; (add-hook 'after-save-hook #'my-fix-invalid-backup-settings)
+;; (remove-hook 'doom-first-input-hook #'which-key-mode)
 
-;; often it's a binary file, so prevent accidental edits!
 
-;; NOTE: Emacs 29 no longer recommends `so-long-mode' anyway, so I'm guessing
-;;       Doom will no longer use it.  (new system is automatic, see
-;;       `long-line-optimizations-p').
+
+;; Prevent accidental edits
+;; NOTE: Emacs 29 no longer recommends `so-long-mode' (new system is automatic,
+;;       see `long-line-optimizations-p').  Still doesn't hurt to keep this.
 (add-hook 'so-long-mode-hook #'read-only-mode)
-
-(remove-hook 'doom-first-file-hook #'global-so-long-mode)

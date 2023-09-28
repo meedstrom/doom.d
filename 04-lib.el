@@ -1,6 +1,6 @@
 ;; my-lib.el -- a collection of defuns -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2019 Martin Edström
+;; Copyright (C) 2019-2023 Martin Edström
 ;; This program is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
 ;; the Free Software Foundation, either version 3 of the License, or
@@ -29,8 +29,10 @@
 (autoload #'objed-ipipe "objed")
 (autoload #'piper "piper")
 
-;; Faster than using `org-get-id' because it doesn't need to activate org-mode
+;; Faster than `org-get-id' because it doesn't need to activate org-mode.
+;; Of course, if you already activated org-mode, just use that.
 (defun my-org-file-id (file)
+  "Assumes a #+TITLE, thus nil can also mean that is absent."
   (with-temp-buffer
     (insert-file-contents-literally file nil 0 300)
     (and (search-forward "#+title" nil t)
@@ -45,7 +47,7 @@
     (if (or (= 0 decimal) (/= 36 (length uuid)))
         (error "Sure this is an UUID? %s" uuid)
       ;; The highest UUID (ffffffff-ffff-ffff-ffff-ffffffffffff) makes a base62
-      ;; string 22 chars long.
+      ;; string 22 characters long.  So let's always return 22 characters.
       (my-int-to-base62 decimal 22))))
 
 (defun my-int-to-base62 (integer &optional length)

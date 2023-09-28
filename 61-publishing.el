@@ -75,10 +75,11 @@ want in my main Emacs."
   ;; Switch theme for 2 reasons
   ;; 1. Show me that this is not a normal Emacs
   ;; 2. Syntax-highlight source blocks in a way that looks OK on the web
-  ;; (load-theme 'doom-rouge)
-  (load-theme 'doom-monokai-machine)
+  (load-theme 'doom-rouge)
+  ;; (load-theme 'doom-monokai-machine)
   ;; Problem: the colors get super weird unlike in actual Emacs
   ;; (fset 'rainbow-delimiters-mode #'prism-mode)
+  (fset 'rainbow-delimiters-mode #'ignore)
 
   ;; For hygiene, ensure that this subordinate emacs syncs nothing to disk
   (cancel-timer my-state-sync-timer)
@@ -357,7 +358,7 @@ will not modify the source file."
             ;; 05 Insert the post body: the HTML produced by Org-export
             (insert-file-contents output-path)
 
-            ;; 08 Set content-start after TOC, if there is one
+            ;; 08 Set content-start after ToC, if there is one
             (goto-char (point-min))
             (setq content-start (point))
             (when (search-forward "<div id=\"table-of-contents\" " nil t)
@@ -414,66 +415,59 @@ will not modify the source file."
             ;; bit after the # character in LINK#ORG-ID) if the org-id points to
             ;; a file-level id anyway
             (goto-char content-start)
+            ;; (while (re-search-forward "<a +?href=\"" nil t)
             (while (re-search-forward "<a .*?href=\"" nil t)
-              ;; NOTE: This way of doing it (the following two lines) caused a
-              ;; heisenbug when org-publish got to the bayesian-methods file!
-              ;; Point jumped back from
-              ;; href="montgomeryDesignAnalysisExperiments2013.html#ID-5f08672c-c0a6-4871-8c37-2104f6db366e"
-              ;; to after the first "<div" and inserted the replacement there!
-              ;; So then the while-loop became infinite.
-              ;; (re-search-forward (rx (* (not "\""))))
-              ;; (replace-match (my-strip-hashlink-if-same-as-permalink (match-string 0)))
               (let* ((beg (point))
                      (end (1- (save-excursion (search-forward "\""))))
                      (link (buffer-substring beg end)))
                 (delete-region beg end)
                 (insert (my-strip-hashlink-if-same-as-permalink link))))
 
-            ;; 18 Remove all in-document divs
-            (goto-char content-start)
-            (while (re-search-forward "</?div.*?>" nil t) ;; hope no > in attrs
-              (replace-match ""))
+            ;; 16 Implement collapsible sections
+            ;; Preserve the ToC div, but remove its pointless inner div
+            (unless (member "logseq" tags)
+              (goto-char (point-min))
+              (when (search-forward "<div id=\"table-of-contents\"" nil t)
+                (re-search-forward "<div id=\"text-table-of-contents\".*?>")
+                (replace-match "")
+                (search-forward "</div>\n</div>")
+                (replace-match "</div>"))
+              ;; First strip all non-outline div tags and their pesky anonymous
+              ;; closing tags
+              (while (search-forward "<div" nil t)
+                (let ((beg (match-beginning 0)))
+                  (unless (re-search-forward " id=\".*?\" class=\"outline-[123456]\"" (line-end-position) t)
+                    (delete-region beg (search-forward ">"))
+                    (search-forward "</div>")
+                    (replace-match "")
+                    (goto-char (1+ beg)))))
+              (goto-char (point-min))
+              ;; Now change all remaining <div> to <details>
+              (while (re-search-forward "<div .*?>" nil t)
+                ;; https://developer.mozilla.org/en-US/docs/Web/HTML/Element/summary
+                ;; Screen readers cannot find headings wrapped in <summary>, since
+                ;; the aria role changes to "button", so revert the role.  It's
+                ;; more important to know that they are headings, than that they
+                ;; are clickable.
+                (replace-match "<details open><summary role=\"heading\"")
+                (unless (looking-at "\n<h\\([123456]\\)")
+                  (error "Expected to be at a heading tag"))
+                (insert " aria-level=\"" (match-string 1) "\">")
+                (re-search-forward "</h[123456]>")
+                (insert "</summary>"))
+              (goto-char (point-min))
+              (while (search-forward "</div>" nil t)
+                (replace-match "</details>")))
 
-            ;; 19
-            ;; MUST AFTER 18
-            ;; This special tag means wrap in special div for special styling
-            ;; (only applies to a few posts)
+            ;; 19 Enable a very different stylesheet for pages tagged "logseq"
             (when (member "logseq" tags)
               (goto-char content-start)
-              (insert "<div class=\"logseq\">"))
-
-            ;; 20
-            ;; DEPENDS ON 19
-            ;; Close the tag we may have added earlier
-            (when (member "logseq" tags)
+              (while (re-search-forward "</?div.*?>" nil t)
+                (replace-match ""))
+              (goto-char content-start)
+              (insert "<div class=\"logseq\">")
               (goto-char (point-max))
               (insert "</div>"))
-
-            ;; 22 Implement collapsible sections
-            ;;
-            ;; https://developer.mozilla.org/en-US/docs/Web/HTML/Element/summary
-            ;; Screen readers cannot find headings wrapped in <summary>, since
-            ;; the aria role changes to "button", so revert the role.  It's
-            ;; more important to know that they are headings, than that they
-            ;; are clickable.
-            (goto-char content-start)
-            (let ((first t))
-              (while (re-search-forward (rx "<h" (group (any "23456"))) nil t)
-                (let ((digit (match-string 1)))
-                  (search-backward "<")
-                  (when (not first)
-                    (insert "</details>"))
-                  (setq first nil)
-                  (insert "<details class=\"outline-"
-                          digit
-                          "\" "
-                          " open><summary role=\"heading\" aria-level=\""
-                          digit
-                          "\">")
-                  (re-search-forward "</h[23456]>")
-                  (insert "</summary>"))))
-            (goto-char (point-max))
-            (insert "</details>")
 
             ;; 26
             ;; Count # of total links (except links to external sites)
