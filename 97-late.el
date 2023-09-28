@@ -206,9 +206,9 @@
 ;; (after! rjsx-mode
   ;; (remove-hook 'rjsx-mode-hook #'rainbow-delimiters-mode))
 
-(after! typescript-mode
-  ;; NOTE: typescript-tsx-mode is actually defined in ~/doomemacs/modules/lang/javascript/config.el
-  (remove-hook 'typescript-tsx-mode-hook #'rainbow-delimiters-mode))
+;; (after! typescript-mode
+;;   ;; NOTE: typescript-tsx-mode is actually defined in ~/doomemacs/modules/lang/javascript/config.el
+;;   (remove-hook 'typescript-tsx-mode-hook #'rainbow-delimiters-mode))
 
 (use-package! prism
   :config

@@ -61,11 +61,12 @@ want in my main Emacs."
   (setopt org-export-with-drawers '(not "logbook" "noexport")) ;; case-insensitive
   (setopt org-export-with-broken-links nil) ;; links would disappear quietly
   (setopt org-export-with-smart-quotes nil)
-  (setopt org-html-checkbox-type 'unicode)
+  (setopt org-html-checkbox-type 'ascii)
+  (setopt org-html-extension "") ;; maybe now?
+  ;; (setopt org-html-checkbox-type 'unicode)
   (setopt org-html-html5-fancy t)
   (setopt case-fold-search t) ;; for all the searches in `my-publish-to-blog'
   (setopt org-inhibit-startup t) ;; from org-publish-org-to
-  ;; (setopt org-html-extension "")
   ;; Love it, but won't apply to every datestamp on the site
   (setopt org-display-custom-times nil)
   (toggle-debug-on-error)
@@ -76,7 +77,8 @@ want in my main Emacs."
   ;; 2. Syntax-highlight source blocks in a way that looks OK on the web
   ;; (load-theme 'doom-rouge)
   (load-theme 'doom-monokai-machine)
-  (fset 'rainbow-delimiters-mode #'prism-mode)
+  ;; Problem: the colors get super weird unlike in actual Emacs
+  ;; (fset 'rainbow-delimiters-mode #'prism-mode)
 
   ;; For hygiene, ensure that this subordinate emacs syncs nothing to disk
   (cancel-timer my-state-sync-timer)
@@ -237,11 +239,7 @@ will not modify the source file."
   (if-let* ((hash-pos (string-search "#" link))
             (hash-part (substring link (1+ hash-pos)))
             (base-part (substring link 0 hash-pos))
-            (same (string-search hash-part base-part))
-            ;; (permalink (when (string-match (rx (group (= 7 alnum)) "/") base-part)
-                         ;; (match-string 1 base-part)))
-            ;; (same (equal hash-part permalink))
-            )
+            (same (string-search hash-part base-part)))
       ;; Cut off the hash
       base-part
     ;; Keep the whole link
@@ -253,12 +251,13 @@ will not modify the source file."
 ;; actually need simple before-hooks nor after-hooks, since in such a simple
 ;; case it is always possible to use `add-function' or write a wrapper such as
 ;; the following wrapper around `org-publish-org-to'.
+
 (defun my-publish-to-blog (plist filename pub-dir)
   ;; Fast early check that avoids loading org-mode
   (let (title id created tags)
     (with-temp-buffer
       (insert-file-contents filename)
-      (forward-line 7)  ;; should be enough to grab the metadata
+      (forward-line 10)  ;; should be enough to grab the metadata
       (delete-region (point) (point-max))
 
       (goto-char (point-min))
@@ -308,6 +307,7 @@ will not modify the source file."
         ;; Customize the resulting HTML file and wrap it in a JSON object
         (let* ((output-path (org-export-output-file-name "" nil pub-dir))
                (slug (string-replace pub-dir "" output-path))
+               (m1 (make-marker))
                (permalink
                 ;; if (string-search "daily" pub-dir)
                 ;; For dailies, reuse the slug
@@ -344,14 +344,9 @@ will not modify the source file."
           (with-temp-buffer
             (goto-char (point-min))
 
-            ;; This special tag means wrap in special div for special styling
-            ;; (only applies to a few posts)
-            (when (member "logseq" tags)
-              (insert "<div class=\"logseq\">"))
-
             (insert "<h1 id=\"title\">" title "</h1>")
 
-            ;; Insert roam_refs before the post body
+            ;; 03 Insert roam_refs before the post body
             (when refs
               (insert "<p>Ref: "  )
               (dolist (ref (split-string refs))
@@ -359,24 +354,50 @@ will not modify the source file."
                 (insert " <a href=\"" ref "f\">" (replace-regexp-in-string "http.?://" "" ref) "</a> "))
               (insert "</p>"))
 
-            ;; Insert the post body: the HTML produced by Org-export
+            ;; 05 Insert the post body: the HTML produced by Org-export
             (insert-file-contents output-path)
 
-            ;; Close the tag we may have added earlier
-            (when (member "logseq" tags)
-              (goto-char (point-max))
-              (insert "</div>"))
-
-            ;; TODO: Remove when I migrate to Svelte
-            ;; Make Bulma CSS render the Table of Contents as an infobox
+            ;; 08 Set content-start after TOC, if there is one
             (goto-char (point-min))
             (setq content-start (point))
             (when (search-forward "<div id=\"table-of-contents\" " nil t)
-              (insert " class=\"box\"")
+              ;; ;; TODO: Remove when I migrate to Svelte
+              ;;   (insert " class=\"box\"") ;; bulma CSS
               (search-forward "</div>")
               (search-forward "</div>")
               (setq content-start (point)))
 
+            ;; 09
+            ;; MUST BEFORE 10,14
+            ;; Give links a CSS class depending on target note's tags
+            (goto-char content-start)
+            (while (re-search-forward "<a [^>]*?href=.[^\"]*?#ID-" nil t)
+              (set-marker m1 (point))
+              (when-let* ((uuid (buffer-substring (point)
+                                                  (1- (search-forward "\""))))
+                          (target-tags (-flatten
+                                        (org-roam-db-query
+                                         `[:select [tag]
+                                           :from tags
+                                           :where (= node-id ,uuid)]))))
+                (let ((private (when (-intersection target-tags
+                                                    my-tags-to-avoid-uploading)
+                                 "private")))
+                  (search-backward "<a ")
+                  (forward-char 3)
+                  (insert " class=\""
+                          (or private
+                              (car (member "eyes_therapist" target-tags))
+                              (car (member "eyes_partner" target-tags))
+                              (car (member "eyes_friend" target-tags))
+                              "public")
+                          (if (member "stub" target-tags)
+                              " stub"
+                            "")
+                          "\" ")))
+              (goto-char (marker-position m1)))
+
+            ;; 10
             ;; Replace all UUIDv4 with truncated base62 translations.
             (goto-char content-start)
             ;; (while (re-search-forward (rx (regexp my-id-re) "ID-") nil t)
@@ -387,6 +408,8 @@ will not modify the source file."
                 (delete-region (- beg 3) end)
                 (insert (substring (my-uuid-to-base62 uuid) -7))))
 
+            ;; 14
+            ;; DEPENDS ON 10
             ;; For all links, remove the lengthy hash-part of the link (i.e. the
             ;; bit after the # character in LINK#ORG-ID) if the org-id points to
             ;; a file-level id anyway
@@ -406,12 +429,27 @@ will not modify the source file."
                 (delete-region beg end)
                 (insert (my-strip-hashlink-if-same-as-permalink link))))
 
-            ;; Remove all in-document divs
+            ;; 18 Remove all in-document divs
             (goto-char content-start)
             (while (re-search-forward "</?div.*?>" nil t) ;; hope no > in attrs
               (replace-match ""))
 
-            ;; Implement collapsible sections
+            ;; 19
+            ;; MUST AFTER 18
+            ;; This special tag means wrap in special div for special styling
+            ;; (only applies to a few posts)
+            (when (member "logseq" tags)
+              (goto-char content-start)
+              (insert "<div class=\"logseq\">"))
+
+            ;; 20
+            ;; DEPENDS ON 19
+            ;; Close the tag we may have added earlier
+            (when (member "logseq" tags)
+              (goto-char (point-max))
+              (insert "</div>"))
+
+            ;; 22 Implement collapsible sections
             ;;
             ;; https://developer.mozilla.org/en-US/docs/Web/HTML/Element/summary
             ;; Screen readers cannot find headings wrapped in <summary>, since
@@ -421,9 +459,7 @@ will not modify the source file."
             (goto-char content-start)
             (let ((first t))
               (while (re-search-forward (rx "<h" (group (any "23456"))) nil t)
-                (let* ((digit (match-string 1))
-                       (new-attributes
-                        (concat " role=\"heading\" aria-level=\"" digit "\" ")))
+                (let ((digit (match-string 1)))
                   (search-backward "<")
                   (when (not first)
                     (insert "</details>"))
@@ -431,19 +467,22 @@ will not modify the source file."
                   (insert "<details class=\"outline-"
                           digit
                           "\" "
-                          new-attributes
-                          " open><summary>")
+                          " open><summary role=\"heading\" aria-level=\""
+                          digit
+                          "\">")
                   (re-search-forward "</h[23456]>")
                   (insert "</summary>"))))
             (goto-char (point-max))
             (insert "</details>")
 
+            ;; 26
             ;; Count # of total links (except links to external sites)
             (goto-char content-start)
             (setq links (cl-loop while (re-search-forward "<a .*?href=." nil t)
                                  unless (looking-at-p "http")
                                  count t))
 
+            ;; 30
             ;; Add 🔗links to headings that have a permanent id
             (goto-char content-start)
             (while (re-search-forward (rx "<h" (group (any "23456"))) nil t)
