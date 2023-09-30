@@ -33,7 +33,11 @@
   (switch-to-buffer "*Messages*") ;; for watching it work
   ;; (split-window) ;; in case the Warnings buffer appears
   (cd "/home/kept/roam") ;; for me to quick-search when an id fails to resolve
-  (org-publish "my-slipbox-blog" t))
+  (org-publish "my-slipbox-blog" t)
+  ;; will probably have to rewrite all attachment/ links to $lib/images or something ...
+  ;; or static/, and place them in svelte's static folder
+  ;; (org-publish "my-slipbox-blog-images" t)
+  )
 
 (setopt org-publish-project-alist
         `(("my-slipbox-blog"
@@ -47,7 +51,13 @@
            :section-numbers nil
            ;; NOTE: this works only for subtrees, so we also check file-level
            ;; tag in `my-publish-to-blog'.
-           :exclude-tags ,my-tags-to-avoid-uploading)))
+           :exclude-tags ,my-tags-to-avoid-uploading)
+
+          ("my-slipbox-blog-images"
+           :base-directory "/tmp/roam/attachments/"
+           :base-extension "png\\|jpg"
+           :publishing-directory "/home/kept/pub/attachments/"
+           :publishing-function org-publish-attachment)))
 
 ;; (defconst my-date-regexp (rx (= 4 digit) "-" (= 2 digit) "-" (= 2 digit)))
 (defvar my-publish-ran-already nil)
@@ -62,24 +72,25 @@ want in my main Emacs."
   (setopt org-export-with-broken-links nil) ;; links would disappear quietly
   (setopt org-export-with-smart-quotes nil)
   (setopt org-html-checkbox-type 'ascii)
-  (setopt org-html-extension "") ;; maybe now?
-  ;; (setopt org-html-checkbox-type 'unicode)
+  ;; If we don't set this to "", there will be .html inside some links even
+  ;; though I also set "" in the `org-publish-org-to' call.
+  (setopt org-html-extension "")
+  (setopt org-html-checkbox-type 'unicode) ;; how will it look in eww? eh.
   (setopt org-html-html5-fancy t)
   (setopt case-fold-search t) ;; for all the searches in `my-publish-to-blog'
   (setopt org-inhibit-startup t) ;; from org-publish-org-to
   ;; Love it, but won't apply to every datestamp on the site
-  (setopt org-display-custom-times nil)
+  ;; (setopt org-display-custom-times nil)
   (toggle-debug-on-error)
   (toggle-debug-on-quit)
 
   ;; Switch theme for 2 reasons
   ;; 1. Show me that this is not a normal Emacs
   ;; 2. Syntax-highlight source blocks in a way that looks OK on the web
+  (fset 'rainbow-delimiters-mode #'prism-mode)
+  (add-hook 'doom-load-theme-hook #'prism-set-colors)
   (load-theme 'doom-rouge)
   ;; (load-theme 'doom-monokai-machine)
-  ;; Problem: the colors get super weird unlike in actual Emacs
-  ;; (fset 'rainbow-delimiters-mode #'prism-mode)
-  (fset 'rainbow-delimiters-mode #'ignore)
 
   ;; For hygiene, ensure that this subordinate emacs syncs nothing to disk
   (cancel-timer my-state-sync-timer)
@@ -340,6 +351,13 @@ will not modify the source file."
                                 alist)
                           (goto-char here))))
                     alist)))
+               (hidden (car (-intersection '("eyes_therapist"
+                                             "eyes_partner"
+                                             "eyes_friend") tags)))
+               (created-fancy (format-time-string (car org-timestamp-custom-formats)
+                                                  (parse-time-string created)))
+               (updated-fancy (format-time-string (car org-timestamp-custom-formats)
+                                                  (parse-time-string updated)))
                (links 0)
                (data-for-json nil))
           (with-temp-buffer
@@ -381,21 +399,17 @@ will not modify the source file."
                                          `[:select [tag]
                                            :from tags
                                            :where (= node-id ,uuid)]))))
-                (let ((private (when (-intersection target-tags
-                                                    my-tags-to-avoid-uploading)
-                                 "private")))
-                  (search-backward "<a ")
-                  (forward-char 3)
-                  (insert " class=\""
-                          (or private
-                              (car (member "eyes_therapist" target-tags))
-                              (car (member "eyes_partner" target-tags))
-                              (car (member "eyes_friend" target-tags))
-                              "public")
-                          (if (member "stub" target-tags)
-                              " stub"
+                (search-backward "<a ")
+                (forward-char 3)
+                (insert " class=\""
+                        (or (car (member "eyes_therapist" target-tags))
+                            (car (member "eyes_partner" target-tags))
+                            (car (member "eyes_friend" target-tags))
+                            "public")
+                        " "
+                        (or (car (member "stub" target-tags))
                             "")
-                          "\" ")))
+                        "\" "))
               (goto-char (marker-position m1)))
 
             ;; 10
@@ -501,9 +515,12 @@ will not modify the source file."
                     (title . ,title)
                     (created . ,created)
                     (updated . ,updated)
+                    (created-fancy . ,created-fancy)
+                    (created-fancy . ,updated-fancy)
                     (wordcount . ,wordcount)
                     (links . ,links)
                     (tags . ,tags)
+                    (hidden . hidden)
                     (content . ,(buffer-string)))))
 
           (when-let ((output-buf (find-buffer-visiting output-path)))

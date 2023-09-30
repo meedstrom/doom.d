@@ -47,9 +47,9 @@
        data
        ess
        nix
-       (go +tree-sitter +lsp)
-       (web +tree-sitter +lsp)
-       (javascript +tree-sitter +lsp)   ;; tsserver freezes Emacs, maybe edit tide-server-max-response-length
+       (go +tree-sitter)
+       (web +tree-sitter)
+       (javascript +tree-sitter)
        ;; javascript
        rust
        json
@@ -68,7 +68,6 @@
        ;; biblio
        (magit +forge)
        (lsp +eglot)
-       ;; lsp
        tree-sitter
        pdf
 

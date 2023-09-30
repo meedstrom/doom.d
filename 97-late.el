@@ -211,17 +211,16 @@
 ;;   (remove-hook 'typescript-tsx-mode-hook #'rainbow-delimiters-mode))
 
 (use-package! prism
-  :config
+  :init
   (setopt prism-comments nil)
   ;; The default (40 50 60) is disorienting when turning prism on and off.
   (setopt prism-desaturations '(0 20 60))
   ;; note, another odd default is that (in lisp) the parens enclosing a sexp are
   ;; a diff color from the symbols inside -- people arent used to this either
-
+  :config
   ;; Replace rainbow-delimiters (it's on a dozen hooks in Doom, so this is easiest).
   (fset 'rainbow-delimiters-mode #'prism-mode)
-  ;; (add-hook 'doom-load-theme-hook #'prism-set-colors)
-  )
+  (add-hook 'doom-load-theme-hook #'prism-set-colors))
 
 (use-package! elfeed
   :defer
