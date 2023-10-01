@@ -57,6 +57,18 @@
         (org-open-at-point arg)
       (org-open-at-point))))
 
+;; (after! org
+;;   (dolist (x '(org-level-1
+;;                org-level-2
+;;                org-level-3
+;;                org-level-4
+;;                org-level-5
+;;                org-level-6
+;;                org-level-7
+;;                org-level-8))
+;;     (set-face-bold x nil)))
+
+
 ;; (defun my-logseq-mode (_))
 ;; (defvar-local my-logseq-mode nil)
 
@@ -133,17 +145,6 @@ per-buffer."
   (interactive)
   (require 'org-roam-dailies)
   (find-file (car (last (org-roam-dailies--list-files)))))
-
-(after! org
-  (dolist (x '(org-level-1
-               org-level-2
-               org-level-3
-               org-level-4
-               org-level-5
-               org-level-6
-               org-level-7
-               org-level-8))
-    (set-face-bold x nil)))
 
 (add-hook 'org-roam-buffer-postrender-functions #'magit-section-show-level-2)
 (setopt org-roam-directory "/home/kept/roam/")
@@ -227,7 +228,7 @@ per-buffer."
 (setopt org-use-speed-commands t)
 (setopt org-clock-x11idle-program-name (or (executable-find "xprintidle") "x11idle"))
 (setopt org-replace-disputed-keys t)
-(setopt org-time-stamp-custom-formats '("<%Y-%b-%d>" . "<%Y-%m-%d %a %H:%M>"))
+(setopt org-timestamp-custom-formats '("%Y-%b-%d" . "%Y-%m-%d %a %H:%M"))
 (setq-default org-display-custom-times t)
 
 ;; Improve org performance

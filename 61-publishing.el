@@ -19,7 +19,7 @@
 (require 'f)
 
 ;; Keep in mind that case-fold-search doesn't affect `equal', and therefore
-;; neither list-comparisons such as `-intersection'!
+;; doesn't affect list-comparisons such as `cl-intersection'!
 (defvar my-extinct-tags '("drill"  "fc" "anki" "partner" "friends-eyes" "therapist" "eyes-partner" "eyes-therapist" "eyes-diana" "eyes-friend"))
 (defvar my-tags-to-avoid-uploading (append my-extinct-tags '("noexport" "archive" "private" "censor")))
 
@@ -36,7 +36,7 @@
   (org-publish "my-slipbox-blog" t)
   ;; will probably have to rewrite all attachment/ links to $lib/images or something ...
   ;; or static/, and place them in svelte's static folder
-  (org-publish "my-slipbox-blog-images" t)
+  ;; (org-publish "my-slipbox-blog-images" t)
   )
 
 (setopt org-publish-project-alist
@@ -69,6 +69,7 @@ want in my main Emacs."
   (setopt org-mode-hook nil) ;; speeds up publishing
   (setopt org-export-use-babel nil)
   (setopt org-export-with-drawers '(not "logbook" "noexport")) ;; case-insensitive
+  (setopt org-export-exclude-tags my-tags-to-avoid-uploading)
   (setopt org-export-with-broken-links nil) ;; links would disappear quietly
   (setopt org-export-with-smart-quotes nil)
   ;; If we don't set this to "", there will be .html inside some links even
@@ -103,9 +104,6 @@ want in my main Emacs."
   (shell-command "cp -a /home/kept/roam /tmp/")
   (shell-command "rm -r /tmp/roam/*/logseq/") ;; no logseq backups
   (shell-command "rm -r /tmp/roam/lesswrong-org/")
-  ;; Will get filtered out anyway, but saves time to skip checking
-  (shell-command "rm -r /tmp/roam/daily/{private,unsorted}")
-
   (shell-command "shopt -s globstar && rm /tmp/roam/**/*.gpg") ;; no crypts
 
   ;; Flatten the directory tree (no more subdirs)
@@ -119,10 +117,10 @@ want in my main Emacs."
    with default-directory = "/tmp/roam"
    for path in (directory-files "/tmp/roam" t "\\.org$")
    as uuid = (my-org-file-id path)
-   when uuid
-   do (let ((permalink (substring (my-uuid-to-base62 uuid) -7)))
-        (mkdir permalink)
-        (rename-file path (concat permalink "/"))))
+   when uuid do
+   (let ((permalink (substring (my-uuid-to-base62 uuid) -7)))
+     (mkdir permalink)
+     (rename-file path (concat permalink "/"))))
 
   ;; Tell `org-id-locations' and the org-roam DB about the new directory.
   (setopt org-roam-directory "/tmp/roam/")
@@ -133,7 +131,7 @@ want in my main Emacs."
     (setq my-publish-ran-already t))
   (fset 'org-id-update-id-locations #'ignore) ;; stop triggering during publish
 
-  ;; Lookup table of refs, used by `my-replace-web-links-with-ref-note-links'
+  ;; Lookup table used by `my-replace-web-links-with-ref-note-links'
   (setq my-all-refs (org-roam-db-query
                      [:select [ref id title]
                       :from refs
@@ -143,7 +141,7 @@ want in my main Emacs."
 ;; Give each h2...h6 heading an ID attribute that matches its source org-id, if
 ;; it has one, instead of e.g. "org953031".  That way, hash-links such as
 ;; #ID-e10bbdfe-1ffb-4c54-9228-2818afdfc5ba will make the web browser jump to
-;; that heading.  Thanks org-roam for this convenience!  Note that I convert
+;; that heading.  Thank org-roam for this convenience!  Note that I convert
 ;; these IDs to base62 later in this file.
 (after! ox (require 'org-roam-export))
 
@@ -267,6 +265,7 @@ will not modify the source file."
 ;; the following wrapper around `org-publish-org-to'.
 
 (defun my-publish-to-blog (plist filename pub-dir)
+  (redisplay) ;; I like watching programs work    
   ;; Fast early check that avoids loading org-mode
   (let (title id created tags)
     (with-temp-buffer
@@ -315,13 +314,12 @@ will not modify the source file."
      (t
       (with-current-buffer (or (find-buffer-visiting filename)
                                (find-file-noselect filename))
-        ;; The original export-function.  Do thy magic!
+        ;; The original export-function.  Thy magic ist magnifique!
         (org-publish-org-to 'html filename "" plist pub-dir)
 
         ;; Customize the resulting HTML file and wrap it in a JSON object
         (let* ((output-path (org-export-output-file-name "" nil pub-dir))
                (slug (string-replace pub-dir "" output-path))
-               (m1 (make-marker))
                ;; NOTE: All pages get a permalink, even daily-pages despite the
                ;; also deterministic slug in their case.  The org-id is
                ;; everything: it underpins how my site will resolve hash-links
@@ -363,9 +361,9 @@ will not modify the source file."
                (updated-fancy (format-time-string (car org-timestamp-custom-formats)
                                                   (date-to-time updated)))
                (links 0)
+               (m1 (make-marker))
                (data-for-json nil))
           (with-temp-buffer
-            (goto-char (point-min))
 
             ;; 03 Insert roam_refs before the post body
             (when refs
@@ -378,18 +376,15 @@ will not modify the source file."
             ;; 05 Insert the post body: the HTML produced by Org-export
             (insert-file-contents output-path)
 
-            ;; 08 Set content-start after ToC, if there is one
-            (goto-char (point-min))
-            (setq content-start (point))
+            ;; 08 Set `content-start' after ToC, if there is one
+            (setq content-start (goto-char (point-min)))
             (when (search-forward "<div id=\"table-of-contents\" " nil t)
-              ;; ;; TODO: Remove when I migrate to Svelte
-              ;;   (insert " class=\"box\"") ;; bulma CSS
               (search-forward "</div>")
               (search-forward "</div>")
               (setq content-start (point)))
 
             ;; 09
-            ;; MUST BEFORE 10,14
+            ;; MUST BEFORE 10
             ;; Give links a CSS class depending on target note's tags
             (goto-char content-start)
             (while (re-search-forward "<a [^>]*?href=.[^\"]*?#ID-" nil t)
@@ -432,8 +427,8 @@ will not modify the source file."
             ;; 14
             ;; DEPENDS ON 10
             ;; For all links, remove the lengthy hash-part of the link (i.e. the
-            ;; bit after the # character in LINK#ORG-ID) if the org-id points to
-            ;; a file-level id anyway
+            ;; bit after the # character in http://.../LINK#ORG-ID) if the
+            ;; org-id points to a file-level id anyway
             (goto-char content-start)
             ;; (while (re-search-forward "<a +?href=\"" nil t)
             (while (re-search-forward "<a .*?href=\"" nil t)
@@ -443,17 +438,18 @@ will not modify the source file."
                 (delete-region beg end)
                 (insert (my-strip-hashlink-if-same-as-permalink link))))
 
-            ;; 16 Implement collapsible sections
-            ;; Preserve the ToC div, but remove its pointless inner div
+            ;; 16
+            ;; Implement collapsible sections
             (unless (member "logseq" tags)
               (goto-char (point-min))
+              ;; Preserve the ToC div, but remove its pointless inner div
               (when (search-forward "<div id=\"table-of-contents\"" nil t)
                 (re-search-forward "<div id=\"text-table-of-contents\".*?>")
                 (replace-match "")
                 (search-forward "</div>\n</div>")
                 (replace-match "</div>"))
-              ;; First strip all non-outline div tags and their pesky anonymous
-              ;; closing tags
+              ;; First strip all non-"outline" div tags and their
+              ;; hard-to-identify anonymous closing tags
               (while (search-forward "<div" nil t)
                 (let ((beg (match-beginning 0)))
                   (unless (re-search-forward " id=\".*?\" class=\"outline-[123456]\"" (line-end-position) t)
@@ -462,11 +458,11 @@ will not modify the source file."
                     (replace-match "")
                     (goto-char (1+ beg)))))
               (goto-char (point-min))
-              ;; Now change all remaining <div> to <details>
+              ;; Now change all remaining <div> to <details> with <summary>
               (while (re-search-forward "<div .*?>" nil t)
                 ;; https://developer.mozilla.org/en-US/docs/Web/HTML/Element/summary
                 ;; Screen readers cannot find headings wrapped in <summary>, since
-                ;; the aria role changes to "button", so revert the role.  It's
+                ;; the ARIA role changes to "button", so revert the role.  It's
                 ;; more important to know that they are headings, than that they
                 ;; are clickable.
                 (replace-match "<details open><summary role=\"heading\"")
@@ -533,12 +529,12 @@ will not modify the source file."
                     (title . ,title)
                     (created . ,created)
                     (updated . ,updated)
-                    (created-fancy . ,created-fancy)
-                    (created-fancy . ,updated-fancy)
+                    (created_fancy . ,created-fancy)
+                    (updated_fancy . ,updated-fancy)
                     (wordcount . ,wordcount)
                     (links . ,links)
                     (tags . ,tags)
-                    (hidden . hidden)
+                    (hidden . ,hidden)
                     (content . ,(buffer-string)))))
 
           (when-let ((output-buf (find-buffer-visiting output-path)))

@@ -119,7 +119,7 @@ https://lojban.org/publications/cll/cll_v1.1_xhtml-section-chunks/section-eviden
                             "turn" "look")
   "See English Prime: https://en.wikipedia.org/wiki/E-Prime")
 
-(defconst my-latinate-saxon-alist
+(defconst my-latinate-native-alist
   '((("adolescence") . ("youth"))
     (("annual") . ("yearly"))
     (("labor") . ("work" "drudge"))
@@ -144,6 +144,7 @@ https://lojban.org/publications/cll/cll_v1.1_xhtml-section-chunks/section-eviden
     (("totally") . ("fully" "wholly" "utterly" "altogether"))
     (("pronounce") . ("utter" "say"))
     (("elevating") . ("uplifting" "raising"))
+    (("elevate") . ("uplift" "raise" "lift up"))
     (("support") . ("bolster" "uphold"))
     (("comprehend") . ("understand" "get" "grasp")))
   "See https://en.wikipedia.org/wiki/List_of_Germanic_and_Latinate_equivalents_in_English")
@@ -164,7 +165,10 @@ https://lojban.org/publications/cll/cll_v1.1_xhtml-section-chunks/section-eviden
              (delete-region (car bounds) (cdr bounds))
              (insert sub)))
           ((when-let* ((cell (cl-assoc-if (lambda (x) (member (word-at-point) x))
-                                          my-latinate-saxon-alist))
+                                          my-latinate-native-alist))
                        (sub (completing-read "Substitute: " (cdr cell))))
              (delete-region (car bounds) (cdr bounds))
              (insert sub))))))
+
+
+(xr "\\b\\(\\w+\\)\\W+\\(\\1\\)\\b")

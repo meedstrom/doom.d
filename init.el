@@ -34,12 +34,12 @@
        ;; :term
        ;; vterm
        ;; eshell
-       ;; shell
+       shell
        ;; term
 
        ;; :checkers
        ;; syntax
-       ;; grammar
+       grammar
        ;; spell
 
        :lang
