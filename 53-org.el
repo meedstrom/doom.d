@@ -200,7 +200,7 @@ per-buffer."
                                    "/home/me/.doom.d/elfeed.org")))
 (setopt org-archive-location "/home/kept/roam/noagenda/archive.org::datetree/")
 (setopt org-archive-save-context-info '(time file itags olpath))
-(setopt org-attach-id-dir "attachments/") ;; doom prolly overrides
+(setopt org-attach-id-dir "static/")
 (setopt org-pomodoro-play-sounds nil)
 (setopt org-clock-out-remove-zero-time-clocks t)
 (setopt org-clock-persist t)

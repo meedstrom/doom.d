@@ -36,7 +36,7 @@
   (org-publish "my-slipbox-blog" t)
   ;; will probably have to rewrite all attachment/ links to $lib/images or something ...
   ;; or static/, and place them in svelte's static folder
-  ;; (org-publish "my-slipbox-blog-images" t)
+  (org-publish "my-slipbox-blog-images" t)
   )
 
 (setopt org-publish-project-alist
@@ -54,9 +54,9 @@
            :exclude-tags ,my-tags-to-avoid-uploading)
 
           ("my-slipbox-blog-images"
-           :base-directory "/tmp/roam/attachments/"
+           :base-directory "/tmp/roam/static/"
            :base-extension "png\\|jpg"
-           :publishing-directory "/home/kept/pub/attachments/"
+           :publishing-directory "/home/kept/pub/static/"
            :publishing-function org-publish-attachment)))
 
 ;; (defconst my-date-regexp (rx (= 4 digit) "-" (= 2 digit) "-" (= 2 digit)))
@@ -71,11 +71,10 @@ want in my main Emacs."
   (setopt org-export-with-drawers '(not "logbook" "noexport")) ;; case-insensitive
   (setopt org-export-with-broken-links nil) ;; links would disappear quietly
   (setopt org-export-with-smart-quotes nil)
-  (setopt org-html-checkbox-type 'ascii)
   ;; If we don't set this to "", there will be .html inside some links even
   ;; though I also set "" in the `org-publish-org-to' call.
   (setopt org-html-extension "")
-  (setopt org-html-checkbox-type 'unicode) ;; how will it look in eww? eh.
+  (setopt org-html-checkbox-type 'unicode) ;; how will it look in eww? test it.
   (setopt org-html-html5-fancy t)
   (setopt case-fold-search t) ;; for all the searches in `my-publish-to-blog'
   (setopt org-inhibit-startup t) ;; from org-publish-org-to
@@ -100,11 +99,14 @@ want in my main Emacs."
   (org-roam-db-autosync-mode 0)
 
   ;; Copy the files to /tmp to work from there
-  (shell-command "rm -rf /tmp/roam/")
+  (shell-command "rm -r /tmp/roam/")
   (shell-command "cp -a /home/kept/roam /tmp/")
-  (shell-command "rm -rf /tmp/roam/*/logseq/") ;; no logseq backups
-  (shell-command "rm -rf /tmp/roam/lesswrong-org/")
-  (shell-command "shopt -s globstar && rm -rf /tmp/roam/**/*.gpg") ;; no crypts
+  (shell-command "rm -r /tmp/roam/*/logseq/") ;; no logseq backups
+  (shell-command "rm -r /tmp/roam/lesswrong-org/")
+  ;; Will get filtered out anyway, but saves time to skip checking
+  (shell-command "rm -r /tmp/roam/daily/{private,unsorted}")
+
+  (shell-command "shopt -s globstar && rm /tmp/roam/**/*.gpg") ;; no crypts
 
   ;; Flatten the directory tree (no more subdirs)
   (cl-loop
@@ -112,7 +114,7 @@ want in my main Emacs."
    unless (equal "/tmp/roam/" (file-name-directory file))
    do (rename-file file "/tmp/roam/"))
 
-  ;; Ensure each post will get an unique ID in the URL
+  ;; Ensure each post will get a unique ID in the URL
   (cl-loop
    with default-directory = "/tmp/roam"
    for path in (directory-files "/tmp/roam" t "\\.org$")
@@ -320,12 +322,14 @@ will not modify the source file."
         (let* ((output-path (org-export-output-file-name "" nil pub-dir))
                (slug (string-replace pub-dir "" output-path))
                (m1 (make-marker))
-               (permalink
-                ;; if (string-search "daily" pub-dir)
-                ;; For dailies, reuse the slug
-                ;; (concat "daily/" slug)
-                ;; For other posts, the subdir is its unique id
-                (-last-item (split-string pub-dir "/" t)))
+               ;; NOTE: All pages get a permalink, even daily-pages despite the
+               ;; also deterministic slug in their case.  The org-id is
+               ;; everything: it underpins how my site will resolve hash-links
+               ;; that are no longer on the page where the user bookmarked them,
+               ;; for example.  Don't be tempted to think it's ugly.  The
+               ;; daily-pages are rarely meant for consumption by the public
+               ;; anyway.
+               (permalink (-last-item (split-string pub-dir "/" t)))
                (updated (format-time-string "%F" (f-modification-time filename)))
                (wordcount (save-excursion
                             (if (re-search-forward "^[^#:\n]" nil t)
@@ -355,15 +359,13 @@ will not modify the source file."
                                              "eyes_partner"
                                              "eyes_friend") tags)))
                (created-fancy (format-time-string (car org-timestamp-custom-formats)
-                                                  (parse-time-string created)))
+                                                  (date-to-time created)))
                (updated-fancy (format-time-string (car org-timestamp-custom-formats)
-                                                  (parse-time-string updated)))
+                                                  (date-to-time updated)))
                (links 0)
                (data-for-json nil))
           (with-temp-buffer
             (goto-char (point-min))
-
-            (insert "<h1 id=\"title\">" title "</h1>")
 
             ;; 03 Insert roam_refs before the post body
             (when refs
@@ -402,10 +404,14 @@ will not modify the source file."
                 (search-backward "<a ")
                 (forward-char 3)
                 (insert " class=\""
+                        (if (-intersection target-tags my-tags-to-avoid-uploading)
+                            "private"
+                          "")
+                        " "
                         (or (car (member "eyes_therapist" target-tags))
                             (car (member "eyes_partner" target-tags))
                             (car (member "eyes_friend" target-tags))
-                            "public")
+                            "")
                         " "
                         (or (car (member "stub" target-tags))
                             "")
@@ -508,6 +514,18 @@ will not modify the source file."
                 (search-forward (concat "</h" digit ">"))
                 (goto-char (match-beginning 0))
                 (insert (concat "<a class=\"easylink\" href=\"#" id "\"> 🔗</a>"))))
+
+            ;; 44
+            ;; Org-export doesn't replace triple-dash in all situations (like
+            ;; in a heading or when it butts up against a link), but I'm pretty
+            ;; sure it's fine
+            (goto-char content-start)
+            (while (search-forward "---" nil t)
+              (replace-match "&mdash;"))
+            ;; a little more risky but im hoping it's fine
+            (goto-char content-start)
+            (while (search-forward "--" nil t)
+              (replace-match "&ndash;"))
 
             (setq data-for-json
                   `((slug . ,slug)

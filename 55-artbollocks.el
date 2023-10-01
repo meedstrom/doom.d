@@ -64,6 +64,7 @@
       (concat "\\b" (regexp-opt
                      (append
                       '(;; Add these:
+                        "this is because"
                         "think"
                         "one of the"
                         "should"
@@ -118,7 +119,7 @@ https://lojban.org/publications/cll/cll_v1.1_xhtml-section-chunks/section-eviden
                             "turn" "look")
   "See English Prime: https://en.wikipedia.org/wiki/E-Prime")
 
-(defconst my-latinate-layman-alist
+(defconst my-latinate-saxon-alist
   '((("adolescence") . ("youth"))
     (("annual") . ("yearly"))
     (("labor") . ("work" "drudge"))
@@ -163,7 +164,7 @@ https://lojban.org/publications/cll/cll_v1.1_xhtml-section-chunks/section-eviden
              (delete-region (car bounds) (cdr bounds))
              (insert sub)))
           ((when-let* ((cell (cl-assoc-if (lambda (x) (member (word-at-point) x))
-                                          my-latinate-layman-alist))
+                                          my-latinate-saxon-alist))
                        (sub (completing-read "Substitute: " (cdr cell))))
              (delete-region (car bounds) (cdr bounds))
              (insert sub))))))

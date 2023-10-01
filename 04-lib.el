@@ -46,14 +46,14 @@
   (let ((decimal (string-to-number (string-replace "-" "" uuid) 16)))
     (if (or (= 0 decimal) (/= 36 (length uuid)))
         (error "Sure this is an UUID? %s" uuid)
-      ;; The highest UUID (ffffffff-ffff-ffff-ffff-ffffffffffff) makes a base62
-      ;; string 22 characters long.  So let's always return 22 characters.
+      ;; The highest UUID (ffffffff-ffff-ffff-ffff-ffffffffffff) makes
+      ;; a base62 string 22 chars long.  Let's always return 22 chars.
       (my-int-to-base62 decimal 22))))
 
 (defun my-int-to-base62 (integer &optional length)
   "Convert an INTEGER to a base-62 number represented as a string.
-The returned string is padded with leading zeroes up to to LENGTH
-if necessary, so that the result is always at least LENGTH long."
+If LENGTH is given, pad the string with leading zeroes as needed
+so the result is always that long or longer."
   (let ((s "")
         (i integer))
     (while (> i 0)
@@ -67,14 +67,16 @@ if necessary, so that the result is always at least LENGTH long."
 
 ;; Workhorse for `my-int-to-base62'
 (defun my-int-to-base62-one-digit (integer)
-  "Convert INTEGER between 0 and 61 into a single character 0..9, A..Z, a..z."
+  "Convert INTEGER between 0 and 61 into one character 0..9, A..Z, a..z."
   ;; Uses chars ?0, ?A, ?a off the ASCII table.  It's important to realize there
   ;; are gaps between the character sets:
   ;; 0-9 has codes 48 thru 57
   ;; A-Z has codes 65 thru 90
   ;; a-z has codes 97 thru 122
-  ;; Why compose chars to construct the final base62 string?  It's either that
-  ;; or you make a lookup string "0123456789abcdefg...", and chars are faster.
+  ;; It's important to realize there are gaps between the character sets.
+  ;; Why compose chars to construct the final base62 string?  It's either
+  ;; that, or you make a lookup string "0123456789abcdefg...", so you're
+  ;; looking something up anyway.  Faster to use the ASCII table.
   (cond
    ((< integer 10) (+ ?0 integer))
    ((< integer 36) (+ ?a integer -10))
