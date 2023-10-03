@@ -31,13 +31,13 @@
        dired
        vc
 
-       ;; :term
+       :term
        ;; vterm
        ;; eshell
        shell
        ;; term
 
-       ;; :checkers
+       :checkers
        ;; syntax
        grammar
        ;; spell

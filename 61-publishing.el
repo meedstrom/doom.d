@@ -415,7 +415,7 @@ will not modify the source file."
 
             ;; 10
             ;; Replace all UUIDv4 with truncated base62 translations.
-            (goto-char content-start)
+            (goto-char (point-min)) ;; gotcha! include the ToC
             ;; (while (re-search-forward (rx (regexp my-id-re) "ID-") nil t)
             (while (re-search-forward "[\"#]ID-" nil t)
               (let* ((beg (point))
@@ -522,6 +522,14 @@ will not modify the source file."
             (goto-char content-start)
             (while (search-forward "--" nil t)
               (replace-match "&ndash;"))
+
+            ;; 50
+            ;; Remove all local images.
+            ;; Temporary solution until I fix image upload.  Having broken
+            ;; image-references breaks svelte prerendering.
+            (goto-char content-start)
+            (while (re-search-forward "<img src=\"[^h]" nil t)
+              (delete-region (match-beginning 0) (search-forward " />")))
 
             (setq data-for-json
                   `((slug . ,slug)

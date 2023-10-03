@@ -220,7 +220,11 @@
   :config
   ;; Replace rainbow-delimiters (it's on a dozen hooks in Doom, so this is easiest).
   (fset 'rainbow-delimiters-mode #'prism-mode)
-  (add-hook 'doom-load-theme-hook #'prism-set-colors))
+  (add-hook 'doom-load-theme-hook #'prism-set-colors)
+
+  (add-hook 'typescript-mode-hook #'prism-mode)
+  ;; (add-hook 'web-mode-hook #'prism-mode) ;; infinite loop in .svelte files
+  )
 
 (use-package! elfeed
   :defer
