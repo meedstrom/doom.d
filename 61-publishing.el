@@ -59,6 +59,13 @@
            :publishing-directory "/home/kept/pub/static/"
            :publishing-function org-publish-attachment)))
 
+;; Override this thing so info: links don't turn into meaningless <a href>.  I
+;; may need more overrides like this for each "special" link type I use, see
+;; `org-link-parameters'.
+(require 'ol-info)
+(defun org-info-export (path desc _format)
+  (or desc path))
+
 ;; (defconst my-date-regexp (rx (= 4 digit) "-" (= 2 digit) "-" (= 2 digit)))
 (defvar my-publish-ran-already nil)
 (defun my-prep-fn (_)
@@ -71,6 +78,7 @@ want in my main Emacs."
   (setopt org-export-with-drawers '(not "logbook" "noexport")) ;; case-insensitive
   (setopt org-export-exclude-tags my-tags-to-avoid-uploading)
   (setopt org-export-with-broken-links nil) ;; links would disappear quietly
+  ;; (setopt org-html-self-link-headlines t)
   (setopt org-export-with-smart-quotes nil)
   ;; If we don't set this to "", there will be .html inside some links even
   ;; though I also set "" in the `org-publish-org-to' call.
@@ -89,7 +97,8 @@ want in my main Emacs."
   ;; 2. Syntax-highlight source blocks in a way that looks OK on the web
   (fset 'rainbow-delimiters-mode #'prism-mode)
   (add-hook 'doom-load-theme-hook #'prism-set-colors)
-  (load-theme 'doom-rouge)
+  ;; (load-theme 'doom-rouge)
+  (load-theme 'doom-zenburn)
   ;; (load-theme 'doom-monokai-machine)
 
   ;; For hygiene, ensure that this subordinate emacs syncs nothing to disk
@@ -176,7 +185,8 @@ will not modify the source file."
                 (insert "\n* What links here"))
             (org-insert-subheading nil)
             (insert "What links here"))
-          (dolist (link (--sort (string-lessp (cdr it) (cdr other))
+          ;; reverse alphabetic sort (z-a) so that newest daily-pages on top
+          (dolist (link (--sort (string-lessp (cdr other) (cdr it))
                                 (append backlinks reflinks)))
             (newline)
             (insert "- [[id:" (car link) "]["
@@ -427,16 +437,15 @@ will not modify the source file."
             ;; 14
             ;; DEPENDS ON 10
             ;; For all links, remove the lengthy hash-part of the link (i.e. the
-            ;; bit after the # character in http://.../LINK#ORG-ID) if the
-            ;; org-id points to a file-level id anyway
-            (goto-char content-start)
-            ;; (while (re-search-forward "<a +?href=\"" nil t)
-            (while (re-search-forward "<a .*?href=\"" nil t)
-              (let* ((beg (point))
-                     (end (1- (save-excursion (search-forward "\""))))
-                     (link (buffer-substring beg end)))
-                (delete-region beg end)
-                (insert (my-strip-hashlink-if-same-as-permalink link))))
+            ;; bit after the # character in http://.../PAGE-ID/LINK#ORG-ID) if the
+            ;; ORG-ID matches PAGE-ID anyway (i.e. it's a file-level id)
+            ;; (goto-char content-start)
+            ;; (while (re-search-forward "<a .*?href=\"" nil t)
+            ;;   (let* ((beg (point))
+            ;;          (end (1- (save-excursion (search-forward "\""))))
+            ;;          (link (buffer-substring beg end)))
+            ;;     (delete-region beg end)
+            ;;     (insert (my-strip-hashlink-if-same-as-permalink link))))
 
             ;; 16
             ;; Implement collapsible sections
@@ -530,6 +539,16 @@ will not modify the source file."
             (goto-char content-start)
             (while (re-search-forward "<img src=\"[^h]" nil t)
               (delete-region (match-beginning 0) (search-forward " />")))
+
+            
+            ;; 55
+            ;; Wrap all tables for horizontal scrollability
+            (goto-char content-start)
+            (while (search-forward "<table" nil t)
+              (goto-char (match-beginning 0))
+              (insert "<div class=\"table-container\">")
+              (search-forward "</table>")
+              (insert "</div>"))
 
             (setq data-for-json
                   `((slug . ,slug)

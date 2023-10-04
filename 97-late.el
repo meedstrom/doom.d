@@ -223,6 +223,8 @@
   (add-hook 'doom-load-theme-hook #'prism-set-colors)
 
   (add-hook 'typescript-mode-hook #'prism-mode)
+  (add-hook 'typescript-tsx-mode-hook #'prism-mode)
+  (add-hook 'js-base-mode-hook #'prism-mode)
   ;; (add-hook 'web-mode-hook #'prism-mode) ;; infinite loop in .svelte files
   )
 

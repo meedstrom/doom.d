@@ -17,8 +17,7 @@
        ligatures
        vc-gutter
        ;; window-select ;; good on big monitors, otherwise no
-       ;; (popup +defaults) ;; retarded org capture window size
-       ;; (emoji +github +unicode)
+       ;; (popup +defaults) ;; terrible org capture window size...
 
        :editor
        ;; fold

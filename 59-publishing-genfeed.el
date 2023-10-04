@@ -49,11 +49,11 @@
 
 
 ;; 2023-09-21: Idea... now that my posts get permalinks, determined by the
-;; org-id, it occurred to me I may not need a renames-table.  Just, uh, briefly
-;; checkout every single commit (!) to record the org-id of each file that was
-;; modified in that commit.  Naturally, we ignore files that don't have org-ids
-;; (this misses some distant history, but I wasn't planning on generating news
-;; from before 2023).
+;; org-id, it occurred to me I may not need a renames-table. (And actually I
+;; never did.)  Just, uh, briefly checkout every single commit (!) to record the
+;; org-id of each file that was modified in that commit.  Naturally, we ignore
+;; files that don't have org-ids (this misses some distant history, but I wasn't
+;; planning on generating news from before 2023).
 ;;
 ;; Then associate the N-lines-changed with the org-id.  Thus, each commit gets
 ;; an alist of (ORG-ID . N-LINES-CHANGED), where the org-id is unique.
@@ -67,6 +67,25 @@
 ;; checks some substring of the date.
 
 
+(defun test ()
+  (shell-command "mkdir /tmp/genfeed/")
+  (shell-command "cp -a /home/kept/roam/.git /tmp/genfeed/")
+  ;; 1. get list of every commit
+  ;; 2. create new empty list, call it FINAL
+  ;; 3. loop thru the commit list, checkouting them one at a time
+  ;;    3a. during checkout, get the list of files modified for that commit
+  ;;    3b. visit each file to record org-id, then push (ORG-ID ADDS DELS) to an alist
+  ;;    3c. add the alist to FINAL so tha we have  (DATESTAMP . ((ID ADDS DELS)
+  ;;                                                             (ID ADDS DELS)
+  ;;                                                             ...))
+
+  (let ((default-directory "/tmp/genfeed"))
+    ;; step 1
+    (shell-command "git log")
+
+
+    )
+  )
 
 ;;-------------
 ;; how should i add arbitrary text for the month?  I guess it would be easier if
