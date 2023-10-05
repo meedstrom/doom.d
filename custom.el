@@ -17,14 +17,8 @@
  ;; If there is more than one, they won't work right.
  '(magit-todos-insert-after '(bottom) nil nil "Changed by setter of obsolete option `magit-todos-insert-at'")
  '(safe-local-variable-values
-   '((eval and buffer-file-name (not (eq major-mode 'package-recipe-mode))
-      (or (require 'package-recipe-mode nil t)
-       (let ((load-path (cons "../package-build" load-path)))
-         (require 'package-recipe-mode nil t)))
-      (package-recipe-mode))
-     (org-refile-targets quote
+   '((org-refile-targets quote
       (("/home/kept/roam/noagenda/2021-08-27-somedaymaybe.org" :maxlevel . 3)))
-     (org-confirm-babel-evaluate) (nameless-current-name . "my")
      (org-drill-scope . directory) (require-final-newline . t)
      (require-final-newline))))
 (custom-set-faces
@@ -32,4 +26,4 @@
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(ts-fold-replacement-face ((t (:foreground unspecified :box nil :inherit font-lock-comment-face :weight light)))))
+ )

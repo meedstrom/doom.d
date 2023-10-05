@@ -405,22 +405,20 @@ will not modify the source file."
                                         (org-roam-db-query
                                          `[:select [tag]
                                            :from tags
-                                           :where (= node-id ,uuid)]))))
+                                           :where (= node-id ,uuid)])))
+                          (classes
+                           (-non-nil
+                            (cons (when (-intersection target-tags
+                                                       my-tags-to-avoid-uploading)
+                                    "private")
+                                  (-intersection target-tags
+                                                 '("eyes_therapist"
+                                                   "eyes_partner"
+                                                   "eyes_friend"
+                                                   "stub"))))))
                 (search-backward "<a ")
                 (forward-char 3)
-                (insert " class=\""
-                        (if (-intersection target-tags my-tags-to-avoid-uploading)
-                            "private"
-                          "")
-                        " "
-                        (or (car (member "eyes_therapist" target-tags))
-                            (car (member "eyes_partner" target-tags))
-                            (car (member "eyes_friend" target-tags))
-                            "")
-                        " "
-                        (or (car (member "stub" target-tags))
-                            "")
-                        "\" "))
+                (insert "class=\"" (string-join classes " ") "\" "))
               (goto-char (marker-position m1)))
 
             ;; 10
@@ -467,17 +465,9 @@ will not modify the source file."
                     (replace-match "")
                     (goto-char (1+ beg)))))
               (goto-char (point-min))
-              ;; Now change all remaining <div> to <details> with <summary>
+              ;; Now turn all remaining <div> into <details>
               (while (re-search-forward "<div .*?>" nil t)
-                ;; https://developer.mozilla.org/en-US/docs/Web/HTML/Element/summary
-                ;; Screen readers cannot find headings wrapped in <summary>, since
-                ;; the ARIA role changes to "button", so revert the role.  It's
-                ;; more important to know that they are headings, than that they
-                ;; are clickable.
-                (replace-match "<details open><summary role=\"heading\"")
-                (unless (looking-at "\n<h\\([123456]\\)")
-                  (error "Expected to be at a heading tag"))
-                (insert " aria-level=\"" (match-string 1) "\">")
+                (replace-match "<details open><summary>")
                 (re-search-forward "</h[123456]>")
                 (insert "</summary>"))
               (goto-char (point-min))
@@ -487,6 +477,7 @@ will not modify the source file."
             ;; 19 Enable a very different stylesheet for pages tagged "logseq"
             (when (member "logseq" tags)
               (goto-char content-start)
+              ;; no divs
               (while (re-search-forward "</?div.*?>" nil t)
                 (replace-match ""))
               (goto-char content-start)
@@ -495,6 +486,7 @@ will not modify the source file."
               (insert "</div>"))
 
             ;; 26
+            ;; MUST BEFORE 30
             ;; Count # of total links (except links to external sites)
             (goto-char content-start)
             (setq links (cl-loop while (re-search-forward "<a .*?href=." nil t)
@@ -521,21 +513,23 @@ will not modify the source file."
                 (insert (concat "<a class=\"easylink\" href=\"#" id "\"> 🔗</a>"))))
 
             ;; 44
-            ;; Org-export doesn't replace triple-dash in all situations (like
-            ;; in a heading or when it butts up against a link), but I'm pretty
-            ;; sure it's fine
+            ;; Org-export doesn't replace triple-dash in all situations (like in
+            ;; a heading or when it butts up against a link on a newline), so
+            ;; force it.  I'm pretty sure it won't break anything...
             (goto-char content-start)
             (while (search-forward "---" nil t)
               (replace-match "&mdash;"))
-            ;; a little more risky but im hoping it's fine
+            ;; A little more risky but I'm hoping it's fine.  Situations where we
+            ;; might not want to transform a double-dash:
+            ;; - css variables in code blocks (i have none)
+            ;; - a code block showing this very code (i have none)
             (goto-char content-start)
             (while (search-forward "--" nil t)
               (replace-match "&ndash;"))
 
             ;; 50
-            ;; Remove all local images.
-            ;; Temporary solution until I fix image upload.  Having broken
-            ;; image-references breaks svelte prerendering.
+            ;; Remove all local images.  Temporary solution until I fix image
+            ;; upload.  Broken image-references break svelte prerendering.
             (goto-char content-start)
             (while (re-search-forward "<img src=\"[^h]" nil t)
               (delete-region (match-beginning 0) (search-forward " />")))
