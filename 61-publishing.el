@@ -121,23 +121,49 @@ want in my main Emacs."
    unless (equal "/tmp/roam/" (file-name-directory file))
    do (rename-file file "/tmp/roam/"))
 
+  ;; ;; Generate a log of completed tasks my partner can peruse <3
+  ;; (setopt org-agenda-files '("/tmp/roam/archive.org"))
+  ;; (org-agenda-list)
+  ;; (org-agenda-log-mode)
+  ;; (org-agenda-archives-mode)
+  ;; ;; TODO: use org-agenda-write
+  ;; (org-agenda-write "/tmp/roam/todo-log.html")
+  ;; (let ((agenda-log (buffer-string)))
+  ;;   (with-temp-file "/tmp/roam/todo-log.org"
+  ;;     (insert (string-join
+  ;;              `(":PROPERTIES:"
+  ;;                ":ID: e4c5ea8b-5b06-43c4-8948-3bfe84e8d5e8"
+  ;;                ":END:"
+  ;;                "#+title: Completed tasks"
+  ;;                "#+filetags: :eyes_partner:"
+  ;;                "#+date: [2023-10-06]"
+  ;;                "#+begin_src"
+  ;;                ,agenda-log
+  ;;                "#+end_src")
+  ;;              "\n"))))
+
   ;; Generate a log of completed tasks my partner can peruse <3
-  (setopt org-agenda-files '("/tmp/roam/noagenda/archive.org"))
+  (setopt org-agenda-files '("/tmp/roam/archive.org"))
   (org-agenda-list)
   (org-agenda-log-mode)
-  (let ((agenda-log (buffer-string)))
-    (with-temp-file "/tmp/roam/todo-log.org"
-      (insert (string-join
-               '(":PROPERTIES:"
-                 ":ID: e4c5ea8b-5b06-43c4-8948-3bfe84e8d5e8"
-                 ":END:"
-                 "#+title: Completed tasks"
-                 "#+filetags: :eyes_partner:"
-                 "#+date: [2023-10-06]"
-                 "#+begin_src"
-                 agenda-log
-                 "#+end_src")
-               "\n"))))
+  (org-agenda-archives-mode)
+  (shell-command "rm /tmp/todo-log.html")
+  (org-agenda-write "/tmp/todo-log.html")
+  (with-temp-file "/tmp/roam/todo-log.org"
+    (insert ":PROPERTIES:"
+            "\n:ID: e4c5ea8b-5b06-43c4-8948-3bfe84e8d5e8"
+            "\n:END:"
+            "\n#+title: Completed tasks"
+            "\n#+filetags: :eyes_friend:"
+            "\n#+date: " (format-time-string "[%F]")
+            "\n#+begin_export html"
+            "\n")
+    (insert-file-contents "/tmp/todo-log.html")
+    (delete-region (point) (search-forward "<pre>"))
+    (insert "<pre class=\"agenda\"")
+    (delete-region (search-forward "</body>") (point-max))
+    (insert "</pre>")
+    (insert "\n#+end_export"))
 
   ;; Ensure each post will get a unique ID in the URL
   (cl-loop
@@ -146,6 +172,9 @@ want in my main Emacs."
    as uuid = (my-org-file-id path)
    when uuid do
    (let ((permalink (substring (my-uuid-to-base62 uuid) -7)))
+     (when (file-exists-p permalink)
+       ;; This has not happened yet
+       (error "Probable page ID collision, suggest renewing UUID %s" uuid))
      (mkdir permalink)
      (rename-file path (concat permalink "/"))))
 

@@ -279,7 +279,7 @@
           (holiday-fixed 3 8 "International Women's Day")
           (holiday-easter-etc) ;; surprisingly hard to calculate
           (holiday-fixed 4 1 "April Fools' Day")
-          (holiday-fixed 4 30 "Walpurgis Night")
+          (holiday-fixed 4 30 "May Eve")
           (holiday-float 5 0 -1 "Mother's Day")
           (holiday-fixed 10 31 "Halloween")
           (holiday-float 11 0 2 "Father's Day")
