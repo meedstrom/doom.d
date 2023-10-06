@@ -121,6 +121,24 @@ want in my main Emacs."
    unless (equal "/tmp/roam/" (file-name-directory file))
    do (rename-file file "/tmp/roam/"))
 
+  ;; Generate a log of completed tasks my partner can peruse <3
+  (setopt org-agenda-files '("/tmp/roam/noagenda/archive.org"))
+  (org-agenda-list)
+  (org-agenda-log-mode)
+  (let ((agenda-log (buffer-string)))
+    (with-temp-file "/tmp/roam/todo-log.org"
+      (insert (string-join
+               '(":PROPERTIES:"
+                 ":ID: e4c5ea8b-5b06-43c4-8948-3bfe84e8d5e8"
+                 ":END:"
+                 "#+title: Completed tasks"
+                 "#+filetags: :eyes_partner:"
+                 "#+date: [2023-10-06]"
+                 "#+begin_src"
+                 agenda-log
+                 "#+end_src")
+               "\n"))))
+
   ;; Ensure each post will get a unique ID in the URL
   (cl-loop
    with default-directory = "/tmp/roam"
@@ -145,7 +163,8 @@ want in my main Emacs."
                      [:select [ref id title]
                       :from refs
                       :left-join nodes
-                      :on (= refs:node-id nodes:id)])))
+                      :on (= refs:node-id nodes:id)]))
+  )
 
 ;; Give each h2...h6 heading an ID attribute that matches its source org-id, if
 ;; it has one, instead of e.g. "org953031".  That way, hash-links such as
@@ -228,6 +247,10 @@ will not modify the source file."
               (insert "[[id:" (cadr ref) "]["
                       (replace-regexp-in-string (rx (any "[]")) "" (caddr ref))
                       "]]"))))))))
+
+(defun my-generate-completed-todo (&rest _)
+  )
+
 
 ;; TODO: In dailies, insert links to any pages created on that same day, under a
 ;; "Created pages" heading.  I guess this has to happen after exporting, so I
@@ -533,7 +556,6 @@ will not modify the source file."
             (goto-char content-start)
             (while (re-search-forward "<img src=\"[^h]" nil t)
               (delete-region (match-beginning 0) (search-forward " />")))
-
             
             ;; 55
             ;; Wrap all tables for horizontal scrollability
@@ -543,6 +565,12 @@ will not modify the source file."
               (insert "<div class=\"table-container\">")
               (search-forward "</table>")
               (insert "</div>"))
+
+            ;; 61
+            ;; Declutter the HTML a bit
+            (goto-char content-start)
+            (while (search-forward " class=\"org-ul\"" nil t)
+              (replace-match ""))
 
             (setq data-for-json
                   `((slug . ,slug)

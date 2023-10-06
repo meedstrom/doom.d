@@ -17,7 +17,8 @@
  ;; If there is more than one, they won't work right.
  '(magit-todos-insert-after '(bottom) nil nil "Changed by setter of obsolete option `magit-todos-insert-at'")
  '(safe-local-variable-values
-   '((org-refile-targets quote
+   '((nameless-current-name . "my") (org-confirm-babel-evaluate)
+     (org-refile-targets quote
       (("/home/kept/roam/noagenda/2021-08-27-somedaymaybe.org" :maxlevel . 3)))
      (org-drill-scope . directory) (require-final-newline . t)
      (require-final-newline))))

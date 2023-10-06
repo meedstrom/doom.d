@@ -272,35 +272,47 @@
 (setopt holiday-oriental-holidays nil)
 (setopt calendar-view-holidays-initially-flag t)
 
-;; Some holidays per the Swedish calendar (the default is American).
-;; Can't easily calculate Easter, but Emacs uses `holiday-easter-etc'.
+;; Some holidays per the Swedish calendar.
 (setopt holiday-general-holidays
         '((holiday-fixed 1 1 "New Year's Day")
           (holiday-fixed 2 14 "Valentine's Day")
           (holiday-fixed 3 8 "International Women's Day")
+          (holiday-easter-etc) ;; surprisingly hard to calculate
           (holiday-fixed 4 1 "April Fools' Day")
+          (holiday-fixed 4 30 "Walpurgis Night")
           (holiday-float 5 0 -1 "Mother's Day")
-          (holiday-float 11 0 2 "Father's Day")
           (holiday-fixed 10 31 "Halloween")
+          (holiday-float 11 0 2 "Father's Day")
           (holiday-fixed 12 13 "Lucia")
-          (holiday-fixed 12 24 "Christmas Eve")))
+          (holiday-fixed 12 24 "Christmas Eve")
+          (holiday-fixed 12 31 "New Year's Eve")))
 
 ;; Add personal holidays
 (setopt holiday-other-holidays
+        ;; Birthdays
         '((holiday-fixed 1 25 "Joel's birthday")
+          (holiday-fixed 2 25 "Ann-Julie's birthday")
           (holiday-fixed 3 8 "Clarence's birthday")
           (holiday-fixed 4 1 "Karin's birthday")
           (holiday-fixed 4 11 "Griselda's birthday")
-          (holiday-fixed 4 11 "Lena D's birthday")
+          (holiday-fixed 4 11 "Lena Duske's birthday")
           (holiday-fixed 6 18 "Rickard's birthday")
           (holiday-fixed 6 27 "Yang Yu Ting's birthday")
-          (holiday-fixed 7 1 "Ignaz Semmelweis Day")
           (holiday-fixed 7 5 "Nath's birthday")
           (holiday-fixed 9 13 "Tuyana's birthday")
           (holiday-fixed 9 24 "Lena A's birthday")
+          (holiday-fixed 12 10 "Simon's birthday")
+
+          ;; Other things
+          (holiday-fixed 7 1 "Ignaz Semmelweis Day")
           (holiday-fixed 9 26 "Petrov Day")
-          (holiday-fixed 10 27 "Arkhipov Day")
-          (holiday-fixed 12 10 "Simon's birthday")))
+          (holiday-fixed 10 27 "Arkhipov Day")))
+
+;; This shouldn't be necessary but somehow `calendar-holidays' is being pre-set
+;; in my emacs (and it has no :set-after as of emacs 30)
+(setopt calendar-holidays (append holiday-general-holidays
+                                  holiday-other-holidays
+                                  ))
 
 ;; add these birthdays
 ;; - Ann-Julie
