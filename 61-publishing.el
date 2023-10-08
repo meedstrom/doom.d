@@ -22,6 +22,7 @@
 ;; doesn't affect list-comparisons such as `cl-intersection'!
 (defvar my-extinct-tags '("drill"  "fc" "anki" "partner" "friends-eyes" "therapist" "eyes-partner" "eyes-therapist" "eyes-diana" "eyes-friend"))
 (defvar my-tags-to-avoid-uploading (append my-extinct-tags '("noexport" "archive" "private" "censor")))
+(defvar my-tags-for-hiding '("eyes_therapist" "eyes_partner" "eyes_friend"))
 
 ;; cache-variable
 (defvar my-all-refs nil)
@@ -59,11 +60,11 @@
            :publishing-directory "/home/kept/pub/static/"
            :publishing-function org-publish-attachment)))
 
-;; Override this thing so info: links don't turn into meaningless <a href>.  I
-;; may need more overrides like this for each "special" link type I use, see
-;; `org-link-parameters'.
+;; Override so the special link type info: won't get exported to a meaningless
+;; <a href>.  I may need more overrides like this for each special link type,
+;; see `org-link-parameters'.
 (require 'ol-info)
-(defun org-info-export (path desc _format)
+(el-patch-defun org-info-export (path desc _format)
   (or desc path))
 
 ;; (defconst my-date-regexp (rx (= 4 digit) "-" (= 2 digit) "-" (= 2 digit)))
@@ -121,27 +122,6 @@ want in my main Emacs."
    unless (equal "/tmp/roam/" (file-name-directory file))
    do (rename-file file "/tmp/roam/"))
 
-  ;; ;; Generate a log of completed tasks my partner can peruse <3
-  ;; (setopt org-agenda-files '("/tmp/roam/archive.org"))
-  ;; (org-agenda-list)
-  ;; (org-agenda-log-mode)
-  ;; (org-agenda-archives-mode)
-  ;; ;; TODO: use org-agenda-write
-  ;; (org-agenda-write "/tmp/roam/todo-log.html")
-  ;; (let ((agenda-log (buffer-string)))
-  ;;   (with-temp-file "/tmp/roam/todo-log.org"
-  ;;     (insert (string-join
-  ;;              `(":PROPERTIES:"
-  ;;                ":ID: e4c5ea8b-5b06-43c4-8948-3bfe84e8d5e8"
-  ;;                ":END:"
-  ;;                "#+title: Completed tasks"
-  ;;                "#+filetags: :eyes_partner:"
-  ;;                "#+date: [2023-10-06]"
-  ;;                "#+begin_src"
-  ;;                ,agenda-log
-  ;;                "#+end_src")
-  ;;              "\n"))))
-
   ;; Generate a log of completed tasks my partner can peruse <3
   (setopt org-agenda-files '("/tmp/roam/archive.org"))
   (org-agenda-list)
@@ -166,6 +146,7 @@ want in my main Emacs."
     (insert "\n#+end_export"))
 
   ;; Ensure each post will get a unique ID in the URL
+  (mkdir "/tmp/roam/hidden/")
   (cl-loop
    with default-directory = "/tmp/roam"
    for path in (directory-files "/tmp/roam" t "\\.org$")
@@ -177,6 +158,26 @@ want in my main Emacs."
        (error "Probable page ID collision, suggest renewing UUID %s" uuid))
      (mkdir permalink)
      (rename-file path (concat permalink "/"))))
+
+  ;; ;; Ensure each post will get a unique ID in the URL, and move hidden stuff to subdir
+  ;; (mkdir "/tmp/roam/hidden/")
+  ;; (cl-loop
+  ;;  with default-directory = "/tmp/roam"
+  ;;  for path in (directory-files "/tmp/roam" t "\\.org$")
+  ;;  as uuid = (my-org-file-id path)
+  ;;  as tags = (my-org-file-tags path)
+  ;;  when uuid do
+  ;;  (let ((permalink (substring (my-uuid-to-base62 uuid) -7)))
+  ;;    (when (file-exists-p permalink)
+  ;;      ;; This has not happened yet
+  ;;      (error "Probable page ID collision, suggest renewing UUID %s" uuid))
+  ;;    (mkdir permalink)
+  ;;    (rename-file path (concat permalink "/"))
+  ;;    ;; Now put hidden posts in a subdir so I can treat them different in the
+  ;;    ;; frontend code.  Note that this act doesn't actually hide them, it's just
+  ;;    ;; semantic.
+  ;;    (when (-intersection tags my-tags-for-hiding)
+  ;;      (rename-file permalink "/tmp/roam/hidden/"))))
 
   ;; Tell `org-id-locations' and the org-roam DB about the new directory.
   (setopt org-roam-directory "/tmp/roam/")
@@ -276,9 +277,6 @@ will not modify the source file."
               (insert "[[id:" (cadr ref) "]["
                       (replace-regexp-in-string (rx (any "[]")) "" (caddr ref))
                       "]]"))))))))
-
-(defun my-generate-completed-todo (&rest _)
-  )
 
 
 ;; TODO: In dailies, insert links to any pages created on that same day, under a

@@ -29,18 +29,28 @@
 (autoload #'objed-ipipe "objed")
 (autoload #'piper "piper")
 
-;; Faster than `org-get-id' because it doesn't need to activate org-mode.
-;; Of course, if you already activated org-mode, just use that.
 (defun my-org-file-id (file)
-  "Assumes a #+TITLE, thus nil can also mean that is absent."
+  "Quickly get the file-level id from FILE.
+For use in heavy loops; it skips activating `org-mode'.
+Otherwise see `org-get-id'."
   (with-temp-buffer
-    (insert-file-contents-literally file nil 0 300)
-    (and (search-forward "#+title" nil t)
-         (search-backward ":id: " nil t)
-         (progn
-           (goto-char (match-end 0))
-           (delete-horizontal-space)
-           (buffer-substring (point) (line-end-position))))))
+    (insert-file-contents-literally file nil 0 100)
+    (when (search-forward ":id: " nil t)
+      (delete-horizontal-space)
+      (buffer-substring (point) (line-end-position)))))
+
+(defun my-org-file-tags (file)
+  "Quickly get the file-tags from FILE.
+For use in heavy loops; it skips activating `org-mode'.
+Otherwise see `org-get-tags'."
+  (with-temp-buffer
+    (insert-file-contents file nil 0 300)
+    (let ((max (or (save-excursion (re-search-forward "^ *?[^#:]"))
+                   (point-max))))
+      (when (search-forward "#+filetags: " max t)
+        (thread-first (buffer-substring (point) (line-end-position))
+                      (string-trim)
+                      (string-split ":" t))))))
 
 (defun my-uuid-to-base62 (uuid)
   (let ((decimal (string-to-number (string-replace "-" "" uuid) 16)))
