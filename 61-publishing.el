@@ -79,17 +79,16 @@ want in my main Emacs."
   (setopt org-export-with-drawers '(not "logbook" "noexport")) ;; case-insensitive
   (setopt org-export-exclude-tags my-tags-to-avoid-uploading)
   (setopt org-export-with-broken-links nil) ;; links would disappear quietly
-  ;; (setopt org-html-self-link-headlines t)
   (setopt org-export-with-smart-quotes nil)
+  (setopt org-export-with-todo-keywords nil)
   ;; If we don't set this to "", there will be .html inside some links even
   ;; though I also set "" in the `org-publish-org-to' call.
   (setopt org-html-extension "")
   (setopt org-html-checkbox-type 'unicode) ;; how will it look in eww? test it.
   (setopt org-html-html5-fancy t)
+  ;; (setopt org-html-self-link-headlines t)
   (setopt case-fold-search t) ;; for all the searches in `my-publish-to-blog'
   (setopt org-inhibit-startup t) ;; from org-publish-org-to
-  ;; Love it, but won't apply to every datestamp on the site
-  ;; (setopt org-display-custom-times nil)
   (toggle-debug-on-error)
   (toggle-debug-on-quit)
 
@@ -422,6 +421,7 @@ will not modify the source file."
                                                   (date-to-time updated)))
                (links 0)
                (m1 (make-marker))
+               (content-start (make-marker))
                (data-for-json nil))
           (with-temp-buffer
 
@@ -437,16 +437,15 @@ will not modify the source file."
             (insert-file-contents output-path)
 
             ;; 08 Set `content-start' after ToC, if there is one
-            (setq content-start (goto-char (point-min)))
+            (set-marker content-start (point-min))
             (when (search-forward "<div id=\"table-of-contents\" " nil t)
-              (search-forward "</div>")
-              (search-forward "</div>")
-              (setq content-start (point)))
+              (search-forward "</div>\n</div>")
+              (set-marker content-start (point)))
 
             ;; 09
             ;; MUST BEFORE 10
             ;; Give links a CSS class depending on target note's tags
-            (goto-char content-start)
+            (goto-char (marker-position content-start))
             (while (re-search-forward "<a [^>]*?href=.[^\"]*?#ID-" nil t)
               (set-marker m1 (point))
               (when-let* ((uuid (buffer-substring (point)
@@ -499,12 +498,15 @@ will not modify the source file."
             ;; Implement collapsible sections
             (unless (member "logseq" tags)
               (goto-char (point-min))
-              ;; Preserve the ToC div, but remove its pointless inner div
-              (when (search-forward "<div id=\"table-of-contents\"" nil t)
+              ;; Give the ToC div a class, and remove its pointless inner div
+              (when (re-search-forward "<div id=\"table-of-contents\".*?>" nil t)
+                (replace-match "<details class=\"toc\" role=\"doc-toc\"><summary>")
+                (search-forward "</h2>")
+                (insert "</summary>")
                 (re-search-forward "<div id=\"text-table-of-contents\".*?>")
                 (replace-match "")
                 (search-forward "</div>\n</div>")
-                (replace-match "</div>"))
+                (replace-match "</details>"))
               ;; First strip all non-"outline" div tags and their
               ;; hard-to-identify anonymous closing tags
               (while (search-forward "<div" nil t)
@@ -514,7 +516,6 @@ will not modify the source file."
                     (search-forward "</div>")
                     (replace-match "")
                     (goto-char (1+ beg)))))
-              (goto-char (point-min))
               ;; Now turn all remaining <div> into <details>
               (while (re-search-forward "<div .*?>" nil t)
                 (replace-match "<details open><summary>")
@@ -525,27 +526,28 @@ will not modify the source file."
                 (replace-match "</details>")))
 
             ;; 19 Enable a very different stylesheet for pages tagged "logseq"
-            (when (member "logseq" tags)
-              (goto-char content-start)
-              ;; no divs
-              (while (re-search-forward "</?div.*?>" nil t)
-                (replace-match ""))
-              (goto-char content-start)
-              (insert "<div class=\"logseq\">")
-              (goto-char (point-max))
-              (insert "</div>"))
+            ;; NOTE: Actually, the mere presence of preexisting .outline- divs works out nicely.
+            ;; (when (member "logseq" tags)
+            ;;   (goto-char (marker-position content-start))
+            ;;   ;; no divs
+            ;;   (while (re-search-forward "</?div.*?>" nil t)
+            ;;     (replace-match ""))
+            ;;   (goto-char (marker-position content-start))
+            ;;   (insert "<div class=\"logseq\">")
+            ;;   (goto-char (point-max))
+            ;;   (insert "</div>"))
 
             ;; 26
             ;; MUST BEFORE 30
             ;; Count # of total links (except links to external sites)
-            (goto-char content-start)
+            (goto-char (marker-position content-start))
             (setq links (cl-loop while (re-search-forward "<a .*?href=." nil t)
                                  unless (looking-at-p "http")
                                  count t))
 
             ;; 30
             ;; Add 🔗links to headings that have a permanent id
-            (goto-char content-start)
+            (goto-char (marker-position content-start))
             (while (re-search-forward (rx "<h" (group (any "23456"))) nil t)
               (when-let ((digit (match-string 1))
                          (beg (match-beginning 0))
@@ -566,27 +568,27 @@ will not modify the source file."
             ;; Org-export doesn't replace triple-dash in all situations (like in
             ;; a heading or when it butts up against a link on a newline), so
             ;; force it.  I'm pretty sure it won't break anything...
-            (goto-char content-start)
+            (goto-char (marker-position content-start))
             (while (search-forward "---" nil t)
               (replace-match "&mdash;"))
             ;; A little more risky but I'm hoping it's fine.  Situations where we
             ;; might not want to transform a double-dash:
             ;; - css variables in code blocks (i have none)
             ;; - a code block showing this very code (i have none)
-            (goto-char content-start)
+            (goto-char (marker-position content-start))
             (while (search-forward "--" nil t)
               (replace-match "&ndash;"))
 
             ;; 50
             ;; Remove all local images.  Temporary solution until I fix image
             ;; upload.  Broken image-references break svelte prerendering.
-            (goto-char content-start)
+            (goto-char (marker-position content-start))
             (while (re-search-forward "<img src=\"[^h]" nil t)
               (delete-region (match-beginning 0) (search-forward " />")))
             
             ;; 55
             ;; Wrap all tables for horizontal scrollability
-            (goto-char content-start)
+            (goto-char (marker-position content-start))
             (while (search-forward "<table" nil t)
               (goto-char (match-beginning 0))
               (insert "<div class=\"table-container\">")
@@ -595,7 +597,7 @@ will not modify the source file."
 
             ;; 61
             ;; Declutter the HTML a bit
-            (goto-char content-start)
+            (goto-char (marker-position content-start))
             (while (search-forward " class=\"org-ul\"" nil t)
               (replace-match ""))
 

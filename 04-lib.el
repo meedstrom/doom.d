@@ -32,22 +32,26 @@
 (defun my-org-file-id (file)
   "Quickly get the file-level id from FILE.
 For use in heavy loops; it skips activating `org-mode'.
-Otherwise see `org-get-id'."
+For all other uses, see `org-id-get'."
   (with-temp-buffer
-    (insert-file-contents-literally file nil 0 100)
+    (insert-file-contents-literally file nil 0 200)
     (when (search-forward ":id: " nil t)
+      (when (= (line-number-at-pos) (line-number-at-pos (point-max)))
+        (error "Whoops, amend `my-org-file-id'"))
       (delete-horizontal-space)
       (buffer-substring (point) (line-end-position)))))
 
 (defun my-org-file-tags (file)
   "Quickly get the file-tags from FILE.
 For use in heavy loops; it skips activating `org-mode'.
-Otherwise see `org-get-tags'."
+For all other uses, see `org-get-tags'."
   (with-temp-buffer
-    (insert-file-contents file nil 0 300)
+    (insert-file-contents file nil 0 400)
     (let ((max (or (save-excursion (re-search-forward "^ *?[^#:]"))
                    (point-max))))
       (when (search-forward "#+filetags: " max t)
+        (when (= (line-number-at-pos) (line-number-at-pos (point-max)))
+          (error "Whoops, amend `my-org-file-tags'"))
         (thread-first (buffer-substring (point) (line-end-position))
                       (string-trim)
                       (string-split ":" t))))))
