@@ -505,13 +505,13 @@ will not modify the source file."
               (goto-char (point-min))
               ;; Give the ToC div a class, and remove its pointless inner div
               (when (re-search-forward "<div id=\"table-of-contents\".*?>" nil t)
-                (replace-match "<details class=\"toc\" role=\"doc-toc\"><summary>")
+                (replace-match "<nav><details class=\"toc\"><summary>")
                 (search-forward "</h2>")
                 (insert "</summary>")
                 (re-search-forward "<div id=\"text-table-of-contents\".*?>")
                 (replace-match "")
                 (search-forward "</div>\n</div>")
-                (replace-match "</details>"))
+                (replace-match "</details></nav"))
               ;; First strip all non-"outline" div tags and their
               ;; hard-to-identify anonymous closing tags.  That way we'll know
               ;; the only closing tags that remain will be the correct ones to
@@ -527,6 +527,7 @@ will not modify the source file."
                     (replace-match "")
                     (goto-char (1+ beg)))))
               ;; Now turn all remaining <div> into <details>
+              ;; TODO: should probably get a <section> too.
               (goto-char (point-min))
               (while (re-search-forward "<div .*?>" nil t)
                 (replace-match "<details open><summary>")

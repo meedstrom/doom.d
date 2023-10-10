@@ -59,7 +59,7 @@ For all other uses, see `org-get-tags'."
 (defun my-uuid-to-base62 (uuid)
   (let ((decimal (string-to-number (string-replace "-" "" uuid) 16)))
     (if (or (= 0 decimal) (/= 36 (length uuid)))
-        (error "Sure this is an UUID? %s" uuid)
+        (error "String should only contain a valid UUID 36 chars long: %s" uuid)
       ;; The highest UUID (ffffffff-ffff-ffff-ffff-ffffffffffff) makes
       ;; a base62 string 22 chars long.  Let's always return 22 chars.
       (my-int-to-base62 decimal 22))))
@@ -82,8 +82,8 @@ so the result is always that long or longer."
 ;; Workhorse for `my-int-to-base62'
 (defun my-int-to-base62-one-digit (integer)
   "Convert INTEGER between 0 and 61 into one character 0..9, a..z, A..Z."
-  ;; Uses chars ?0, ?A, ?a off the ASCII table (try evalling them).  It's
-  ;; important to realize there are gaps between the character sets:
+  ;; Uses chars ?0, ?A, ?a off the ASCII table.  Evaluate those symbols and you
+  ;; see important gaps between the character sets:
   ;; 0-9 has codes 48 thru 57
   ;; A-Z has codes 65 thru 90
   ;; a-z has codes 97 thru 122
@@ -94,7 +94,7 @@ so the result is always that long or longer."
    ((< integer 10) (+ ?0 integer))
    ((< integer 36) (+ ?a integer -10))
    ((< integer 62) (+ ?A integer -36))
-   (t (error "Larger than 61"))))
+   (t (error "Input was larger than 61"))))
 
 (defun my-all-recursive-subdirs (dir &optional exclude-dotfiles)
   (seq-filter #'file-directory-p

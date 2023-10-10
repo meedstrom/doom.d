@@ -190,6 +190,8 @@ per-buffer."
 (setopt org-agenda-todo-ignore-scheduled t)
 (setopt org-agenda-dim-blocked-tasks nil) ;; Speed up the agenda
 (setopt org-agenda-use-tag-inheritance '(todo search)) ;; Speed up the agenda
+(setopt org-agenda-ignore-properties '(stats)) ;; Speed up the agenda
+(setopt org-agenda-inhibit-startup t) ;; Speed up the agenda
 (setopt org-agenda-files
         (-filter #'file-exists-p '(
                                    ;; "/home/kept/roam/"   ;; slowww
