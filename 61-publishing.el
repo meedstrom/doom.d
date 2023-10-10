@@ -123,9 +123,13 @@ want in my main Emacs."
 
   ;; Generate a log of completed tasks my partner can peruse <3
   (setopt org-agenda-files '("/tmp/roam/archive.org"))
+  (setopt org-agenda-span 'fortnight)
+  (setopt org-agenda-prefix-format '((agenda . " %i %?-12t% s") (todo . "") (tags . "") (search . "")))
+  (setopt org-agenda-show-inherited-tags nil)
   (org-agenda-list)
   (org-agenda-log-mode)
   (org-agenda-archives-mode)
+  (org-agenda-earlier 1)
   (shell-command "rm /tmp/todo-log.html")
   (org-agenda-write "/tmp/todo-log.html")
   (with-temp-file "/tmp/roam/todo-log.org"
@@ -153,7 +157,8 @@ want in my main Emacs."
    when uuid do
    (let ((permalink (substring (my-uuid-to-base62 uuid) -7)))
      (when (file-exists-p permalink)
-       ;; This has not happened yet
+       ;; This has not happened yet.  Would need to generate 1,000,000 IDs to
+       ;; expect a 50% chance to see one collision.
        (error "Probable page ID collision, suggest renewing UUID %s" uuid))
      (mkdir permalink)
      (rename-file path (concat permalink "/"))))
@@ -508,15 +513,21 @@ will not modify the source file."
                 (search-forward "</div>\n</div>")
                 (replace-match "</details>"))
               ;; First strip all non-"outline" div tags and their
-              ;; hard-to-identify anonymous closing tags
+              ;; hard-to-identify anonymous closing tags.  That way we'll know
+              ;; the only closing tags that remain will be the correct ones to
+              ;; turn into </details> tags.
               (while (search-forward "<div" nil t)
                 (let ((beg (match-beginning 0)))
                   (unless (re-search-forward " id=\".*?\" class=\"outline-[123456]\"" (line-end-position) t)
                     (delete-region beg (search-forward ">"))
+                    ;; Note that this may not be the corresponding closing tag.
+                    ;; That's why we goto-char (1+ beg) below, to make sure the
+                    ;; loop catches them all.
                     (search-forward "</div>")
                     (replace-match "")
                     (goto-char (1+ beg)))))
               ;; Now turn all remaining <div> into <details>
+              (goto-char (point-min))
               (while (re-search-forward "<div .*?>" nil t)
                 (replace-match "<details open><summary>")
                 (re-search-forward "</h[123456]>")
