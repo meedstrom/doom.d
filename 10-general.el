@@ -106,7 +106,7 @@
 ;;   - but I prefer italics on comments ONLY
 ;;     - counterintuitively, if I see a theme with italic comments, I should
 ;;       avoid it bc it's likely this theme designer also saw fit to italicize
-;;       other things
+;;       other things. So in the end, move along---nothing to see here.
 ;; - with prism-mode, none of the faces should be grey !!!
 ;; - with prism-mode, none of the faces should be much darker than the rest
 
@@ -114,7 +114,7 @@
 ;; (load-theme 'monokai-pro)
 ;; (load-theme 'doom-storage-tube)
 
-;; Good sans prism-desaturations
+;; Good WITHOUT prism-desaturations
 ;; (load-theme 'doom-Iosvkem)
 ;; (load-theme 'doom-solarized-dark-high-contrast)
 ;; (load-theme 'doom-rouge)
@@ -239,7 +239,7 @@
 (setopt display-line-numbers-type nil) ; undoom
 (setopt garbage-collection-messages nil)
 (setopt auto-save-no-message t)
-;; (setopt shift-select-mode nil)
+(setopt shift-select-mode nil)
 
 (setopt browse-url-generic-program "firefox")
 (setopt browse-url-handlers
@@ -255,7 +255,6 @@
 ;; I've not decided yet what's the best approach here.
 (add-to-list 'safe-local-variable-values '(require-final-newline . nil))
 (add-to-list 'safe-local-variable-values '(require-final-newline . t))
-(add-to-list 'safe-local-variable-values '(org-drill-scope . directory))
 
 
 ;;; Calendar...
@@ -272,22 +271,23 @@
 (setopt holiday-oriental-holidays nil)
 (setopt calendar-view-holidays-initially-flag t)
 
-;; Some holidays per the Swedish calendar.
+;; Swedish holidays
 (setopt holiday-general-holidays
         '((holiday-fixed 1 1 "New Year's Day")
           (holiday-fixed 2 14 "Valentine's Day")
           (holiday-fixed 3 8 "International Women's Day")
           (holiday-easter-etc) ;; surprisingly hard to calculate
           (holiday-fixed 4 1 "April Fools' Day")
-          (holiday-fixed 4 30 "May Eve")
+          (holiday-fixed 4 30 "Walpurgis Night")
           (holiday-float 5 0 -1 "Mother's Day")
+          (holiday-fixed 6 24 "Midsummer")
           (holiday-fixed 10 31 "Halloween")
           (holiday-float 11 0 2 "Father's Day")
           (holiday-fixed 12 13 "Lucia")
           (holiday-fixed 12 24 "Christmas Eve")
           (holiday-fixed 12 31 "New Year's Eve")))
 
-;; Add personal holidays
+;; Personal holidays
 (setopt holiday-other-holidays
         ;; Birthdays
         '((holiday-fixed 1 25 "Joel's birthday")
@@ -301,6 +301,7 @@
           (holiday-fixed 7 5 "Nath's birthday")
           (holiday-fixed 9 13 "Tuyana's birthday")
           (holiday-fixed 9 24 "Lena A's birthday")
+          (holiday-fixed 11 6 "Lore's birthday")
           (holiday-fixed 12 10 "Simon's birthday")
 
           ;; Other things
@@ -315,11 +316,9 @@
                                   ))
 
 ;; add these birthdays
-;; - Ann-Julie
 ;; - Cristina
-;; - Griselda's parents?
 ;; - Jesus
-;; - Laia (the nutritionist)
+;; - Laia
 ;; - Marc-Antoine
 ;; - Mirela
 ;; - Sammer

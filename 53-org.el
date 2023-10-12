@@ -30,6 +30,16 @@
 ;; 75% of the time is spent on GC.  I feel like something is broken.
 (setopt gcmh-high-cons-threshold (* 1024 1024 100)) ;; 100 MiB
 
+;; for invisible-anki: use cloze face
+(defface cloze '((t . (:box t))) "Cloze face")
+(setq org-emphasis-alist '(("*" bold)
+                           ("/" italic)
+                           ("_" cloze)
+                           ("=" org-verbatim verbatim)
+                           ("~" org-code verbatim)
+                           ("+" (:strike-through t))))
+;; (set-face-attribute 'underline :box t)
+
 (after! ox-latex
   (add-to-list 'org-latex-classes
                '("letter"
@@ -75,37 +85,34 @@
 ;; TODO: Maybe this can become a buffer-local mode, if instead of setting faces,
 ;; it just removes the faces from the local syntax table.  Or use
 ;; `face-remap-add-relative'.
-(defvar my-org-default-faces nil)
+(defvar my-org-default-headline-faces nil)
 (define-minor-mode my-logseq-mode
   "De-fontify Org headings.
 Must unfortunately be a global mode because faces cannot be set
 per-buffer."
   :global t
+  :group 'org
   (when (featurep 'org)
-    (if my-logseq-mode
-        (dolist (x '(org-level-1
-                     org-level-2
-                     org-level-3
-                     org-level-4
-                     org-level-5
-                     org-level-6
-                     org-level-7
-                     org-level-8))
-          (setf (alist-get x my-org-default-faces)
-                (cons (face-bold-p x)
-                      (face-foreground x)))
-          (set-face-bold x nil)
-          (set-face-foreground x (face-foreground 'default)))
-      (dolist (x '(org-level-1
-                   org-level-2
-                   org-level-3
-                   org-level-4
-                   org-level-5
-                   org-level-6
-                   org-level-7
-                   org-level-8))
-        (set-face-bold x (car (alist-get x my-org-default-faces)))
-        (set-face-foreground x (cdr (alist-get x my-org-default-faces)))))))
+    (let ((headline-faces '(org-level-1
+                            org-level-2
+                            org-level-3
+                            org-level-4
+                            org-level-5
+                            org-level-6
+                            org-level-7
+                            org-level-8)))
+      (if my-logseq-mode
+          (dolist (x headline-faces)
+            (setf (alist-get x my-org-default-headline-faces)
+                  (cons (face-bold-p x) (face-foreground x)))
+            (set-face-bold x nil)
+            (set-face-foreground x (face-foreground 'default)))
+        (dolist (x headline-faces)
+          (set-face-bold x (car (alist-get x my-org-default-headline-faces)))
+          (set-face-foreground x (cdr (alist-get x my-org-default-headline-faces))))))))
+
+(after! org
+  (my-logseq-mode))
 
 (add-hook 'delve-mode-hook #'delve-compact-view-mode)
 
