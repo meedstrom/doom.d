@@ -235,7 +235,7 @@ will not modify the source file."
           (if (bobp)
               (progn
                 (goto-char (point-max))
-                (insert "\n* What links here"))
+                (insert "\n* What links here  :backlinks:"))
             (org-insert-subheading nil)
             (insert "What links here"))
           ;; reverse alphabetic sort (z-a) so that newest daily-pages on top
@@ -367,11 +367,12 @@ will not modify the source file."
       (warn "DATE MISSING: %s" filename))
      ((not id)
       (warn "ID MISSING: %s" filename))
-     ((cl-intersection tags my-extinct-tags
-                       :test #'string-equal-ignore-case)
+     ;; ensure lowercase everywhere so `-intersection' works
+     ((string-match-p "[[:upper:]]" (string-join tags))
+      (warn "UPPERCASE IN TAG FOUND: %s" filename))
+     ((-intersection tags my-extinct-tags)
       (warn "OUTDATED TAG FOUND: %s" filename))
-     ((cl-intersection tags my-tags-to-avoid-uploading
-                       :test #'string-equal-ignore-case)
+     ((-intersection tags my-tags-to-avoid-uploading)
       (message "Found exclude-tag, excluding: %s" filename))
 
      ;; OK, export
@@ -420,6 +421,10 @@ will not modify the source file."
                (hidden (car (-intersection '("eyes_therapist"
                                              "eyes_partner"
                                              "eyes_friend") tags)))
+               (description (save-excursion
+                              (goto-char (point-min))
+                              (when (search-forward "\n#+subtitle: ")
+                                (buffer-substring (point) (line-end-position)))))
                (created-fancy (format-time-string (car org-timestamp-custom-formats)
                                                   (date-to-time created)))
                (updated-fancy (format-time-string (car org-timestamp-custom-formats)
@@ -465,11 +470,13 @@ will not modify the source file."
                             (cons (when (-intersection target-tags
                                                        my-tags-to-avoid-uploading)
                                     "private")
-                                  (-intersection target-tags
-                                                 '("eyes_therapist"
-                                                   "eyes_partner"
-                                                   "eyes_friend"
-                                                   "stub"))))))
+                                  (-difference target-tags my-tags-to-avoid-uploading)
+                                  ;; (-intersection target-tags
+                                  ;;                '("eyes_therapist"
+                                  ;;                  "eyes_partner"
+                                  ;;                  "eyes_friend"
+                                  ;;                  "stub"))
+                                  ))))
                 (search-backward "<a ")
                 (forward-char 3)
                 (insert "class=\"" (string-join classes " ") "\" "))
@@ -528,6 +535,9 @@ will not modify the source file."
                     (goto-char (1+ beg)))))
               ;; Now turn all remaining <div> into <details>
               ;; TODO: should probably get a <section> too.
+              ;; TODO: give classes based on tags, so we can attach a
+              ;; :backlinks: tag to the backlinks section and thereby pad links
+              ;; for increased tap-targets.
               (goto-char (point-min))
               (while (re-search-forward "<div .*?>" nil t)
                 (replace-match "<details open><summary>")
@@ -625,6 +635,7 @@ will not modify the source file."
                     (links . ,links)
                     (tags . ,tags)
                     (hidden . ,hidden)
+                    (description . ,description)
                     (content . ,(buffer-string)))))
 
           (when-let ((output-buf (find-buffer-visiting output-path)))
