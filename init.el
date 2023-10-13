@@ -53,7 +53,7 @@
        rust
        json
        ledger
-       markdown
+       ;; ((markdown))))
        ;; (org +dragndrop +pomodoro +roam2 +pretty)
        ;; (org +roam2)
        (scheme +guile)

@@ -220,6 +220,7 @@
   :config
   ;; Replace rainbow-delimiters (it's on a dozen hooks in Doom, so this is easiest).
   (fset 'rainbow-delimiters-mode #'prism-mode)
+  (require 'prism)
   (add-hook 'doom-load-theme-hook #'prism-set-colors)
 
   (add-hook 'typescript-mode-hook #'prism-mode)

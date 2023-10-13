@@ -34,6 +34,7 @@
   (switch-to-buffer "*Messages*") ;; for watching it work
   ;; (split-window) ;; in case the Warnings buffer appears
   (cd "/home/kept/roam") ;; for me to quick-search when an id fails to resolve
+  (shell-command "npm i texzilla")
   (org-publish "my-slipbox-blog" t)
   ;; will probably have to rewrite all attachment/ links to $lib/images or something ...
   ;; or static/, and place them in svelte's static folder
@@ -81,12 +82,21 @@ want in my main Emacs."
   (setopt org-export-with-broken-links nil) ;; links would disappear quietly
   (setopt org-export-with-smart-quotes nil)
   (setopt org-export-with-todo-keywords nil)
+  (setopt org-export-headline-levels 5) ;; go all the way to <h6> before making <li>
   ;; If we don't set this to "", there will be .html inside some links even
   ;; though I also set "" in the `org-publish-org-to' call.
   (setopt org-html-extension "")
   (setopt org-html-checkbox-type 'unicode) ;; how will it look in eww? test it.
-  (setopt org-html-html5-fancy t)
   ;; (setopt org-html-self-link-headlines t)
+  (setopt org-html-html5-fancy t)
+  ;; FIXME: why does it skip environments like \begin{align}?
+  (setopt org-html-with-latex 'html) ;; use `org-latex-to-html-convert-command'
+  ;; latex2mathml seems way faster, at least for smaller snippets, but it doesn't
+  ;; auto-pick "display: inline" vs "display: block".  I'm gonna have to use TeXZilla postprocessing.
+  ;; (setopt org-latex-to-html-convert-command "latexmlmath '%i'")
+  ;; (setopt org-latex-to-html-convert-command "latex2mathml -bt '%i'")
+  ;; (setopt org-latex-to-html-convert-command "node /home/kept/roam/node_modules/texzilla/TeXZilla.js parser '%i'")
+  (setopt org-latex-to-html-convert-command "node /home/kept/pub/texToMathML.js \"%i\"")
   (setopt case-fold-search t) ;; for all the searches in `my-publish-to-blog'
   (setopt org-inhibit-startup t) ;; from org-publish-org-to
   (toggle-debug-on-error)
@@ -124,7 +134,8 @@ want in my main Emacs."
   ;; Generate a log of completed tasks my partner can peruse <3
   (setopt org-agenda-files '("/tmp/roam/archive.org"))
   (setopt org-agenda-span 'fortnight)
-  (setopt org-agenda-prefix-format '((agenda . " %i %?-12t% s") (todo . "") (tags . "") (search . "")))
+  ;; (setopt org-agenda-prefix-format '((agenda . " %i %?-12t% s") (todo . "") (tags . "") (search . "")))
+  (setopt org-agenda-prefix-format '((agenda . " %i %?-12t") (todo . "") (tags . "") (search . "")))
   (setopt org-agenda-show-inherited-tags nil)
   (org-agenda-list)
   (org-agenda-log-mode)
@@ -132,6 +143,8 @@ want in my main Emacs."
   (org-agenda-earlier 1)
   (shell-command "rm /tmp/todo-log.html")
   (org-agenda-write "/tmp/todo-log.html")
+  (delete-other-windows)
+  (view-echo-area-messages)
   (with-temp-file "/tmp/roam/todo-log.org"
     (insert ":PROPERTIES:"
             "\n:ID: e4c5ea8b-5b06-43c4-8948-3bfe84e8d5e8"
@@ -155,10 +168,12 @@ want in my main Emacs."
    for path in (directory-files "/tmp/roam" t "\\.org$")
    as uuid = (my-org-file-id path)
    when uuid do
-   (let ((permalink (substring (my-uuid-to-base62 uuid) -7)))
+   (let ((permalink (substring (my-uuid-to-base62 uuid) -5)))
      (when (file-exists-p permalink)
-       ;; This has not happened yet.  Would need to generate 1,000,000 IDs to
-       ;; expect a 50% chance to see one collision.
+       ;; This has not happened yet.  At 7 chars, would need to generate
+       ;; 1,000,000 IDs to expect a 50% chance to see one collision (assuming a
+       ;; perfect RNG).  But I'm ready for when it does.
+       ;; (At 5 chars, would need to generate ~30,000 IDs)
        (error "Probable page ID collision, suggest renewing UUID %s" uuid))
      (mkdir permalink)
      (rename-file path (concat permalink "/"))))
@@ -367,19 +382,20 @@ will not modify the source file."
       (warn "DATE MISSING: %s" filename))
      ((not id)
       (warn "ID MISSING: %s" filename))
-     ;; ensure lowercase everywhere so `-intersection' works
-     ((string-match-p "[[:upper:]]" (string-join tags))
-      (warn "UPPERCASE IN TAG FOUND: %s" filename))
      ((-intersection tags my-extinct-tags)
       (warn "OUTDATED TAG FOUND: %s" filename))
      ((-intersection tags my-tags-to-avoid-uploading)
       (message "Found exclude-tag, excluding: %s" filename))
+     ;; ensure lowercase everywhere so `-intersection' works
+     ((let ((case-fold-search nil))
+        (string-match-p "[[:upper:]]" (string-join tags)))
+      (warn "UPPERCASE IN TAG FOUND: %s" filename))
 
      ;; OK, export
      (t
       (with-current-buffer (or (find-buffer-visiting filename)
                                (find-file-noselect filename))
-        ;; The original export-function.  Thy magic ist magnifique!
+        ;; The original export-function.  By Thy might, Bastien, Carsten &c.
         (org-publish-org-to 'html filename "" plist pub-dir)
 
         ;; Customize the resulting HTML file and wrap it in a JSON object
@@ -418,12 +434,10 @@ will not modify the source file."
                                 alist)
                           (goto-char here))))
                     alist)))
-               (hidden (car (-intersection '("eyes_therapist"
-                                             "eyes_partner"
-                                             "eyes_friend") tags)))
+               (hidden (car (-intersection my-tags-for-hiding tags)))
                (description (save-excursion
                               (goto-char (point-min))
-                              (when (search-forward "\n#+subtitle: ")
+                              (when (search-forward "\n#+subtitle: " nil t)
                                 (buffer-substring (point) (line-end-position)))))
                (created-fancy (format-time-string (car org-timestamp-custom-formats)
                                                   (date-to-time created)))
@@ -470,13 +484,7 @@ will not modify the source file."
                             (cons (when (-intersection target-tags
                                                        my-tags-to-avoid-uploading)
                                     "private")
-                                  (-difference target-tags my-tags-to-avoid-uploading)
-                                  ;; (-intersection target-tags
-                                  ;;                '("eyes_therapist"
-                                  ;;                  "eyes_partner"
-                                  ;;                  "eyes_friend"
-                                  ;;                  "stub"))
-                                  ))))
+                                  (-difference target-tags my-tags-to-avoid-uploading)))))
                 (search-backward "<a ")
                 (forward-char 3)
                 (insert "class=\"" (string-join classes " ") "\" "))
@@ -491,7 +499,7 @@ will not modify the source file."
                      (end (1- (save-excursion (search-forward "\""))))
                      (uuid (buffer-substring beg end)))
                 (delete-region (- beg 3) end)
-                (insert (substring (my-uuid-to-base62 uuid) -7))))
+                (insert (substring (my-uuid-to-base62 uuid) -5))))
 
             ;; 14
             ;; DEPENDS ON 10
@@ -534,13 +542,24 @@ will not modify the source file."
                     (replace-match "")
                     (goto-char (1+ beg)))))
               ;; Now turn all remaining <div> into <details>
-              ;; TODO: should probably get a <section> too.
-              ;; TODO: give classes based on tags, so we can attach a
-              ;; :backlinks: tag to the backlinks section and thereby pad links
-              ;; for increased tap-targets.
+              ;; Also give that <details> tag a class based on the heading tag.
+              ;; (Will probably only grab the first such tag)
+              ;; (Background info: If a headline is tagged with e.g. :stub:, the
+              ;; h2 tag will end in &nbsp;&nbsp;&nbsp;<span class="tag"><span
+              ;; class="stub">stub</span></span>.)
               (goto-char (point-min))
               (while (re-search-forward "<div .*?>" nil t)
                 (replace-match "<details open><summary>")
+                (let ((inside-div-pos (+ 8 (line-beginning-position))))
+                  (forward-line)
+                  (when (search-forward "<span class=\"tag\">" (line-end-position) t)
+                    (re-search-forward "class=\".+?\"")
+                    (let ((class (match-string 0))
+                          (end (search-forward "</span></span>" (line-end-position))))
+                      (search-backward "&nbsp;&nbsp;&nbsp;" (line-begnning-position))
+                      (delete-region (point) end)
+                      (goto-char inside-div-pos)
+                      (insert " " class))))
                 (re-search-forward "</h[123456]>")
                 (insert "</summary>"))
               (goto-char (point-min))
