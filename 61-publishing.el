@@ -168,7 +168,7 @@ want in my main Emacs."
    for path in (directory-files "/tmp/roam" t "\\.org$")
    as uuid = (my-org-file-id path)
    when uuid do
-   (let ((permalink (substring (my-uuid-to-base62 uuid) -5)))
+   (let ((permalink (substring (my-uuid-to-base62 uuid) -4)))
      (when (file-exists-p permalink)
        ;; This has not happened yet.  At 7 chars, would need to generate
        ;; 1,000,000 IDs to expect a 50% chance to see one collision (assuming a
@@ -493,13 +493,12 @@ will not modify the source file."
             ;; 10
             ;; Replace all UUIDv4 with truncated base62 translations.
             (goto-char (point-min)) ;; gotcha! include the ToC
-            ;; (while (re-search-forward (rx (regexp my-id-re) "ID-") nil t)
             (while (re-search-forward "[\"#]ID-" nil t)
               (let* ((beg (point))
                      (end (1- (save-excursion (search-forward "\""))))
                      (uuid (buffer-substring beg end)))
                 (delete-region (- beg 3) end)
-                (insert (substring (my-uuid-to-base62 uuid) -5))))
+                (insert (substring (my-uuid-to-base62 uuid) -4))))
 
             ;; 14
             ;; DEPENDS ON 10
@@ -526,7 +525,7 @@ will not modify the source file."
                 (re-search-forward "<div id=\"text-table-of-contents\".*?>")
                 (replace-match "")
                 (search-forward "</div>\n</div>")
-                (replace-match "</details></nav"))
+                (replace-match "</details></nav>"))
               ;; First strip all non-"outline" div tags and their
               ;; hard-to-identify anonymous closing tags.  That way we'll know
               ;; the only closing tags that remain will be the correct ones to
@@ -542,11 +541,11 @@ will not modify the source file."
                     (replace-match "")
                     (goto-char (1+ beg)))))
               ;; Now turn all remaining <div> into <details>
-              ;; Also give that <details> tag a class based on the heading tag.
-              ;; (Will probably only grab the first such tag)
-              ;; (Background info: If a headline is tagged with e.g. :stub:, the
-              ;; h2 tag will end in &nbsp;&nbsp;&nbsp;<span class="tag"><span
-              ;; class="stub">stub</span></span>.)
+              ;; Also give that <details> tag a class based on the (first) tag
+              ;; in the heading.
+              ;; (Background info: If a headline is tagged with
+              ;; e.g. :stub:, the h2 tag will end in &nbsp;&nbsp;&nbsp;<span
+              ;; class="tag"><span class="stub">stub</span></span>.)
               (goto-char (point-min))
               (while (re-search-forward "<div .*?>" nil t)
                 (replace-match "<details open><summary>")
@@ -554,29 +553,13 @@ will not modify the source file."
                   (forward-line)
                   (when (search-forward "<span class=\"tag\">" (line-end-position) t)
                     (re-search-forward "class=\".+?\"")
-                    (let ((class (match-string 0))
-                          (end (search-forward "</span></span>" (line-end-position))))
-                      (search-backward "&nbsp;&nbsp;&nbsp;" (line-begnning-position))
-                      (delete-region (point) end)
-                      (goto-char inside-div-pos)
-                      (insert " " class))))
+                    (goto-char inside-div-pos)
+                    (insert " " (match-string 0))))
                 (re-search-forward "</h[123456]>")
                 (insert "</summary>"))
               (goto-char (point-min))
               (while (search-forward "</div>" nil t)
                 (replace-match "</details>")))
-
-            ;; 19 Enable a very different stylesheet for pages tagged "logseq"
-            ;; NOTE: Actually, the mere presence of preexisting .outline- divs works out nicely.
-            ;; (when (member "logseq" tags)
-            ;;   (goto-char (marker-position content-start))
-            ;;   ;; no divs
-            ;;   (while (re-search-forward "</?div.*?>" nil t)
-            ;;     (replace-match ""))
-            ;;   (goto-char (marker-position content-start))
-            ;;   (insert "<div class=\"logseq\">")
-            ;;   (goto-char (point-max))
-            ;;   (insert "</div>"))
 
             ;; 26
             ;; MUST BEFORE 30
@@ -641,6 +624,16 @@ will not modify the source file."
             (goto-char (marker-position content-start))
             (while (search-forward " class=\"org-ul\"" nil t)
               (replace-match ""))
+
+            ;; 65
+            ;; Remove tags from headlines (each one re-appears in ToC also).  It
+            ;; was a bad default to put the nbsp entities outside the span so
+            ;; they couldn't be hidden with css...
+            (goto-char (point-min))
+            (while (search-forward "&#xa0;&#xa0;&#xa0;<span class=\"tag\">" nil t)
+              (let ((beg (match-beginning 0)))
+                (search-forward "</span></span>" (line-end-position))
+                (delete-region beg (point))))
 
             (setq data-for-json
                   `((slug . ,slug)
