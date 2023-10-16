@@ -20,25 +20,51 @@
 ;; I can only guess there's something wrong with the autoloads...
 ;; I have a lot of bugs with Org atm, 2023-09-26
 (after! org
-  (require 'org-element) ;; org-element-at-point not found
+  ;; (require 'org-element) ;; org-element-at-point not found
   (require 'org-archive) ;; `org-add-archive-files'
   ;; (require 'ox-html)  ;; htmlize not found , maybe this helps
   ;; (org-require-package 'htmlize) ;; cannot be found!!! have to install it in packages.el
   )
 
-;; `org-roam-node-find' is super slow now, and even with Doom's high GC limit,
-;; 75% of the time is spent on GC.  I feel like something is broken.
-(setopt gcmh-high-cons-threshold (* 1024 1024 100)) ;; 100 MiB
+;; Speed up `org-roam-db-sync' massively
+(setq org-roam-db-gc-threshold most-positive-fixnum)
 
-;; for invisible-anki: use cloze face
-(defface cloze '((t . (:box t))) "Cloze face")
+;; Make `org-roam-node-find' & `org-roam-node-insert' instant.
+;; Drawback: new posts won't be visible until the cached value is auto-refreshed
+;; (shelf-life 2 hours) or you call `org-roam-db-sync'.
+(use-package! memoize)
+(after! org-roam 
+  (memoize #'org-roam-node-read--completions)
+  (advice-add #'org-roam-db-sync :after
+              (defun my-refresh-roam-memo (&rest _)
+                (memoize-restore #'org-roam-node-read--completions)
+                (memoize         #'org-roam-node-read--completions)
+                (let ((gcmh-high-cons-theshold most-positive-fixnum)
+                      (gc-cons-threshold       most-positive-fixnum))
+                  (org-roam-node-read--completions)
+                  nil))))
+
+
+;; for inline-anki: override underlines to represent cloze deletions, as I never
+;; use underlines anyway
+(defface my-cloze '((t . (:box t))) "Cloze face")
 (setq org-emphasis-alist '(("*" bold)
                            ("/" italic)
-                           ("_" cloze)
+                           ("_" my-cloze)
                            ("=" org-verbatim verbatim)
                            ("~" org-code verbatim)
                            ("+" (:strike-through t))))
-;; (set-face-attribute 'underline :box t)
+
+(after! org
+  (dolist (x '(org-level-1
+               org-level-2
+               org-level-3
+               org-level-4
+               org-level-5
+               org-level-6
+               org-level-7
+               org-level-8))
+    (set-face-bold x nil)))
 
 (after! ox-latex
   (add-to-list 'org-latex-classes
@@ -67,47 +93,6 @@
         (org-open-at-point arg)
       (org-open-at-point))))
 
-(after! org
-  (dolist (x '(org-level-1
-               org-level-2
-               org-level-3
-               org-level-4
-               org-level-5
-               org-level-6
-               org-level-7
-               org-level-8))
-    (set-face-bold x nil)))
-
-
-;; TODO: Maybe this can become a buffer-local mode, if instead of setting faces,
-;; it just removes the faces from the local syntax table, or uses
-;; `face-remap-add-relative'.  Or... Duh!  Even more natural to just define
-;; new faces inherited from org-level-123...
-(defvar my-org-default-headline-faces nil)
-(define-minor-mode my-logseq-mode
-  "De-fontify Org headings.
-Must unfortunately be a global mode because faces cannot be set
-per-buffer."
-  :global t
-  :group 'org
-  (when (featurep 'org)
-    (let ((headline-faces '(org-level-1
-                            org-level-2
-                            org-level-3
-                            org-level-4
-                            org-level-5
-                            org-level-6
-                            org-level-7
-                            org-level-8)))
-      (if my-logseq-mode
-          (dolist (x headline-faces)
-            (setf (alist-get x my-org-default-headline-faces)
-                  (cons (face-bold-p x) (face-foreground x)))
-            (set-face-bold x nil)
-            (set-face-foreground x (face-foreground 'default)))
-        (dolist (x headline-faces)
-          (set-face-bold x (car (alist-get x my-org-default-headline-faces)))
-          (set-face-foreground x (cdr (alist-get x my-org-default-headline-faces))))))))
 
 (add-hook 'delve-mode-hook #'delve-compact-view-mode)
 
