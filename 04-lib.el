@@ -337,12 +337,13 @@ It skips prompting, and inserts the metadata I want."
     (org-roam-db-update-file)
     (let* ((template-info nil)
            (node (org-roam-node-at-point))
+           ;; Determine filename based on `org-roam-extract-new-file-path'
            (template (org-roam-format-template
-                      (string-trim (org-capture-fill-template org-roam-extract-new-file-path))
+                      (string-trim (org-capture-fill-template
+                                    org-roam-extract-new-file-path))
                       (lambda (key default-val)
                         (let ((fn (intern key))
-                              (node-fn (intern (concat "org-roam-node-" key)))
-                              (ksym (intern (concat ":" key))))
+                              (node-fn (intern (concat "org-roam-node-" key))))
                           (cond
                            ((fboundp fn)
                             (funcall fn node))
@@ -353,13 +354,10 @@ It skips prompting, and inserts the metadata I want."
                                 r)))))))
            (file-path
             (expand-file-name template org-roam-directory))
-           (created-date (save-excursion
-                           (org-back-to-heading)
-                           (when (search-forward ":created: " (org-entry-end-position) t)
-                             (just-one-space)
-                             (prog1 (buffer-substring (point) (line-end-position))
-                               (delete-line)))))
-           (has-tags nil))
+           (parent-tags (org-get-tags))
+           (parent-creation (save-excursion
+                              (goto-char (point-min))
+                              (org-entry-get nil "CREATED"))))
       (when (file-exists-p file-path)
         (user-error "%s exists. Aborting" file-path))
       (org-cut-subtree)
@@ -370,25 +368,26 @@ It skips prompting, and inserts the metadata I want."
       (save-buffer)
       (find-file file-path)
       (org-paste-subtree)
-      (while (> (org-current-level) 1) (org-promote-subtree))
+      (while (> (org-current-level) 1)
+        (org-promote-subtree))
       (save-buffer)
       (org-roam-promote-entire-buffer)
       (goto-char (point-min))
+      (unless (org-entry-get nil "CREATED")
+        (org-set-property "CREATED" (or parent-creation
+                                        (format-time-string "[%F]"))))
+      (org-roam-tag-add (or parent-tags
+                            '("noexport")))
       (search-forward "#+title")
       (goto-char (line-beginning-position))
-      ;; (when (looking-back "\n\n")
-      ;; (join-line))
-      ;; emacs 29 alternative to above
-      (ensure-empty-lines 0)
-      (when (search-forward "#+filetags" nil t)
-        (setq has-tags t))
+      (if (version<= "29" emacs-version)
+          (ensure-empty-lines 0)
+        (when (looking-back "\n\n")
+          (join-line)))
+      (search-forward "#+filetags" nil t)
       (forward-line 1)
       (open-line 2)
-      (if created-date
-          (insert "#+date: " created-date)
-        (insert "#+date: [" (format-time-string "%F") "]"))
-      (unless has-tags
-        (org-roam-tag-add '("noexport")))
+      (insert "#+date: " (org-entry-get nil "CREATED"))
       (save-buffer))))
 
 ;; bloggable

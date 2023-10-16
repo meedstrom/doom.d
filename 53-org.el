@@ -278,6 +278,21 @@ to the new note in the \"timeline\" note."
                             ")"))
   "#+title: ${title}\n#+filetags: :person:stub:\n#+date: \[%<%Y-%m-%d>\]\n")
 
+(defun my-org-add-creation-date-and-id ()
+  "Add ID and CREATED to entry at point."
+  (interactive)
+  (org-id-get-create)
+  (unless (org-entry-get nil "CREATED")
+    (org-set-property "CREATED" (format-time-string "[%F]"))))
+
+(defun my-org-add-creation-date ()
+  "Add CREATED property to entry at point."
+  (interactive)
+  (unless (org-entry-get nil "CREATED")
+    (org-set-property "CREATED" (format-time-string "[%F]"))))
+
+(add-hook 'org-roam-capture-new-node-hook #'my-org-add-creation-date)
+
 (after! org-roam
   (add-hook 'doom-load-theme-hook
             (defun my-theme-mod-org ()
@@ -287,14 +302,19 @@ to the new note in the \"timeline\" note."
   (setopt org-roam-capture-templates
         `(("d" "default" plain "%?" :if-new
            (file+head "${slug}.org"
-                      "#+title: ${title}\n#+filetags: :noexport:stub:\n#+date: \[%<%Y-%m-%d>\]\n")
+                      ,(lines
+                        "#+title: ${title}"
+                        "#+filetags: :noexport:stub:"
+                        "#+date: \[%<%Y-%m-%d>\]"))
            :unnarrowed t
            :immediate-finish t
            :jump-to-captured t)
           ("i" "instantly create this node" plain "%?" :if-new
            (file+head "${slug}.org"
-                      "#+title: ${title}\n#+filetags: :stub:\n#+date: \[%<%Y-%m-%d>\]\n")
-           :unnarrowed t
+                      ,(lines
+                        "#+title: ${title}"
+                        "#+filetags: :noexport:stub:"
+                        "#+date: \[%<%Y-%m-%d>\]"))
            :immediate-finish t)
           ("a" "acquaintance" plain "%?" :if-new
            (file+head "${slug}.org"

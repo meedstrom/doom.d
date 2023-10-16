@@ -29,6 +29,7 @@
 ;; (package! affe)
 (package! apheleia)
 (package! copy-as-format)
+(package! memoize)
 (package! smart-tabs-mode)
 ;; (package! anki-editor)
 ;; (package! org-anki)
