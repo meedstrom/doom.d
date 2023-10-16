@@ -20,7 +20,7 @@
 ;; I can only guess there's something wrong with the autoloads...
 ;; I have a lot of bugs with Org atm, 2023-09-26
 (after! org
-  ;; (require 'org-element) ;; org-element-at-point not found
+  (require 'org-element) ;; org-element-at-point not found
   (require 'org-archive) ;; `org-add-archive-files'
   ;; (require 'ox-html)  ;; htmlize not found , maybe this helps
   ;; (org-require-package 'htmlize) ;; cannot be found!!! have to install it in packages.el

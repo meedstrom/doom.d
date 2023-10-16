@@ -37,7 +37,7 @@
   (org-publish "my-slipbox-blog" t)
   ;; will probably have to rewrite all attachment/ links to $lib/images or something ...
   ;; or static/, and place them in svelte's static folder
-  ;; (org-publish "my-slipbox-blog-images" t)
+  (org-publish "my-slipbox-blog-images" t)
   )
 
 (setopt org-publish-project-alist
@@ -55,9 +55,9 @@
            :exclude-tags ,my-tags-to-avoid-uploading)
 
           ("my-slipbox-blog-images"
-           :base-directory "/tmp/roam/static/"
+           :base-directory "/tmp/roam/attachments/"
            :base-extension "png\\|jpg"
-           :publishing-directory "/home/kept/pub/static/"
+           :publishing-directory "/home/kept/pub/attachments/"
            :publishing-function org-publish-attachment)))
 
 ;; Override so the special link type info: won't get exported to a meaningless
@@ -67,6 +67,21 @@
 (el-patch-defun org-info-export (path desc _format)
   (or desc path))
 
+(defvar my-ids nil
+  "Database for checking ID collisions.
+This is not as important as it sounds.  I am using 4-char IDs,
+which haven't had a collision yet.  But maybe in the future I
+move to 3-char IDs, and that's what I check now.  By
+futureproofing in this way, I won't have to set up redirects,
+just a general one that cuts one char off the ID.")
+
+(defun my-check-id-collisions ()
+  (interactive)
+  (cl-loop for id-uuids in my-ids
+           as uuids = (-distinct (cdr id-uuids))
+           when (> (length uuids) 1)
+           do (message "These uuids made same 3-char id: %s" uuids)))
+
 ;; (defconst my-date-regexp (rx (= 4 digit) "-" (= 2 digit) "-" (= 2 digit)))
 (defvar my-publish-ran-already nil)
 (defun my-prep-fn (_)
@@ -74,7 +89,23 @@
 Since I intend to run `org-publish' in a subordinate Emacs, this
 function is where I can make destructive env changes that I don't
 want in my main Emacs."
-  (setopt org-mode-hook nil) ;; speeds up publishing
+   ;; Speed up publishing
+  (setopt org-mode-hook nil)
+  (gcmh-mode 0)
+  (setopt gc-cons-threshold most-positive-fixnum)
+  (fset 'org-publish-write-cache-file #'ignore)
+  (advice-remove 'after-find-file #'doom--shut-up-autosave-a)
+
+  ;; Not sure it helps speed at all
+  (global-emojify-mode 0)
+  (apheleia-global-mode 0)
+  (solaire-global-mode 0)
+  (ws-butler-global-mode 0)
+  (smartparens-global-mode 0)
+  (setq whitespace-global-modes nil)
+  (projectile-global-mode 0)
+  ;; (remove-hook  'git-gutter-mode)
+
   (setopt org-export-use-babel nil)
   (setopt org-export-with-drawers '(not "logbook" "noexport")) ;; case-insensitive
   (setopt org-export-exclude-tags my-tags-to-avoid-uploading)
@@ -88,13 +119,8 @@ want in my main Emacs."
   (setopt org-html-checkbox-type 'unicode) ;; how will it look in eww? test it.
   ;; (setopt org-html-self-link-headlines t)
   (setopt org-html-html5-fancy t)
-  ;; FIXME: why does it skip environments like \begin{align}?
+  ;; why does it skip environments like \begin{align}?
   (setopt org-html-with-latex 'html) ;; use `org-latex-to-html-convert-command'
-  ;; latex2mathml seems way faster, at least for smaller snippets, but it doesn't
-  ;; auto-pick "display: inline" vs "display: block".  I'm gonna have to use TeXZilla postprocessing.
-  ;; (setopt org-latex-to-html-convert-command "latexmlmath '%i'")
-  ;; (setopt org-latex-to-html-convert-command "latex2mathml -bt '%i'")
-  ;; (setopt org-latex-to-html-convert-command "node /home/kept/roam/node_modules/texzilla/TeXZilla.js parser '%i'")
   (setopt org-latex-to-html-convert-command "node /home/kept/pub/texToMathML.js \"%i\"")
   (setopt case-fold-search t) ;; for all the searches in `my-publish-to-blog'
   (setopt org-inhibit-startup t) ;; from org-publish-org-to
@@ -107,8 +133,8 @@ want in my main Emacs."
   (fset 'rainbow-delimiters-mode #'prism-mode)
   (add-hook 'doom-load-theme-hook #'prism-set-colors)
   ;; (load-theme 'doom-rouge)
-  (load-theme 'doom-zenburn)
-  ;; (load-theme 'doom-monokai-machine)
+  ;; (load-theme 'doom-zenburn)
+  (load-theme 'doom-monokai-machine)
 
   ;; For hygiene, ensure that this subordinate emacs syncs nothing to disk
   (cancel-timer my-state-sync-timer)
@@ -133,7 +159,6 @@ want in my main Emacs."
   ;; Generate a log of completed tasks my partner can peruse <3
   (setopt org-agenda-files '("/tmp/roam/archive.org"))
   (setopt org-agenda-span 'fortnight)
-  ;; (setopt org-agenda-prefix-format '((agenda . " %i %?-12t% s") (todo . "") (tags . "") (search . "")))
   (setopt org-agenda-prefix-format '((agenda . " %i %?-12t") (todo . "") (tags . "") (search . "")))
   (setopt org-agenda-show-inherited-tags nil)
   (org-agenda-list)
@@ -162,13 +187,14 @@ want in my main Emacs."
     (insert "\n#+end_export"))
 
   ;; Ensure each post will get a unique ID in the URL
-  (mkdir "/tmp/roam/hidden/")
   (cl-loop
    with default-directory = "/tmp/roam"
    for path in (directory-files "/tmp/roam" t "\\.org$")
    as uuid = (my-org-file-id path)
    when uuid do
-   (let ((permalink (substring (my-uuid-to-base62 uuid) -3)))
+   (let ((permalink (substring (my-uuid-to-base62 uuid) -4)))
+     (push uuid (alist-get (substring permalink 1) my-ids
+                                 nil nil #'equal))
      (when (file-exists-p permalink)
        ;; So far, I've had 0 collisions.  How many can I expect?  Taking into
        ;; account the birthday paradox, and assuming a perfect RNG:
@@ -178,7 +204,7 @@ want in my main Emacs."
        ;; - At 4 chars, would need to generate ~3,000 IDs
        ;; So 4 chars is ideal, since I'll rarely have to renew an ID.  Thinking
        ;; about 3...
-       ;; Reduced it to 3, got only 6 collisions per 1,000 IDs -- manageable rate.
+       ;; Reduced it to 3, got only 6 collisions per 1,000 IDs.
        ;; Tried reducing to 2, got 360 collisions per 1,000 IDs
        (error "Probable page ID collision, suggest renewing UUID %s" uuid))
      (mkdir permalink t)
@@ -210,6 +236,7 @@ want in my main Emacs."
 ;; Change some things about the Org files, before org-export does its thing.
 (add-hook 'org-export-before-parsing-functions #'my-add-backlinks)
 (add-hook 'org-export-before-parsing-functions #'my-replace-web-links-with-ref-note-links)
+(add-hook 'org-export-before-parsing-functions #'my-replace-datestamps-with-links)
 
 (defun my-add-backlinks (&rest _)
   "Add a \"What links here\" subtree at the end.
@@ -282,6 +309,31 @@ will not modify the source file."
                       (replace-regexp-in-string (rx (any "[]")) "" (caddr ref))
                       "]]"))))))))
 
+(defun my-replace-datestamps-with-links (&rest _)
+  (when (ignore-errors (org-roam-node-at-point))
+    (save-excursion
+      (goto-char (point-min))
+      (while (re-search-forward (rx "[" (group (= 4 digit) "-" (= 2 digit) "-" (= 2 digit)) "]") nil t)
+        (let ((beg (match-beginning 0))
+              (end (match-end 0))
+              (datestamp (substring-no-properties (match-string 1))))
+          ;; check that it is not already a link
+          (unless (org-element-property :path (org-element-context))
+            ;; check that it isn't a property or comment line
+            (unless (save-excursion
+                      (goto-char (line-beginning-position))
+                      (looking-at-p "[[:space:]]*?[:#]"))
+              ;; check that a daily-page exists
+              (when-let ((daily-id (org-roam-db-query
+                                    `[:select [id]
+                                      :from nodes
+                                      :where (like title ,datestamp)])))
+                (delete-region beg end)
+                (goto-char beg)
+                (let ((fancy (format-time-string
+                              (car org-timestamp-custom-formats)
+                              (date-to-time datestamp))))
+                  (insert (concat "[[id:" (caar daily-id) "][<" fancy ">]]")))))))))))
 
 ;; TODO: In dailies, insert links to any pages created on that same day, under a
 ;; "Created pages" heading.  I guess this has to happen after exporting, so I
@@ -489,9 +541,11 @@ will not modify the source file."
             (while (re-search-forward "[\"#]ID-" nil t)
               (let* ((beg (point))
                      (end (1- (save-excursion (search-forward "\""))))
-                     (uuid (buffer-substring beg end)))
+                     (uuid (buffer-substring beg end))
+                     (id (substring (my-uuid-to-base62 uuid) -4)))
+                (push uuid (alist-get (substring id 1) my-ids nil nil #'equal))
                 (delete-region (- beg 3) end)
-                (insert (substring (my-uuid-to-base62 uuid) -3))))
+                (insert (substring (my-uuid-to-base62 uuid) -4))))
 
             ;; 14
             ;; DEPENDS ON 10
@@ -534,10 +588,11 @@ will not modify the source file."
                     (replace-match "")
                     (goto-char (1+ beg)))))
               ;; Now turn all remaining <div> into <details>
-              ;; Also give that <details> tag a class based on the (first) tag
+              ;; Also give each <details> tag a class based on the (first) tag
               ;; in the heading.
-              ;; (Background info: If a headline is tagged with
-              ;; e.g. :stub:, the h2 tag will end in &nbsp;&nbsp;&nbsp;<span
+
+              ;; (Background info: If a headline is tagged with e.g. :stub:, the
+              ;; h2 tag will end in the objet d'art &nbsp;&nbsp;&nbsp;<span
               ;; class="tag"><span class="stub">stub</span></span>.)
               (goto-char (point-min))
               (while (re-search-forward "<div .*?>" nil t)
@@ -585,24 +640,29 @@ will not modify the source file."
             ;; Org-export doesn't replace triple-dash in all situations (like in
             ;; a heading or when it butts up against a link on a newline), so
             ;; force it.  I'm pretty sure it won't break anything...
-            (goto-char (marker-position content-start))
+            (goto-char (point-min))
             (while (search-forward "---" nil t)
               (replace-match "&mdash;"))
             ;; A little more risky but I'm hoping it's fine.  Situations where we
             ;; might not want to transform a double-dash:
             ;; - css variables in code blocks (i have none)
             ;; - a code block showing this very code (i have none)
-            (goto-char (marker-position content-start))
+            (goto-char (point-min))
             (while (search-forward "--" nil t)
               (replace-match "&ndash;"))
 
+            ;; 45 While we're at it, the title needs the same fix
+            (setq title (->> title
+                             (replace-regexp-in-string "---" "—")
+                             (replace-regexp-in-string "--" "–")))
+
             ;; 50
-            ;; Remove all local images.  Temporary solution until I fix image
-            ;; upload.  Broken image-references break svelte prerendering.
+            ;; Correct image paths
             (goto-char (marker-position content-start))
             (while (re-search-forward "<img src=\"[^h]" nil t)
-              (delete-region (match-beginning 0) (search-forward " />")))
-            
+              (forward-char -1)
+              (insert "/"))
+
             ;; 55
             ;; Wrap all tables for horizontal scrollability
             (goto-char (marker-position content-start))
@@ -614,7 +674,7 @@ will not modify the source file."
 
             ;; 61
             ;; Declutter the HTML a bit
-            (goto-char (marker-position content-start))
+            (goto-char (point-min))
             (while (search-forward " class=\"org-ul\"" nil t)
               (replace-match ""))
 
@@ -628,6 +688,11 @@ will not modify the source file."
                 (search-forward "</span></span>" (line-end-position))
                 (delete-region beg (point))))
 
+            ;; 68
+            ;; give dailies titles a fancy date format too
+            (when (member "daily" tags)
+              (setq title created-fancy))
+      
             (setq data-for-json
                   `((slug . ,slug)
                     (permalink . ,permalink)
