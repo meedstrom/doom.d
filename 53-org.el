@@ -79,12 +79,10 @@
     (set-face-bold x nil)))
 
 
-;; (defun my-logseq-mode (_))
-;; (defvar-local my-logseq-mode nil)
-
 ;; TODO: Maybe this can become a buffer-local mode, if instead of setting faces,
-;; it just removes the faces from the local syntax table.  Or use
-;; `face-remap-add-relative'.
+;; it just removes the faces from the local syntax table, or uses
+;; `face-remap-add-relative'.  Or... Duh!  Even more natural to just define
+;; new faces inherited from org-level-123...
 (defvar my-org-default-headline-faces nil)
 (define-minor-mode my-logseq-mode
   "De-fontify Org headings.
@@ -110,9 +108,6 @@ per-buffer."
         (dolist (x headline-faces)
           (set-face-bold x (car (alist-get x my-org-default-headline-faces)))
           (set-face-foreground x (cdr (alist-get x my-org-default-headline-faces))))))))
-
-(after! org
-  (my-logseq-mode))
 
 (add-hook 'delve-mode-hook #'delve-compact-view-mode)
 
