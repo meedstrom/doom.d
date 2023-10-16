@@ -214,7 +214,8 @@
   :init
   (setopt prism-comments nil)
   ;; The default (40 50 60) is disorienting when turning prism on and off.
-  (setopt prism-desaturations '(0 20 60))
+  ;; (setopt prism-desaturations '(0 20 60))
+  (setopt prism-desaturations '(0))
   ;; note, another odd default is that (in lisp) the parens enclosing a sexp are
   ;; a diff color from the symbols inside -- people arent used to this either
   :config

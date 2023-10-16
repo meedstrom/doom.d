@@ -34,7 +34,6 @@
   (switch-to-buffer "*Messages*") ;; for watching it work
   ;; (split-window) ;; in case the Warnings buffer appears
   (cd "/home/kept/roam") ;; for me to quick-search when an id fails to resolve
-  (shell-command "npm i texzilla")
   (org-publish "my-slipbox-blog" t)
   ;; will probably have to rewrite all attachment/ links to $lib/images or something ...
   ;; or static/, and place them in svelte's static folder
@@ -148,6 +147,7 @@ want in my main Emacs."
   (with-temp-file "/tmp/roam/todo-log.org"
     (insert ":PROPERTIES:"
             "\n:ID: e4c5ea8b-5b06-43c4-8948-3bfe84e8d5e8"
+            "\n:CREATED:  " (format-time-string "[%F]")
             "\n:END:"
             "\n#+title: Completed tasks"
             "\n#+filetags: :eyes_friend:"
@@ -168,35 +168,21 @@ want in my main Emacs."
    for path in (directory-files "/tmp/roam" t "\\.org$")
    as uuid = (my-org-file-id path)
    when uuid do
-   (let ((permalink (substring (my-uuid-to-base62 uuid) -4)))
+   (let ((permalink (substring (my-uuid-to-base62 uuid) -3)))
      (when (file-exists-p permalink)
-       ;; This has not happened yet.  At 7 chars, would need to generate
-       ;; 1,000,000 IDs to expect a 50% chance to see one collision (assuming a
-       ;; perfect RNG).  But I'm ready for when it does.
-       ;; (At 5 chars, would need to generate ~30,000 IDs)
+       ;; So far, I've had 0 collisions.  How many can I expect?  Taking into
+       ;; account the birthday paradox, and assuming a perfect RNG:
+       ;; - At 7 chars, would need to generate ~1,000,000 IDs for a 50%
+       ;;   chance to see one or more collisions
+       ;; - At 5 chars, would need to generate ~30,000 IDs
+       ;; - At 4 chars, would need to generate ~3,000 IDs
+       ;; So 4 chars is ideal, since I'll rarely have to renew an ID.  Thinking
+       ;; about 3...
+       ;; Reduced it to 3, got only 6 collisions per 1,000 IDs -- manageable rate.
+       ;; Tried reducing to 2, got 360 collisions per 1,000 IDs
        (error "Probable page ID collision, suggest renewing UUID %s" uuid))
-     (mkdir permalink)
+     (mkdir permalink t)
      (rename-file path (concat permalink "/"))))
-
-  ;; ;; Ensure each post will get a unique ID in the URL, and move hidden stuff to subdir
-  ;; (mkdir "/tmp/roam/hidden/")
-  ;; (cl-loop
-  ;;  with default-directory = "/tmp/roam"
-  ;;  for path in (directory-files "/tmp/roam" t "\\.org$")
-  ;;  as uuid = (my-org-file-id path)
-  ;;  as tags = (my-org-file-tags path)
-  ;;  when uuid do
-  ;;  (let ((permalink (substring (my-uuid-to-base62 uuid) -7)))
-  ;;    (when (file-exists-p permalink)
-  ;;      ;; This has not happened yet
-  ;;      (error "Probable page ID collision, suggest renewing UUID %s" uuid))
-  ;;    (mkdir permalink)
-  ;;    (rename-file path (concat permalink "/"))
-  ;;    ;; Now put hidden posts in a subdir so I can treat them different in the
-  ;;    ;; frontend code.  Note that this act doesn't actually hide them, it's just
-  ;;    ;; semantic.
-  ;;    (when (-intersection tags my-tags-for-hiding)
-  ;;      (rename-file permalink "/tmp/roam/hidden/"))))
 
   ;; Tell `org-id-locations' and the org-roam DB about the new directory.
   (setopt org-roam-directory "/tmp/roam/")
@@ -212,8 +198,7 @@ want in my main Emacs."
                      [:select [ref id title]
                       :from refs
                       :left-join nodes
-                      :on (= refs:node-id nodes:id)]))
-  )
+                      :on (= refs:node-id nodes:id)])))
 
 ;; Give each h2...h6 heading an ID attribute that matches its source org-id, if
 ;; it has one, instead of e.g. "org953031".  That way, hash-links such as
@@ -350,24 +335,27 @@ will not modify the source file."
     (with-temp-buffer
       (insert-file-contents filename)
       (forward-line 10)  ;; should be enough to grab the metadata
+      ;; protect ourselves against mentions of #+title etc in article text
       (delete-region (point) (point-max))
 
       (goto-char (point-min))
-      (setq title (when (search-forward "#+title: " nil t)
+      (setq title (when (search-forward "\n#+title: " nil t)
                     (delete-horizontal-space)
                     (buffer-substring (point) (line-end-position))))
 
       (goto-char (point-min))
-      (setq id (when (search-forward ":id:" nil t)
+      (setq id (when (search-forward "\n:id: " nil t)
                  (delete-horizontal-space)
                  (buffer-substring (point) (line-end-position))))
 
       (goto-char (point-min))
-      (setq created (when (search-forward "#+date: [" nil t)
-                      (buffer-substring (point) (+ 10 (point)))))
+      (setq created (when (search-forward "\n:created: " nil t)
+                      (delete-horizontal-space)
+                      (cl-assert (not (looking-at-p "\n")))
+                      (buffer-substring (+ 1 (point)) (+ 11 (point)))))
 
       (goto-char (point-min))
-      (setq tags (if (search-forward "#+filetags: " nil t)
+      (setq tags (if (search-forward "\n#+filetags: " nil t)
                      (thread-first (buffer-substring (point) (line-end-position))
                                    (string-trim)
                                    (string-split ":" t)
@@ -379,7 +367,7 @@ will not modify the source file."
      ((not title)
       (warn "TITLE MISSING: %s" filename))
      ((not created)
-      (warn "DATE MISSING: %s" filename))
+      (warn "CREATION-DATE MISSING: %s" filename))
      ((not id)
       (warn "ID MISSING: %s" filename))
      ((-intersection tags my-extinct-tags)
@@ -401,20 +389,22 @@ will not modify the source file."
         ;; Customize the resulting HTML file and wrap it in a JSON object
         (let* ((output-path (org-export-output-file-name "" nil pub-dir))
                (slug (string-replace pub-dir "" output-path))
-               ;; NOTE: All pages get a permalink, even daily-pages despite the
-               ;; also deterministic slug in their case.  The org-id is
-               ;; everything: it underpins how my site will resolve hash-links
-               ;; that are no longer on the page where the user bookmarked them,
-               ;; for example.  Don't be tempted to think it's ugly.  The
-               ;; daily-pages are rarely meant for consumption by the public
-               ;; anyway.
+               ;; NOTE: All pages get a unique permalink, even daily-pages
+               ;; despite the also deterministic slug in their case.  The org-id
+               ;; is everything: it underpins how my site will resolve
+               ;; hash-links that are no longer on the page where the user
+               ;; bookmarked them, for example.  Don't be tempted to think it's
+               ;; ugly.  The daily-pages are rarely meant for consumption by the
+               ;; public anyway.
                (permalink (-last-item (split-string pub-dir "/" t)))
-               (updated (format-time-string "%F" (f-modification-time filename)))
+               (updated (save-excursion
+                          (goto-char (point-min))
+                          (when (search-forward "\n#+date: [" nil t)
+                            (buffer-substring (point) (1- (line-end-position))))))
                (wordcount (save-excursion
                             (if (re-search-forward "^[^#:\n]" nil t)
                                 (count-words (point) (point-max))
                               0)))
-
                (refs (save-excursion
                        (when (search-forward ":roam_refs: " nil t)
                          ;; Only top-level refs; not refs from a subheading
@@ -439,10 +429,13 @@ will not modify the source file."
                               (goto-char (point-min))
                               (when (search-forward "\n#+subtitle: " nil t)
                                 (buffer-substring (point) (line-end-position)))))
-               (created-fancy (format-time-string (car org-timestamp-custom-formats)
-                                                  (date-to-time created)))
-               (updated-fancy (format-time-string (car org-timestamp-custom-formats)
-                                                  (date-to-time updated)))
+               (created-fancy
+                (format-time-string (car org-timestamp-custom-formats)
+                                    (date-to-time created)))
+               (updated-fancy
+                (when updated
+                  (format-time-string (car org-timestamp-custom-formats)
+                                      (date-to-time updated))))
                (links 0)
                (m1 (make-marker))
                (content-start (make-marker))
@@ -498,7 +491,7 @@ will not modify the source file."
                      (end (1- (save-excursion (search-forward "\""))))
                      (uuid (buffer-substring beg end)))
                 (delete-region (- beg 3) end)
-                (insert (substring (my-uuid-to-base62 uuid) -4))))
+                (insert (substring (my-uuid-to-base62 uuid) -3))))
 
             ;; 14
             ;; DEPENDS ON 10
@@ -653,5 +646,5 @@ will not modify the source file."
           (when-let ((output-buf (find-buffer-visiting output-path)))
             (kill-buffer output-buf))
           (with-temp-file output-path
-            (insert (json-encode data-for-json))))))
-     (kill-buffer (current-buffer)))))
+            (insert (json-encode data-for-json))))
+        (kill-buffer (current-buffer)))))))

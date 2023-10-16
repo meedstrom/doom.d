@@ -86,7 +86,6 @@
                         :left-join nodes
                         :on (= refs:node-id nodes:id)])))
         ;; (org-roam-ref-find url)
-
         )
 
     (if arg
@@ -137,7 +136,7 @@
 (setopt org-roam-directory "/home/kept/roam/")
 (setopt org-roam-dailies-capture-templates
       '(("d" "default" entry "* %<%H:%M>\n%?" :if-new
-         (file+head "%<%Y-%m-%d>.org" "#+title: %<%Y-%m-%d>\n#+filetags: :noexport:daily:\n#+date: [%<%Y-%m-%d>]\n")
+         (file+head "%<%Y-%m-%d>.org" "#+title: %<%Y-%m-%d>\n#+filetags: :noexport:daily:\n")
          :immediate-finish t
          :jump-to-captured t)))
 
@@ -244,12 +243,11 @@
   )
 
 (after! org
-  (require 'org-protocol) ;; for org capture from firefox
+  ;; (require 'org-protocol) ;; for org capture from firefox
 
   (require 'named-timer) ;; an indispensable 70-line library
   (named-timer-run :my-clock-reminder nil 600
                    (defun my-clock-remind ()
-
                      (when (org-clock-is-active)
                        (message (concat "Currently working on: "
                                         org-clock-current-task))))))
@@ -306,7 +304,6 @@ to the new note in the \"timeline\" note."
                         "#+title: ${title}"
                         "#+filetags: :noexport:stub:"
                         "#+date: \[%<%Y-%m-%d>\]"))
-           :unnarrowed t
            :immediate-finish t
            :jump-to-captured t)
           ("i" "instantly create this node" plain "%?" :if-new
@@ -328,10 +325,8 @@ to the new note in the \"timeline\" note."
                                "- Birthday :: "
                                "- Interests :: "
                                "- How we met :: "))
-           :unnarrowed t
            :immediate-finish t
-           :jump-to-captured t)
-          )))
+           :jump-to-captured t))))
 
 (defun my-insert-heading-with-id ()
   (interactive)
