@@ -37,8 +37,7 @@
   (org-publish "my-slipbox-blog" t)
   ;; will probably have to rewrite all attachment/ links to $lib/images or something ...
   ;; or static/, and place them in svelte's static folder
-  (org-publish "my-slipbox-blog-images" t)
-  )
+  (org-publish "my-slipbox-blog-attachments" t))
 
 (setopt org-publish-project-alist
         `(("my-slipbox-blog"
@@ -54,7 +53,7 @@
            ;; tag in `my-publish-to-blog'.
            :exclude-tags ,my-tags-to-avoid-uploading)
 
-          ("my-slipbox-blog-images"
+          ("my-slipbox-blog-attachments"
            :base-directory "/tmp/roam/attachments/"
            :base-extension "png\\|jpg"
            :publishing-directory "/home/kept/pub/attachments/"
