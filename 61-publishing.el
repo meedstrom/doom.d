@@ -24,8 +24,7 @@
 (defvar my-tags-to-avoid-uploading (append my-extinct-tags '("noexport" "archive" "private" "censor")))
 (defvar my-tags-for-hiding '("eyes_therapist" "eyes_partner" "eyes_friend"))
 
-;; cache-variable
-(defvar my-all-refs nil)
+(defvar my-refs-cache nil)
 
 (defun my-publish ()
   "A single command I can use in a child emacs."
@@ -35,9 +34,11 @@
   ;; (split-window) ;; in case the Warnings buffer appears
   (cd "/home/kept/roam") ;; for me to quick-search when an id fails to resolve
   (org-publish "my-slipbox-blog" t)
-  ;; will probably have to rewrite all attachment/ links to $lib/images or something ...
-  ;; or static/, and place them in svelte's static folder
-  (org-publish "my-slipbox-blog-attachments" t))
+  (org-publish "my-slipbox-blog-attachments" t)
+  ;; ensure it's gone from recentf so I don't accidentally edit these instead of
+  ;; the originals
+  (rm -rf "/tmp/roam")
+  (my-check-id-collisions))
 
 (setopt org-publish-project-alist
         `(("my-slipbox-blog"
@@ -70,9 +71,9 @@
   "Database for checking ID collisions.
 This is not as important as it sounds.  I am using 4-char IDs,
 which haven't had a collision yet.  But maybe in the future I
-move to 3-char IDs, and that's what I check now.  By
-futureproofing in this way, I won't have to set up redirects,
-just a general one that cuts one char off the ID.")
+move to 3-char IDs, and that's what I like to check.  By
+futureproofing in this way, I won't have to set up redirects
+beyond a general one that cuts one char off the ID.")
 
 (defun my-check-id-collisions ()
   (interactive)
@@ -219,7 +220,7 @@ want in my main Emacs."
   (fset 'org-id-update-id-locations #'ignore) ;; stop triggering during publish
 
   ;; Lookup table used by `my-replace-web-links-with-ref-note-links'
-  (setq my-all-refs (org-roam-db-query
+  (setq my-refs-cache (org-roam-db-query
                      [:select [ref id title]
                       :from refs
                       :left-join nodes
@@ -290,7 +291,7 @@ will not modify the source file."
       (while (not (equal "No further link found" (quiet! (org-next-link))))
         (let* ((elem (org-element-context))
                (link (org-element-property :path elem))
-               (ref (assoc link my-all-refs))
+               (ref (assoc link my-refs-cache))
                (end (org-element-property :end elem)))
           (when (and ref
                      ;; ignore if referring to same page we're on
