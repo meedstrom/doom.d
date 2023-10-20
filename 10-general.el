@@ -78,7 +78,8 @@
 ;; (setq doom-font (font-spec :family "DejaVu SansM Nerd Font" :size 27))
 ;; (setq doom-font (font-spec :family "Noto Sans Mono" :size 27))
 
-(setq doom-font (font-spec :family "Iosevka Nerd Font" :size 15))
+;; (setq doom-font (font-spec :family "Iosevka Nerd Font" :size 15))
+(setq doom-font (font-spec :family "Iosevka Nerd Font" :size 33))
 
 ;; The default is Symbola, but I can't find it on pacman repos.
 ;; (setq doom-unicode-font (font-spec :family "DejaVu Sans Mono"))

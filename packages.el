@@ -57,7 +57,7 @@
 (package! emacs-piper :recipe (:host gitlab :repo "howardabrams/emacs-piper"))
 (package! ess-rproj :recipe (:host github :repo "chainsawriot/ess-rproj"))
 (package! esup)
-(package! asyncloop :recipe (:host github :repo "meedstrom/asyncloop"))
+;; (package! asyncloop :recipe (:host github :repo "meedstrom/asyncloop"))
 (package! deianira :recipe (:host github :repo "meedstrom/deianira"))
 (package! inline-anki :recipe (:host github :repo "meedstrom/inline-anki"))
 (package! exwm)
@@ -168,4 +168,4 @@
 ;; (package! sx)
 
 ;; another alternative to feebleline!
-;; (package! awesome-tray :recipe (:host github :repo "manateelazycat/awesome-tray"))
+(package! awesome-tray :recipe (:host github :repo "manateelazycat/awesome-tray"))

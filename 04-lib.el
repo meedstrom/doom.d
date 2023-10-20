@@ -1566,7 +1566,7 @@ function to `aggressive-indent-mode-hook'."
     (set-face-attribute 'org-block-end-line   () :background 'unspecified :inherit 'region))
   (with-eval-after-load 'org-habit
     ;; the default red color doesn't end up helping my psyche
-    (set-face-attribute 'org-habit-overdue-face () :background (face-foreground 'font-lock-comment-face))
+    (set-face-attribute 'org-habit-overdue-face () :background (or (face-foreground 'font-lock-comment-face) 'unspecified))
     )
   (with-eval-after-load 'rainbow-delimiters
     (set-face-attribute 'rainbow-delimiters-depth-3-face () :foreground 'unspecified :inherit 'font-lock-builtin-face)

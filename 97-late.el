@@ -85,8 +85,11 @@
 ;; the filtered buffers when they want them?
 (assoc-delete-all 'buffer-predicate default-frame-alist) ;; undoom
 (set-frame-parameter nil 'buffer-predicate nil) ;; undoom
-(setopt iflipb-ignore-buffers nil)
+(setopt iflipb-ignore-buffers (lambda () t))
 
+;; Never bury buffers, so the buffer list is truly chronological and
+;; unsurprising to cycle thru.
+;;
 ;; FWIW, might be worth knowing the command `unbury-buffer' and using that
 ;; instead -- but would be great if there was a visual effect associated with a
 ;; buffer being buried as opposed to just switched-away-from.
@@ -96,7 +99,7 @@
 (fset 'bury-buffer #'ignore)
 (fset 'bury-buffer-internal #'ignore)
 
-(setopt helpful-max-buffers nil) ;; wats the point of killing buffers
+(setopt helpful-max-buffers nil) ;; what's the point of killing buffers
 (setopt iflipb-wrap-around t)
 (setopt ranger-map-style 'emacs)
 (setopt which-key-idle-delay 0.2)

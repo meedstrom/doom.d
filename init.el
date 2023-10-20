@@ -43,6 +43,7 @@
 
        :lang
        emacs-lisp
+       common-lisp
        data
        ess
        nix
@@ -53,7 +54,7 @@
        rust
        json
        ledger
-       ;; ((markdown))))
+       ;; markdown
        ;; (org +dragndrop +pomodoro +roam2 +pretty)
        ;; (org +roam2)
        (scheme +guile)
@@ -61,7 +62,7 @@
        yaml
 
        :email
-       mu4e
+       ;; mu4e
 
        :tools
        ;; biblio
