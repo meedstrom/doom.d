@@ -119,9 +119,22 @@
 
 (setopt mediawiki-site-default "WikEmacs")
 
+(use-package! inline-anki
+  :config
+  (defun my-anki-field:webpage ()
+    (when-let* ((uuid (org-id-get))
+                (pageid (substring (my-uuid-to-base62 uuid) -4))
+                (url (concat "https://edstrom.dev/" pageid)))
+      (concat "<a href=\"" url "\">" url "</a>")))
+  (add-to-list 'inline-anki-fields '("Online mirror" . my-anki-field:webpage))
+  (add-to-list 'inline-anki-ignore "/daily/")
+  (after! org 
+    (add-to-list 'org-structure-template-alist '("f" . "flashcard"))))
+
 (after! ws-butler
   ;; Undoom. Was this a Vimism? If this is nil while auto-save-visited-mode is
   ;; active, the result is incredibly annoying.
+  ;; https://github.com/doomemacs/doomemacs/issues/7516
   (setopt ws-butler-keep-whitespace-before-point t)
   ;; fix guix.el
   (add-to-list 'ws-butler-global-exempt-modes #'minibuffer-inactive-mode)
