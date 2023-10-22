@@ -19,6 +19,7 @@
 ;; Workaround bugs causing functions to be called before they're loaded.
 ;; I can only guess there's something wrong with the autoloads...
 ;; I have a lot of bugs with Org atm, 2023-09-26
+(setopt org-element-use-cache nil) ;; heavily bugged, no idea how to debug
 (after! org
   (require 'org-element) ;; org-element-at-point not found
   (require 'org-archive) ;; `org-add-archive-files'
@@ -26,7 +27,7 @@
   ;; (org-require-package 'htmlize) ;; cannot be found!!! have to install it in packages.el
   )
 
-;; Speed up `org-roam-db-sync' massively
+;; Speed up `org-roam-db-sync'
 (setq org-roam-db-gc-threshold most-positive-fixnum)
 
 ;; Make `org-roam-node-find' & `org-roam-node-insert' instant.
@@ -43,7 +44,6 @@
                       (gc-cons-threshold       most-positive-fixnum))
                   (org-roam-node-read--completions)
                   nil))))
-
 
 ;; for inline-anki: override underlines to represent cloze deletions, as I never
 ;; use underlines anyway
@@ -76,23 +76,6 @@
                  ("\\paragraph{%s}" . "\\paragraph*{%s}")
                  ("\\subparagraph{%s}" . "\\subparagraph*{%s}"))))
 
-(defun my-org-open-at-point (&optional arg)
-  (interactive "P")
-  (if-let ((url (thing-at-point 'url)))
-      ;; TODO: only goto if an actually known reflink
-      (let ((all-refs (org-roam-db-query
-                       [:select [ref id title]
-                        :from refs
-                        :left-join nodes
-                        :on (= refs:node-id nodes:id)])))
-        ;; (org-roam-ref-find url)
-        )
-
-    (if arg
-        (org-open-at-point arg)
-      (org-open-at-point))))
-
-
 (add-hook 'delve-mode-hook #'delve-compact-view-mode)
 
 ;; (add-hook 'lister-mode-hook #'View-exit)
@@ -110,8 +93,8 @@
 
 (after! org
   (use-package! org-recent-headings :disabled
-    :config
-    (org-recent-headings-mode))
+                :config
+                (org-recent-headings-mode))
   ;; temporarily not using doom's org
   (use-package! org-indent
     :config
@@ -135,10 +118,10 @@
 (add-hook 'org-roam-buffer-postrender-functions #'magit-section-show-level-2)
 (setopt org-roam-directory "/home/kept/roam/")
 (setopt org-roam-dailies-capture-templates
-      '(("d" "default" entry "* %<%H:%M>\n%?" :if-new
-         (file+head "%<%Y-%m-%d>.org" "#+title: %<%Y-%m-%d>\n#+filetags: :noexport:daily:\n")
-         :immediate-finish t
-         :jump-to-captured t)))
+        '(("d" "default" entry "* %<%H:%M>\n%?" :if-new
+           (file+head "%<%Y-%m-%d>.org" "#+title: %<%Y-%m-%d>\n#+filetags: :noexport:daily:\n")
+           :immediate-finish t
+           :jump-to-captured t)))
 
 ;; See also C-h d m :tools biblio
 (setopt citar-bibliography '("/home/kept/roam/refs/library_biblatex.bib"))
@@ -211,7 +194,7 @@
 ;; (setopt org-latex-compiler "xelatex") ; allow unicode (åäö) in VERBATIM blocks
 (setopt org-log-done 'time)
 (setopt org-log-into-drawer t) ; hide spam
-(setopt org-modules '(org-id ol-info ol-eww)) ;;org-eww-copy-for-org-mode
+(setopt org-modules '(org-id ol-info ol-eww)) ;; `org-eww-copy-for-org-mode'
 (setopt org-pretty-entities t)
 (setopt org-use-speed-commands t)
 (setopt org-clock-x11idle-program-name (or (executable-find "xprintidle") "x11idle"))
@@ -224,16 +207,16 @@
 (setopt bidi-display-reordering nil)
 
 (setopt my-org-prettify-alist '(
-                              ;; Nice for writing/reading equations in plaintext
-                              ;; ("[" . "［")
-                              ;; ("]" . "］")
-                              ;; ("-" . "－")
-                              ;; ("=" . "＝")
-                              ;; ("+" . "＋")
-                              ("\\vdots" . "⋮")
-                              ("\\implies" . "⟹")
-                              ("\\sqrt" . "√")
-                              ("\\ldots" . "…")))
+                                ;; Nice for writing/reading equations in plaintext
+                                ;; ("[" . "［")
+                                ;; ("]" . "］")
+                                ;; ("-" . "－")
+                                ;; ("=" . "＝")
+                                ;; ("+" . "＋")
+                                ("\\vdots" . "⋮")
+                                ("\\implies" . "⟹")
+                                ("\\sqrt" . "√")
+                                ("\\ldots" . "…")))
 
 (defun my-org-prettify ()
   (setq prettify-symbols-alist
@@ -298,35 +281,35 @@ to the new note in the \"timeline\" note."
   (my-theme-mod-org)
   (setopt org-roam-extract-new-file-path "${slug}.org")
   (setopt org-roam-capture-templates
-        `(("d" "default" plain "%?" :if-new
-           (file+head "${slug}.org"
-                      ,(lines
-                        "#+title: ${title}"
-                        "#+filetags: :noexport:stub:"
-                        "#+date: \[%<%Y-%m-%d>\]"))
-           :immediate-finish t
-           :jump-to-captured t)
-          ("i" "instantly create this node" plain "%?" :if-new
-           (file+head "${slug}.org"
-                      ,(lines
-                        "#+title: ${title}"
-                        "#+filetags: :noexport:stub:"
-                        "#+date: \[%<%Y-%m-%d>\]"))
-           :immediate-finish t)
-          ("a" "acquaintance" plain "%?" :if-new
-           (file+head "${slug}.org"
-                      ,(lines "#+title: ${title}\n#+filetags: :stub:acquaintance:eyes_therapist:\n#+date: \[%<%Y-%m-%d>\]\n"
-                              ":noexport:"
-                               "- Email :: "
-                               "- Phone :: "
-                               "- Address :: "
-                               ":end:"
-                               "- Location :: "
-                               "- Birthday :: "
-                               "- Interests :: "
-                               "- How we met :: "))
-           :immediate-finish t
-           :jump-to-captured t))))
+          `(("d" "default" plain "%?" :if-new
+             (file+head "${slug}.org"
+                        ,(lines
+                          "#+title: ${title}"
+                          "#+filetags: :noexport:stub:"
+                          "#+date: \[%<%Y-%m-%d>\]"))
+             :immediate-finish t
+             :jump-to-captured t)
+            ("i" "instantly create this node" plain "%?" :if-new
+             (file+head "${slug}.org"
+                        ,(lines
+                          "#+title: ${title}"
+                          "#+filetags: :noexport:stub:"
+                          "#+date: \[%<%Y-%m-%d>\]"))
+             :immediate-finish t)
+            ("a" "acquaintance" plain "%?" :if-new
+             (file+head "${slug}.org"
+                        ,(lines "#+title: ${title}\n#+filetags: :stub:acquaintance:eyes_therapist:\n#+date: \[%<%Y-%m-%d>\]\n"
+                                ":noexport:"
+                                "- Email :: "
+                                "- Phone :: "
+                                "- Address :: "
+                                ":end:"
+                                "- Location :: "
+                                "- Birthday :: "
+                                "- Interests :: "
+                                "- How we met :: "))
+             :immediate-finish t
+             :jump-to-captured t))))
 
 (defun my-insert-heading-with-id ()
   (interactive)

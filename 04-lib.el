@@ -29,6 +29,36 @@
 (autoload #'objed-ipipe "objed")
 (autoload #'piper "piper")
 
+(defun my-org-open-at-point-as-maybe-roam-ref (&optional arg)
+  "Like `org-open-at-point', but prefer to visit any org-roam node
+that has the link as a ref.
+If already visiting that same node, then follow the link normally."
+  (interactive "P")
+  (let* ((url (thing-at-point 'url))
+         (path (if (derived-mode-p 'org-mode)
+                   (org-element-property :path (org-element-context))
+                 (replace-regexp-in-string (rx bol (* (not "/"))) "" url)))
+         (all-refs (org-roam-db-query
+                    [:select [ref id]
+                     :from refs
+                     :left-join nodes
+                     :on (= refs:node-id nodes:id)]))
+         (found (when path (assoc path all-refs))))
+
+    (if (and found
+             ;; check that the ref does not point to THIS file (if so, better to
+             ;; just open the url normally)
+             (not (when (derived-mode-p 'org-mode)
+                    (equal (cdr found)
+                           (or (org-id-get)
+                               (progn
+                                 (goto-char (point-min))
+                                 (org-id-get)))))))
+        (org-roam-node-visit (org-roam-node-from-id (cadr found)))
+      (if arg
+          (org-open-at-point arg)
+        (org-open-at-point)))))
+
 (defun my-org-file-id (file)
   "Quickly get the file-level id from FILE.
 For use in heavy loops; it skips activating `org-mode'.
@@ -253,7 +283,7 @@ asynchronously so you can do something else."
                 (set-window-buffer on-window buf)))))))))
 
 ;; bloggable
-;; NOTE: not used during my publishing process right now, I just run it manually
+;; NOTE: not used automatically in my publish process, I just use manually
 ;; sometimes
 (defun my-rename-roam-file-by-title (&optional path)
   (interactive)
@@ -264,8 +294,8 @@ asynchronously so you can do something else."
   (let* ((title (org-get-title))
          (name (file-name-nondirectory path))
          (new-path (concat (file-name-directory path)
-                               (my-slugify title)
-                               ".org"))
+                           (my-slugify title)
+                           ".org"))
          (visiting (find-buffer-visiting path))
          (visiting-and-visible (and visiting
                                     (get-buffer-window visiting))))
@@ -394,7 +424,10 @@ It skips prompting, and inserts the metadata I want."
 (defun my-truncate-buffer-and-move-excess (&optional _string)
   "A substitute for `comint-truncate-buffer'.
 Instead of deleting, move the excess lines to a buffer named
-*comint-excess:..., in case you need to look far back."
+*comint-excess:..., in case you need to look far back.
+
+The prescribed way to use this function is:
+(add-hook 'comint-output-filter-functions #'my-truncate-buffer-and-move-excess)"
   (save-mark-and-excursion
     (goto-char (process-mark (get-buffer-process (current-buffer))))
     (forward-line (- comint-buffer-maximum-size))

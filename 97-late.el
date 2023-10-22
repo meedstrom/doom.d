@@ -122,24 +122,26 @@
 (use-package! inline-anki
   :config
   (defun my-anki-field:webpage ()
-    (when-let* ((uuid (org-id-get))
+    (cl-letf ((org-mode-hook nil))
+      (org-mode))
+    (when-let* ((uuid (or (org-id-get)
+                          (progn (goto-char (point-min)) (org-id-get))))
                 (pageid (substring (my-uuid-to-base62 uuid) -4))
                 (url (concat "https://edstrom.dev/" pageid)))
       (concat "<a href=\"" url "\">" url "</a>")))
   (add-to-list 'inline-anki-fields '("Online mirror" . my-anki-field:webpage))
   (add-to-list 'inline-anki-ignore "/daily/")
+  (setopt inline-anki-use-tags t)
   (after! org 
     (add-to-list 'org-structure-template-alist '("f" . "flashcard"))))
 
 (after! ws-butler
-  ;; Undoom. Was this a Vimism? If this is nil while auto-save-visited-mode is
-  ;; active, the result is incredibly annoying.
+  ;; Undoom.  Having it nil jibes badly with auto-save-visited-mode.
   ;; https://github.com/doomemacs/doomemacs/issues/7516
   (setopt ws-butler-keep-whitespace-before-point t)
   ;; fix guix.el
   (add-to-list 'ws-butler-global-exempt-modes #'minibuffer-inactive-mode)
-  ;; because org-element-cache (runs in background) throws warnings now (culprit Roam?)
-  ;; probably fixed in emacs 29
+  ;; because org-element-cache (runs in background) throws warnings now
   (add-to-list 'ws-butler-global-exempt-modes #'org-mode))
 
 (use-package! form-feed
@@ -220,7 +222,7 @@
 ;; try to fix JS/TS buffers freezing.  Seems the issue is that prism-mode collides badly with RJSX mode.
 ;; (setq tide-server-max-response-length )
 ;; (after! rjsx-mode
-  ;; (remove-hook 'rjsx-mode-hook #'rainbow-delimiters-mode))
+;; (remove-hook 'rjsx-mode-hook #'rainbow-delimiters-mode))
 
 ;; (after! typescript-mode
 ;;   ;; NOTE: typescript-tsx-mode is actually defined in ~/doomemacs/modules/lang/javascript/config.el

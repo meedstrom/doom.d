@@ -46,7 +46,8 @@
      "/home/kept/roam/grismartin/pages/what-we-can-work-on.org"
      "/home/me/.doom.d/elfeed.org"))
  '(safe-local-variable-values
-   '((nameless-current-name . "my") (org-confirm-babel-evaluate)
+   '((coding-system . utf-8-unix) (nameless-current-name . "my")
+     (org-confirm-babel-evaluate)
      (org-refile-targets quote
       (("/home/kept/roam/noagenda/2021-08-27-somedaymaybe.org" :maxlevel . 3)))
      (org-drill-scope . directory) (require-final-newline . t)
