@@ -144,10 +144,10 @@
            :repo "meedstrom/eva"
            :files (:defaults "assets" "renv" "*.R" "*.gnuplot")))
 
-;(package! taxy
-;  :recipe (:host github
-;           :repo "alphapapa/taxy.el"
-;           :files (:defaults "deffy.el" "*.el")))
+;;(package! taxy
+;;  :recipe (:host github
+;;           :repo "alphapapa/taxy.el"
+;;           :files (:defaults "deffy.el" "*.el")))
 
 ;; Not tried out
 
@@ -155,7 +155,7 @@
 ;; (package! embrace)
 ;; (package! pulseaudio-control)
 ;; (package! delve :recipe (:host github :repo "publicimageltd/delve"))
-;; (package! hyperbole)
+(package! hyperbole)
 ;; (package! suggest)
 ;; (package! sly)
 ;; (package! osm)

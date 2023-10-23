@@ -24,6 +24,41 @@
 (make-variable-buffer-local 'my-eshell-backref-counter)
 (make-variable-buffer-local 'my-eshell-id)
 
+
+;; bloggable 2023-10-23
+(defvar my-dsc-orig-buf nil)
+(defvar my-dsc-ctr 0)
+(defvar my-dsc-max 0)
+(defvar my-dsc-triplet nil)
+(defun my-dired-shell-cycle ()
+  (interactive)
+  (when (and (not (eq last-command #'my-dired-shell-cycle))
+             (not (memq (current-buffer) my-dsc-triplet)))
+    (if (derived-mode-p 'dired-mode)
+        (setq my-dsc-ctr 1)
+      (setq my-dsc-ctr 0))
+    (if (or (derived-mode-p 'dired-mode)
+            (derived-mode-p 'eshell-mode))
+        (progn
+          (setq my-dsc-triplet nil)
+          (setq my-dsc-max 2))
+      (setq my-dsc-orig-buf (current-buffer))
+      (setq my-dsc-triplet (list (current-buffer)))
+      (setq my-dsc-max 3)))
+
+  (if (= 2 my-dsc-ctr)
+      (switch-to-buffer my-dsc-orig-buf)
+    (if (= 1 my-dsc-ctr)
+        (progn
+          (my-eshell-here)
+          (cl-pushnew (current-buffer) my-dsc-triplet))
+      (if (= 0 my-dsc-ctr)
+          (progn
+            (dired-jump)
+            (cl-pushnew (current-buffer) my-dsc-triplet)))))
+  (setq my-dsc-ctr (mod (1+ my-dsc-ctr) my-dsc-max)))
+
+
 (defun my-eshell-assign-id ()
   (setq-local my-eshell-id (my-alphabetic my-eshell-buffer-counter))
   (cl-incf my-eshell-buffer-counter))
@@ -51,7 +86,7 @@ prompt becomes a timestamp like 13:59 after you run a command."
     (let ((output (buffer-substring (eshell-beginning-of-output)
                                     (eshell-end-of-output)))
           (i (my-base36 (prog1 my-eshell-backref-counter
-                        (cl-incf my-eshell-backref-counter)))))
+                          (cl-incf my-eshell-backref-counter)))))
       (unless (string-blank-p output)
         (unless my-eshell-id
           (my-eshell-assign-id))
@@ -73,7 +108,8 @@ prompt becomes a timestamp like 13:59 after you run a command."
                 (replace-regexp (rx (** 2 3 "-")) "" nil (point) (+ 4 (point)))
                 (insert (concat my-eshell-id i))
                 (add-text-properties beg (point) '(font-lock-face eshell-prompt
-                                                   read-only t)))
+                                                   ;; read-only t
+                                                   )))
               (goto-char (point-max)))
           (message "Eshell: Failed to find backref placeholder"))))))
 
@@ -110,7 +146,8 @@ Functions here have access to the variable
                  (substring (number-to-string n) 0 4))
                " s\n ")
               (add-text-properties beg (point) '(font-lock-face eshell-prompt
-                                                 read-only t)))))))))
+                                                 ;; read-only t
+                                                 )))))))))
 
 
 ;;; Base encoding
@@ -582,9 +619,9 @@ MAX-LEN, not counting slashes."
     (goto-char (line-beginning-position))
     (insert "Emacs: ")
     (add-text-properties
-       (line-beginning-position) (point)
-       `(face (list :foreground ,(seq-elt ansi-color-names-vector 3)
-                    :weight bold)))
+     (line-beginning-position) (point)
+     `(face (list :foreground ,(seq-elt ansi-color-names-vector 3)
+                  :weight bold)))
     (insert emacs-version)
     (open-line 1)
     (when (re-search-forward "Shell: " nil t)

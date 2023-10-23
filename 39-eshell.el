@@ -17,22 +17,22 @@
 ;; Wishlist:
 
 ;; - Unbreak the prompts occasionally going read-only
+;;   (Fixed by just not applying read-only)
 
 ;; - Stop writing .eshell-scrolback and .eshell-command-history, keep track in
 ;;   .emacs.d/cache/ instead
 
 ;;   - Stretch goal: For robustness, attempt to sync to at least two places:
 ;;     locally in the dir AND in .emacs.d.  To merge mismatched syncs, just add
-;;     together the logs, which are of course timestamped to the nanosecond,
-;;     order by time, and dedup. This way, the local dir file can regenerate from
-;;     .emacs.d, and .emacs.d can regenerate from the local dir file.  And local
-;;     file need not exist at all (helps when dir unwritable, or when the user
-;;     disabled writing local files).
+;;     together the logs, which are of course timestamped to the unix
+;;     nanosecond, sort by time, and dedup. This way, the local dir file can
+;;     regenerate from .emacs.d, and .emacs.d can regenerate from the local dir
+;;     file!  And local file need not exist at all (helps when dir unwritable,
+;;     or when the user disabled writing local files).
 
 (require 'subr-x)
 
 (set-eshell-alias! "less" "view-file $1")
-(set-eshell-alias! "r" "dired-jump")
 
 ;; TODO: Automatically do scroll-right after coming off a long line
 ;; (add-hook 'window-scroll-functions
@@ -120,6 +120,7 @@
                my-eshell-narrow-dwim
                my-copy-region-or-rest-of-line-to-other-window
                my-cycle-path-at-point-repeat
+               my-dired-shell-cycle
                my-insert-other-buffer-file-name-and-cycle-repeat
                my-eval-and-replace-print
                my-replace-var-at-point-with-value
@@ -170,7 +171,7 @@
 ;; Bear in mind the setting will also apply to programs spawned from Emacs,
 ;; such as (let's say) Alacritty, RStudio & VSCodium, which may not be a problem,
 ;; but it would be hygienic to revert this setting when calling make-process.
-(setenv "PAGER" "cat")
+;; (setenv "PAGER" "cat")
 
 ;; TODO: try the "smart" thing for a while
 ;; (use-package em-smart
@@ -196,30 +197,22 @@
   )
 
 ;; Encourage idiomatic ways to work with Emacs
-(after! eshell
-  (after! em-ls
-    (defun eshell/ls (&rest args)
-      (if (null args)
-          (dired-jump)
-        (kill-new (apply #'concat args))
-        "ls: ls is blocked, but added your input to kill ring.  Try C-x C-f C-y RET?")))
-  (after! em-dirs
-    (defun eshell/cd (&rest args)
-      (if (null args)
-          (let ((default-directory "~"))
-            (my-eshell-here))
-        (kill-new (apply #'concat args))
-        ;; (my-hook-once 'my-real-eshell-post-command-hook
-        ;;   (eshell-previous-prompt 1))
-        "cd: cd is blocked, but added your input to kill ring.  Try C-x C-f C-y RET?"))))
-
-;; TODO: Make a command that cycles between a trio of buffers: the dired, the
-;; eshell, and the buffer it was first called from.
-(keymap-set global-map "M-r" #'my-dired-jump)
-(after! esh-mode
-  (keymap-set eshell-mode-map "M-r" #'dired-jump))
-(after! dired
-  (keymap-set dired-mode-map "M-r" #'my-eshell-here))
+;; (after! eshell
+;;   (after! em-ls
+;;     (defun eshell/ls (&rest args)
+;;       (if (null args)
+;;           (dired-jump)
+;;         (kill-new (apply #'concat args))
+;;         "ls: ls is blocked, but added your input to kill ring.  Try C-x C-f C-y RET?")))
+;;   (after! em-dirs
+;;     (defun eshell/cd (&rest args)
+;;       (if (null args)
+;;           (let ((default-directory "~"))
+;;             (my-eshell-here))
+;;         (kill-new (apply #'concat args))
+;;         ;; (my-hook-once 'my-real-eshell-post-command-hook
+;;         ;;   (eshell-previous-prompt 1))
+;;         "cd: cd is blocked, but added your input to kill ring.  Try C-x C-f C-y RET?"))))
 
 ;; Emulate my Dired "b" key for going up one directory.
 (defun eshell/b (&optional _args)

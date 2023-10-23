@@ -278,7 +278,7 @@
   (keymap-set vertico-map "M-<backspace>" #'vertico-directory-up)
   (keymap-set vertico-map "<next>" #'scroll-up-command)
   (keymap-set vertico-map "<prior>" #'scroll-down-command))
-  
+
 (after! ledger-mode
   (keymap-set ledger-mode-map "M-<return>" #'crux-duplicate-current-line-or-region))
 
@@ -397,6 +397,9 @@
 
 ;; Grand list
 
+
+(keymap-set global-map "M-z"                        #'my-dired-shell-cycle)
+(keymap-set global-map "M-r"                        #'hkey-either)
 (keymap-set global-map "<f10> a"                    #'my-save-buffer-and-amend)
 (keymap-set global-map "<f10> d"                    #'org-download-yank)
 (keymap-set global-map "<f10> e"                    #'eww)
@@ -507,6 +510,7 @@
 (keymap-set global-map "M-s s"                      #'isearch-forward)
 (keymap-set global-map "M-|"                        #'my-shell-command-replace-region)
 ;; (keymap-set global-map "TAB"                        #'my-tab-command)
+
 (keymap-set help-map "M"                 #'describe-mode)
 (keymap-set help-map "m"                 #'consult-minor-mode-menu)
 (keymap-set isearch-mode-map "<down>"    #'isearch-repeat-forward)
