@@ -16,6 +16,8 @@
 
 (require 'my-lib-external)
 
+(define-key global-map [remap org-open-at-point] #'my-org-open-at-point-as-maybe-roam-ref)
+
 ;; Workaround bugs causing functions to be called before they're loaded.
 ;; I can only guess there's something wrong with the autoloads...
 ;; I have a lot of bugs with Org atm, 2023-09-26

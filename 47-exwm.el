@@ -77,7 +77,7 @@
   (use-package! exwm
     :config
     ;; NOTE: exwm-enable just adds exwm-init on various hooks which will be called
-    ;; later; exwm-init won't get called at the end of this sexp.
+    ;; later; exwm-init won't get called right at the end of this sexp.
     (exwm-enable)))
 
 ;; not good

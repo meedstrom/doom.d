@@ -29,6 +29,42 @@
 (autoload #'objed-ipipe "objed")
 (autoload #'piper "piper")
 
+
+;; bloggable 2023-10-23
+(defvar my-dsc-orig-buf nil)
+(defvar my-dsc-ctr nil)
+(defvar my-dsc-max nil)
+(defvar my-dsc-triple nil)
+(defun my-dired-shell-cycle ()
+  "Cycle between Dired and Eshell for the current directory.
+If the cycling started in a buffer that was neither Dired nor
+Eshell, include that buffer in the cycle."
+  (interactive)
+  (when (and (not (eq last-command #'my-dired-shell-cycle))
+             (not (member (current-buffer) my-dsc-triple)))
+    ;; Ensure we never have to call the command twice to see effect
+    (if (derived-mode-p 'eshell-mode)
+        (setq my-dsc-ctr 1)
+      (if (derived-mode-p 'dired-mode)
+          (setq my-dsc-ctr 2)
+        (setq my-dsc-ctr 0)))
+    ;; Refresh data about the buffer-pair/buffer-triple
+    (if (or (derived-mode-p 'dired-mode)
+            (derived-mode-p 'eshell-mode))
+        (setq my-dsc-max 2)
+      (setq my-dsc-orig-buf (current-buffer))
+      (setq my-dsc-max 3))
+    (setq my-dsc-triple nil))
+  ;; Cycle
+  (cl-pushnew (current-buffer) my-dsc-triple)
+  (if (= 2 my-dsc-ctr)
+      (switch-to-buffer my-dsc-orig-buf)
+    (if (= 1 my-dsc-ctr)
+        (dired-jump)
+      (if (= 0 my-dsc-ctr)
+          (my-eshell-here))))
+  (setq my-dsc-ctr (mod (1+ my-dsc-ctr) my-dsc-max)))
+
 (defun my-org-open-at-point-as-maybe-roam-ref (&optional arg)
   "Like `org-open-at-point', but prefer to visit any org-roam node
 that has the link as a ref.

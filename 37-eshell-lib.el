@@ -25,39 +25,6 @@
 (make-variable-buffer-local 'my-eshell-id)
 
 
-;; bloggable 2023-10-23
-(defvar my-dsc-orig-buf nil)
-(defvar my-dsc-ctr 0)
-(defvar my-dsc-max 0)
-(defvar my-dsc-triplet nil)
-(defun my-dired-shell-cycle ()
-  (interactive)
-  (when (and (not (eq last-command #'my-dired-shell-cycle))
-             (not (memq (current-buffer) my-dsc-triplet)))
-    (if (derived-mode-p 'dired-mode)
-        (setq my-dsc-ctr 1)
-      (setq my-dsc-ctr 0))
-    (if (or (derived-mode-p 'dired-mode)
-            (derived-mode-p 'eshell-mode))
-        (progn
-          (setq my-dsc-triplet nil)
-          (setq my-dsc-max 2))
-      (setq my-dsc-orig-buf (current-buffer))
-      (setq my-dsc-triplet (list (current-buffer)))
-      (setq my-dsc-max 3)))
-
-  (if (= 2 my-dsc-ctr)
-      (switch-to-buffer my-dsc-orig-buf)
-    (if (= 1 my-dsc-ctr)
-        (progn
-          (my-eshell-here)
-          (cl-pushnew (current-buffer) my-dsc-triplet))
-      (if (= 0 my-dsc-ctr)
-          (progn
-            (dired-jump)
-            (cl-pushnew (current-buffer) my-dsc-triplet)))))
-  (setq my-dsc-ctr (mod (1+ my-dsc-ctr) my-dsc-max)))
-
 
 (defun my-eshell-assign-id ()
   (setq-local my-eshell-id (my-alphabetic my-eshell-buffer-counter))
@@ -90,15 +57,15 @@ prompt becomes a timestamp like 13:59 after you run a command."
       (unless (string-blank-p output)
         (unless my-eshell-id
           (my-eshell-assign-id))
-        ;; Save the backref buffer-locally.
+        ;; Save the backref, buffer-locally.
         ;; (set (make-local-variable (intern (concat my-eshell-id i))) output)
-        ;; Save the backref globally.
+        ;; Save the backref, globally.
         (set (intern (concat my-eshell-id i)) output)
         (eshell-previous-prompt 1)
         ;; NOTE: makes assumption about eshell-prompt-function, and that the
         ;; placeholder is in the last line in case of a multiline prompt.
         (if (search-backward "] --" ;;(line-beginning-position)
-                             )
+                             nil t)
             (progn
               (forward-char 2)
               (let ((beg (point))
@@ -140,7 +107,7 @@ Functions here have access to the variable
             (let ((beg (search-backward "〈 ")))
               (forward-char 1)
               (insert
-               " Last command time elapsed: "
+               " Last command took: "
                (if (> n 100)
                    (number-to-string (round n))
                  (substring (number-to-string n) 0 4))

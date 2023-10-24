@@ -398,7 +398,7 @@
 ;; Grand list
 
 
-(keymap-set global-map "M-z"                        #'my-dired-shell-cycle)
+(keymap-set global-map "C-q"                        #'my-dired-shell-cycle)
 (keymap-set global-map "M-r"                        #'hkey-either)
 (keymap-set global-map "<f10> a"                    #'my-save-buffer-and-amend)
 (keymap-set global-map "<f10> d"                    #'org-download-yank)
