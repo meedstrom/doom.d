@@ -163,20 +163,20 @@
 ;; (debug-watch 'org-mode)
 
 (use-package! snitch :disabled
-  :config
-  (require 'snitch)
-  (setq snitch-network-policy 'deny)
-  (setq snitch-network-whitelist
-        (list (cons #'snitch-filter-src-pkg '(eww))
-              (cons #'snitch-filter-src-pkg '(magit))
-              (cons #'snitch-filter-src-pkg '(forge))))
-  (setq snitch-log-policy '(blocked blacklisted))
-  ;; (setq snitch-log-policy '(allowed blocked whitelisted blacklisted))
-  ;; (setq snitch-log-verbose nil)
-  ;; (setq snitch-log-buffer-max-lines)
-  ;; (setq snitch-enable-notifications t)
-  (setq snitch-trace-timers nil)
-  (snitch-mode))
+              :config
+              (require 'snitch)
+              (setq snitch-network-policy 'deny)
+              (setq snitch-network-whitelist
+                    (list (cons #'snitch-filter-src-pkg '(eww))
+                          (cons #'snitch-filter-src-pkg '(magit))
+                          (cons #'snitch-filter-src-pkg '(forge))))
+              (setq snitch-log-policy '(blocked blacklisted))
+              ;; (setq snitch-log-policy '(allowed blocked whitelisted blacklisted))
+              ;; (setq snitch-log-verbose nil)
+              ;; (setq snitch-log-buffer-max-lines)
+              ;; (setq snitch-enable-notifications t)
+              (setq snitch-trace-timers nil)
+              (snitch-mode))
 
 
 ;;; Stuff
@@ -202,7 +202,7 @@
 
 ;; TODO: how to find out parent process
 (defvar child-emacs nil)
-  ;; (process-attributes (emacs-pid))
+;; (process-attributes (emacs-pid))
 
 ;; In case I'm not on a tiling WM.
 (add-to-list 'initial-frame-alist '(fullscreen . fullheight))
@@ -244,7 +244,7 @@
 (setopt indent-tabs-mode nil)
 (setopt vc-msg-newbie-friendly-msg nil)
 (setopt vc-msg-copy-id-to-kill-ring nil)
-(setopt display-line-numbers-type nil) ; undoom
+;; (setopt display-line-numbers-type nil) ; undoom
 (setopt garbage-collection-messages nil)
 (setopt auto-save-no-message t)
 (setopt shift-select-mode nil)
