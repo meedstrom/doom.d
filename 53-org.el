@@ -388,7 +388,7 @@ to the new note in the \"timeline\" note."
 
 (after! org
   (unless after-init-time
-    (warn "Org loaded during init, I don't want this"))
+    (warn (message "Org loaded during init, I don't want this")))
   (setopt org-babel-load-languages '((R . t)
                                      (emacs-lisp . t)
                                      (calc . t)

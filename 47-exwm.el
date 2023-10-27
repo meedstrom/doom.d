@@ -17,6 +17,12 @@
 ;; (general-unbind exwm-mode-map "C-c")
 ;; (general-def exwm-mode-map "M-s q" #'exwm-input-send-next-key)
 
+
+;; not good
+;; (setopt exwm-workspace-minibuffer-position 'bottom)
+;; (add-hook 'exwm-init-hook #'exwm-workspace-attach-minibuffer)
+
+
 ;; (setq exwm-replace t)
 (setq exwm-input-simulation-keys '(([?\s-a] . [home])
                                    ([?\s-b] . [left])
@@ -51,7 +57,7 @@
                                (,(kbd "<XF86MonBrightnessUp>") . my-backlight-inc)))
 
 (after! exwm-core
-  (keymap-set exwm-mode-map "s-c" (lookup-key exwm-mode-map "C-c"))
+  (keymap-set exwm-mode-map "M-q" (keymap-lookup exwm-mode-map "C-c"))
   (keymap-unset exwm-mode-map "C-c"))
 
 (defun my-golden-ratio-if-exwm (&optional _arg)
@@ -73,13 +79,9 @@
 ;; C-c C-g  merge: merge a detached tab back into its "parent" window
 ;; (exwm-firefox-mode)
 
-(when (eq window-system 'x)
-  (use-package! exwm
-    :config
-    ;; NOTE: exwm-enable just adds exwm-init on various hooks which will be called
-    ;; later; exwm-init won't get called right at the end of this sexp.
-    (exwm-enable)))
-
-;; not good
-;; (setopt exwm-workspace-minibuffer-position 'bottom)
-;; (add-hook 'exwm-init-hook #'exwm-workspace-attach-minibuffer)
+;; (when (eq window-system 'x)
+;;   (use-package! exwm
+;;     :config
+;;     ;; NOTE: exwm-enable just adds exwm-init on various hooks which will
+;;     ;; be called later; don't count on exwm at the end of this sexp.
+;;     (exwm-enable)))

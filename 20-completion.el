@@ -48,14 +48,11 @@
 ;; completion-styles or orderless-matching-styles.
 
 
-
-
-
-;; This worked in Emacs 28.  Why 29 causes warning?
-
 ;; Partial fix: only the first component should match on initialisms.  Then I
 ;; only need to append a = on the first search term, and the rest will anyway
 ;; not be analyzed for initialisms.
+
+;; This worked in Emacs 28.  Why 29 causes warning?
 (defun my-orderless-first-piece-may-be-initialism (pattern index total)
   (if (= index 0)
       (or (+vertico-orderless-dispatch pattern index total) ;; so the usual `=@! still work
@@ -66,9 +63,6 @@
   (add-to-list 'orderless-style-dispatchers #'my-orderless-first-piece-may-be-initialism))
 
 ;; (setopt orderless-matching-styles '(orderless-literal orderless-regexp))
-
-
-
 
 
 ;; embark
@@ -88,19 +82,50 @@
 ;;   ;; which-key one day.
 ;;   ;; (define-key consult-narrow-map (vconcat consult-narrow-key "?") #'consult-narrow-help)
 
+(use-package! cape
+  :config
+  ;; https://github.com/minad/corfu/wiki#configuring-corfu-for-eglot
+  (defun my/eglot-capf ()
+    (setq-local completion-at-point-functions
+                (list (cape-super-capf
+                       #'eglot-completion-at-point
+                       #'tempel-expand
+                       #'cape-file))))
+  (add-hook 'eglot-managed-mode-hook #'my/eglot-capf))
+
+;; https://github.com/minad/corfu/wiki#same-key-used-for-both-the-separator-and-the-insertion
+(defun my-complete-on-double-space ()
+  "Makes sense only with `corfu-separator' 32 (space)."
+  (interactive)
+  (if current-prefix-arg
+      ;;we suppose that we want leave the word like that, so do a space
+      (progn
+        (corfu-quit)
+        (insert " "))
+    (if (and (= (char-before) corfu-separator)
+             (or
+              ;; check if space, return or nothing after
+              (not (char-after))
+              (= (char-after) ?\s)
+              (= (char-after) ?\n)))
+        (progn
+          (corfu-insert)
+          (insert " "))
+      (corfu-insert-separator))))
 
 ;; completion-at-point, TAB -> corfu-complete
 ;; RET -> corfu-insert
 ;; M-g -> corfu-show-location
 ;; M-h -> corfu-show-documentation
-(use-package! corfu :disabled
+(use-package! corfu
   :init
   (setopt corfu-auto t)
   (setopt corfu-auto-delay 0.35)
   (setopt tab-always-indent 'complete) ;; or use M-TAB to complete
   :config
   (setopt completion-cycle-threshold 3)
-  ;; invoke corfu for dabbrev instead of the opportunistic expand
+  ;; invoke corfu for dabbrev instead of its own dabbrev-expand
+  ;; (keymap-set [remap hippie-expand])
   (keymap-set global-map "M-/" #'dabbrev-completion)
   (keymap-set global-map "C-M-/" #'dabbrev-expand)
   (global-corfu-mode)
@@ -120,19 +145,35 @@ https://github.com/minad/corfu."
   (advice-add #'corfu-insert :after #'corfu-send-shell)
 
   (defun corfu-enable-always-in-minibuffer ()
-  "Enable Corfu in the minibuffer if Vertico is not active."
-  (unless (bound-and-true-p vertico--input)
-    ;; (setq-local corfu-auto nil) Enable/disable auto completion
-    (corfu-mode 1)))
+    "Enable Corfu in the minibuffer if Vertico is not active."
+    (unless (bound-and-true-p vertico--input)
+      ;; (setq-local corfu-auto nil) Enable/disable auto completion
+      (corfu-mode)))
 
   (add-hook 'minibuffer-setup-hook #'corfu-enable-always-in-minibuffer 1)
+
+  (define-key corfu-map (kbd "SPC") #'my-complete-on-double-space)
+
+  ;; Complete on punctuation
+  ;; https://github.com/minad/corfu/wiki#tab-and-go-completion
+  (dolist (c (list (cons "." ".")
+                   (cons "," ",")
+                   (cons ":" ":")
+                   (cons ")" ")")
+                   (cons "}" "}")
+                   (cons "]" "]")))
+    (define-key corfu-map (kbd (car c)) `(lambda ()
+                                           (interactive)
+                                           (corfu-insert)
+                                           (insert ,(cdr c)))))
+
   )
 
-;; NOTE: probably fixed in Emacs 29
-(use-package! cape
-  :after corfu
-  :config
-  ;; Fix eshell: https://github.com/minad/corfu/issues/61
-  ;; (the pcomplete capf does not behave as a proper capf by default)
-  (advice-add 'pcomplete-completions-at-point :around #'cape-wrap-silent)
-  (advice-add 'pcomplete-completions-at-point :around #'cape-wrap-purify))
+;; ;; NOTE: probably fixed in Emacs 29
+;; (use-package! cape
+;;   :after corfu
+;;   :config
+;;   ;; Fix eshell: https://github.com/minad/corfu/issues/61
+;;   ;; (the pcomplete capf does not behave as a proper capf by default)
+;;   (advice-add 'pcomplete-completions-at-point :around #'cape-wrap-silent)
+;;   (advice-add 'pcomplete-completions-at-point :around #'cape-wrap-purify))

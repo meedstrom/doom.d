@@ -25,14 +25,14 @@
  backup-directory-alist `(("." . "/home/backups"))
  delete-old-versions t ;; nil led to Emacs appearing broken for newbie-me
  vc-make-backup-files t ;; I don't commit regularly in every project
- make-backup-files t ;; Why did Doom disable it
+ make-backup-files t ;; undoom
  version-control t)
 
 ;; undoom; I want readable backup names since I rename files and directories all
 ;; the time.
 (advice-remove #'make-backup-file-name-1 #'doom-make-hashed-backup-file-name-a)
 
-;; Have grace
+;; Graceful degradation
 (unless (file-writable-p "/home/backups/")
   (error "Disabling backups because can't write to: /home/backups/")
   (setq backup-directory-alist nil)
@@ -200,8 +200,8 @@
 ;; useful for `my-stim'.
 (defvar internet nil)
 
-;; TODO: how to find out parent process
-(defvar child-emacs nil)
+;; TODO: how to find out parent process?
+;; (defvar child-emacs nil)
 ;; (process-attributes (emacs-pid))
 
 ;; In case I'm not on a tiling WM.
@@ -365,8 +365,5 @@
 ;; (remove-hook 'doom-first-input-hook #'which-key-mode)
 
 
-
 ;; Prevent accidental edits
-;; NOTE: Emacs 29 no longer recommends `so-long-mode' (new system is automatic,
-;;       see `long-line-optimizations-p').  Still doesn't hurt to keep this.
 (add-hook 'so-long-mode-hook #'read-only-mode)

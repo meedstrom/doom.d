@@ -47,7 +47,7 @@
        data
        ess
        nix
-       (go +tree-sitter)
+       (go +tree-sitter +lsp)
        (web +tree-sitter)
        (javascript +tree-sitter)
        ;; javascript

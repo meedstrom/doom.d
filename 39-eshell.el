@@ -96,6 +96,13 @@
 
 ;; (my-syms-starting-with "my-eshell-")
 
+;; OK, so using a regexp is pretty unreliable.  The way shell-mode does it, it
+;; has a shell-prompt-pattern, but won't use it by default for anything other
+;; than C-c C-p motion.  Instead, it relies on comint use of the "field" text
+;; property to mark a prompt.  Docstring of `shell-prompt-pattern' says: The
+;; pattern should probably not match more than one line.  If it does, Shell mode
+;; may become confused trying to distinguish prompt from input on lines which
+;; don't start with a prompt.
 (after! eshell
   (setopt eshell-prompt-function
           (lambda ()

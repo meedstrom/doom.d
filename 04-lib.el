@@ -1051,7 +1051,8 @@ being called by certain hooks, such as
 `window-selection-change-functions'."
   (when (buffer-modified-p) ;; i.e. it is STILL in a modified state
     (auto-save-visited-mode 0)
-    (global-auto-revert-mode 0)
+    (auto-revert-mode 0)
+    ;; (global-auto-revert-mode 0)
     (message "Disabled auto-save-visited-mode due to suspected failure to save.")
     (unless (ignore-errors (backup-buffer))
       (warn "Backup failed\; wiping backup-directory-alist to let you save anyway")
@@ -1329,7 +1330,7 @@ training wheel."
 
 (defun my-hippie-expand-or-org-cycle (&optional arg)
   "On Org headline or table do `org-cycle', else `hippie-expand'.
-Great on the TAB key!  As an atlernative, you can use corfu
+Great on the TAB key!  As an alternative, you can use corfu
 instead of hippie-expand and set `tab-always-indent' to
 'complete."
   (interactive)
