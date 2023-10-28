@@ -57,6 +57,8 @@
 (package! emacs-piper :recipe (:host gitlab :repo "howardabrams/emacs-piper"))
 (package! ess-rproj :recipe (:host github :repo "chainsawriot/ess-rproj"))
 (package! esup)
+(package! tempel)
+(package! tempel-collection)
 ;; (package! asyncloop :recipe (:host github :repo "meedstrom/asyncloop"))
 (package! deianira :recipe (:host github :repo "meedstrom/deianira"))
 (package! inline-anki :recipe (:host github :repo "meedstrom/inline-anki"))
