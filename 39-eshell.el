@@ -225,13 +225,3 @@
 (defun eshell/b (&optional _args)
   (let ((default-directory (file-name-parent-directory default-directory)))
     (my-eshell-here)))
-
-;; undoom
-(after! eshell
-  (fmakunbound #'eshell/emacs) ;; give me access to emacs --help
-  (setopt +eshell-enable-new-shell-on-split nil) ;; I prefer it pick a recent buffer
-  (setopt eshell-input-filter #'eshell-input-filter-default)
-  (setopt eshell-scroll-to-bottom-on-input nil)
-  (setopt eshell-scroll-to-bottom-on-output nil)
-  (after! esh-mode
-    (keymap-set eshell-mode-map "C-l" #'recenter-top-bottom)))

@@ -20,17 +20,16 @@
 
 ;; Backups have saved my skin in 2015, 2016, 2018, and 2020.
 ;; So I should not stop using them until 2030 or so, given no more incidents.
-;; I put them in the unusual path /home/backups/ to prevent cluttered rg output.
+;; And I'll probably keep them forever.  The fundamental issue with "git can
+;; replace backups!" is I don't commit regularly in every project nor do I even
+;; have a git project everywhere.
 (setopt
+ ;; Put them in the unusual path /home/backups/ to avoid cluttering rg output.
  backup-directory-alist `(("." . "/home/backups"))
- delete-old-versions t ;; nil led to Emacs appearing broken for newbie-me
+ delete-old-versions t ;; nil led to Emacs looking broken for newbie-me
  vc-make-backup-files t ;; I don't commit regularly in every project
  make-backup-files t ;; undoom
  version-control t)
-
-;; undoom; I want readable backup names since I rename files and directories all
-;; the time.
-(advice-remove #'make-backup-file-name-1 #'doom-make-hashed-backup-file-name-a)
 
 ;; Graceful degradation
 (unless (file-writable-p "/home/backups/")
@@ -214,13 +213,6 @@
   ;; (set-face-foreground 'solaire-default-face "pale green")
   )
 (my-fix-pdf-midnight-colors)
-
-;; undoom; I find customize a handy exploration tool
-(put 'customize-themes 'disabled nil)
-(put 'customize-group 'disabled nil)
-(put 'customize-changed 'disabled nil)
-(put 'customize-face 'disabled nil)
-(put 'customize-variable 'disabled nil)
 
 (after! recentf
   (setopt recentf-max-saved-items nil))

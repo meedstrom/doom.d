@@ -78,8 +78,7 @@
   (context-menu-mode)
   (repeat-mode)
   ;; (setq use-short-answers t)
-  (setq abbrev-suggest t)
-  )
+  (setq abbrev-suggest t))
 
 ;; Don't filter the buffer list when cycling.  How do these people actually find
 ;; the filtered buffers when they want them?
@@ -136,12 +135,9 @@
     (add-to-list 'org-structure-template-alist '("f" . "flashcard"))))
 
 (after! ws-butler
-  ;; Undoom.  Having it nil jibes badly with auto-save-visited-mode.
-  ;; https://github.com/doomemacs/doomemacs/issues/7516
-  (setopt ws-butler-keep-whitespace-before-point t)
-  ;; fix guix.el
+  ;; Fix guix.el
   (add-to-list 'ws-butler-global-exempt-modes #'minibuffer-inactive-mode)
-  ;; because org-element-cache (runs in background) throws warnings now
+  ;; Because org-element-cache (runs in background) throws warnings now
   (add-to-list 'ws-butler-global-exempt-modes #'org-mode))
 
 (use-package! form-feed
@@ -159,18 +155,7 @@
 (use-package! objed
   :commands objed-ipipe)
 
-(use-package! crux
-  :config
-  ;; Reopen as root specifically when exiting read-only-mode on a root-owned file.
-  ;; (add-hook 'read-only-mode-hook
-  ;;           (defun my-sudo-edit-maybe ()
-  ;;             "Call `crux-sudo-edit' if the file is unwritable."
-  ;;             (if buffer-read-only
-  ;;                 nil
-  ;;               (when (and (buffer-file-name)
-  ;;                          (not (file-writable-p (buffer-file-name)))
-  ;;                          (crux-sudo-edit))))))
-  )
+(use-package! crux)
 
 (use-package! nov
   :mode ("\\.epub\\'" . nov-mode))
@@ -178,17 +163,18 @@
 (use-package! deianira-mass-remap
   :config
   (general-auto-unbind-keys 'undo) ;; ensure it works with and without general
+  (setopt dei-mass-remap-debug-level 1)
   (add-hook 'window-buffer-change-functions #'dei-record-keymap-maybe -70)
   (add-hook 'dei-keymap-found-hook #'dei-define-super-like-ctl)
   (add-hook 'dei-keymap-found-hook #'dei-homogenize-all-keymaps)
-  (setq dei-homogenizing-winners
-        '(("C-x C-s" . global-map)
-          ("C-x C-f" . global-map)
-          ("C-x C-q" . global-map)
-          ("C-x C-;" . global-map)
-          ("C-x C-l" . global-map)
-          ("C-c C-c")
-          ("C-c C-," . org-mode-map))))
+  (setopt dei-homogenizing-winners
+          '(("C-x C-s" . global-map)
+            ("C-x C-f" . global-map)
+            ("C-x C-q" . global-map)
+            ("C-x C-;" . global-map)
+            ("C-x C-l" . global-map)
+            ("C-c C-c")
+            ("C-c C-," . org-mode-map))))
 
 ;; (dei-define-super-like-ctl)
 ;; (dei-homogenize-all-keymaps)
@@ -198,7 +184,6 @@
   ;; (fset 'which-key-mode #'ignore)
   (after! hydra
     (define-key hydra-base-map (kbd "<f5>") #'hydra-repeat))
-  (setq asyncloop-debug-level 1)
   (setq dei-invisible-leafs
         (seq-difference dei-invisible-leafs '("<menu>" "SPC")))
   ;; (deianira-mode)

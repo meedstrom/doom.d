@@ -274,7 +274,6 @@
 
 (after! vertico
   ;; (keymap-set global-map "M-<backspace>" (lambda()(interactive)(message "no")))
-  (keymap-unset vertico-map "<backspace>" t) ;; undoom
   (keymap-set vertico-map "M-<backspace>" #'vertico-directory-up)
   (keymap-set vertico-map "<next>" #'scroll-up-command)
   (keymap-set vertico-map "<prior>" #'scroll-down-command))
@@ -285,9 +284,7 @@
 (after! dired
   ;; Dired default unbound keys: `, b, E, J, K, r, z, <backspace>
   ;; Dired useless keys: h, 1234567890
-
-  ;; Easy swapping between dired and eshell
-  (keymap-set dired-mode-map "r"  #'my-eshell-here))
+  )
 
 (after! shell
   (keymap-set shell-mode-map "C-S-n" #'my-new-shell))

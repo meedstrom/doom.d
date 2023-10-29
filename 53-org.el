@@ -85,17 +85,7 @@
   ;; It normally inherits from org-roam-title, which I find too big
   (set-face-attribute 'delve-title-face () :inherit 'org-document-title))
 
-(after! org
-  (use-package! org-recent-headings :disabled
-                :config
-                (org-recent-headings-mode))
-  ;; for the times i'm temporarily not using doom's org
-  (use-package! org-indent
-    :config
-    (add-hook 'org-mode-hook #'org-indent-mode))
-  ;; (setopt org-startup-folded 'fold)
-  ;; Undoom. Having exactly two states makes for comfy toggling.
-  (setopt org-todo-keywords '((sequence "TODO" "DONE"))))
+;; (setopt org-startup-folded 'fold)
 
 (after! org-roam-node
   ;; Use my own slug style
@@ -388,6 +378,9 @@ to the new note in the \"timeline\" note."
                                      (dot . t)))
   ;; Stuff to do if I'm not using Doom's Org
   (unless (fboundp '+org-init-org-directory-h)
+    (use-package! org-indent
+      :config
+      (add-hook 'org-mode-hook #'org-indent-mode))
     ;; Upscale the LaTeX preview.
     (my-change-latex-scale)
     ;; Adapt LaTeX preview scale to the font zoom.

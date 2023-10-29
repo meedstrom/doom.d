@@ -17,7 +17,6 @@
 (require 'dired-git-info)
 (require 'dired-hist)
 
-(remove-hook 'dired-mode-hook #'dired-omit-mode) ;; undoom
 (add-hook 'dired-mode-hook #'dired-hide-details-mode) ;; press ( to toggle
 
 (setopt wdired-allow-to-change-permissions 'advanced)
@@ -45,7 +44,7 @@
       )))
 
 (after! dired-git-info
-  ;; (setopt dgi-commit-message-format "%s") ;; undoom
+  ;; (setopt dgi-commit-message-format "%s")
   ;; Disabling for now -- slow as hell on large dirs
   ;; (add-hook 'dired-after-readin-hook #'dired-git-info-auto-enable)
   ;; (add-hook 'dired-before-readin-hook #'my-dired-git-info-prevent-maybe) ;; doesnt prevent
