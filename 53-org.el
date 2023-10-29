@@ -85,23 +85,14 @@
   ;; It normally inherits from org-roam-title, which I find too big
   (set-face-attribute 'delve-title-face () :inherit 'org-document-title))
 
-;; undoom
-(after! org
-  ;; IDK why but I find this doom-docs-mode just gets in my way
-  (remove-hook 'read-only-mode-hook 'doom-docs--toggle-read-only-h))
-;; Crude but guaranteed to work
-(fset 'doom-docs-org-mode #'ignore)
-(fset 'doom-docs--toggle-read-only-h #'ignore)
-
 (after! org
   (use-package! org-recent-headings :disabled
                 :config
                 (org-recent-headings-mode))
-  ;; temporarily not using doom's org
+  ;; for the times i'm temporarily not using doom's org
   (use-package! org-indent
     :config
-    (add-hook 'org-mode-hook #'org-indent-mode)
-    )
+    (add-hook 'org-mode-hook #'org-indent-mode))
   ;; (setopt org-startup-folded 'fold)
   ;; Undoom. Having exactly two states makes for comfy toggling.
   (setopt org-todo-keywords '((sequence "TODO" "DONE"))))

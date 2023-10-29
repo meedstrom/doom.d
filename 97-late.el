@@ -92,7 +92,7 @@
 ;;
 ;; FWIW, might be worth knowing the command `unbury-buffer' and using that
 ;; instead -- but would be great if there was a visual effect associated with a
-;; buffer being buried as opposed to just switched-away-from.
+;; buffer being buried as opposed to just switched out.
 ;; Note that `unbury-buffer' is just a debatably-named wrapper for
 ;; (switch-to-buffer (last-buffer)).  So maybe you could use it all the time in
 ;; place of `iflipb-previous-buffer'/`iflipb-next-buffer'.
@@ -149,6 +149,7 @@
   (global-form-feed-mode)
   (add-hook 'emacs-lisp-compilation-mode-hook #'form-feed-mode))
 
+;; flash effect on deletion, yank and the like
 (use-package! goggles
   :hook ((prog-mode text-mode) . goggles-mode))
 
