@@ -12,6 +12,10 @@
 (put 'customize-face 'disabled nil)
 (put 'customize-variable 'disabled nil)
 
+;; I'll do M-x dlnm RET when I want it (a couple of occasions per year)
+(remove-hook! '(prog-mode-hook text-mode-hook conf-mode-hook)
+  #'display-line-numbers-mode)
+
 (after! vertico
   (keymap-unset vertico-map "<backspace>" t))
 

@@ -60,6 +60,7 @@
 (package! tempel)
 (package! tempel-collection)
 ;; (package! asyncloop :recipe (:host github :repo "meedstrom/asyncloop"))
+(package! massmapper :recipe (:host github :repo "meedstrom/massmapper"))
 (package! deianira :recipe (:host github :repo "meedstrom/deianira"))
 (package! inline-anki :recipe (:host github :repo "meedstrom/inline-anki"))
 (package! exwm)

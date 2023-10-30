@@ -236,7 +236,7 @@
 (setopt indent-tabs-mode nil)
 (setopt vc-msg-newbie-friendly-msg nil)
 (setopt vc-msg-copy-id-to-kill-ring nil)
-;; (setopt display-line-numbers-type nil) ; undoom
+;; (setopt display-line-numbers-type nil)
 (setopt garbage-collection-messages nil)
 (setopt auto-save-no-message t)
 (setopt shift-select-mode nil)

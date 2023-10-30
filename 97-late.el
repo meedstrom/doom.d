@@ -160,14 +160,14 @@
 (use-package! nov
   :mode ("\\.epub\\'" . nov-mode))
 
-(use-package! deianira-mass-remap
+(use-package! massmapper
   :config
   (general-auto-unbind-keys 'undo) ;; ensure it works with and without general
-  (setopt dei-mass-remap-debug-level 1)
-  (add-hook 'window-buffer-change-functions #'dei-record-keymap-maybe -70)
-  (add-hook 'dei-keymap-found-hook #'dei-define-super-like-ctl)
-  (add-hook 'dei-keymap-found-hook #'dei-homogenize-all-keymaps)
-  (setopt dei-homogenizing-winners
+  (setopt massmapper-debug-level 1)
+  (add-hook 'after-init-hook #'massmapper-mode)
+  (add-hook 'massmapper-keymap-found-hook #'massmapper-define-super-like-ctl)
+  (add-hook 'massmapper-keymap-found-hook #'massmapper-homogenize-all-keymaps)
+  (setopt massmapper-homogenizing-winners
           '(("C-x C-s" . global-map)
             ("C-x C-f" . global-map)
             ("C-x C-q" . global-map)
@@ -175,9 +175,6 @@
             ("C-x C-l" . global-map)
             ("C-c C-c")
             ("C-c C-," . org-mode-map))))
-
-;; (dei-define-super-like-ctl)
-;; (dei-homogenize-all-keymaps)
 
 (use-package! deianira
   :config
@@ -235,6 +232,7 @@
   )
 
 (use-package! elfeed
+  :disabled
   :defer
   :config
   (setopt rmh-elfeed-org-files
