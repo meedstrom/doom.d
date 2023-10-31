@@ -90,8 +90,8 @@
 ;; unsurprising to cycle thru.
 ;;
 ;; FWIW, might be worth knowing the command `unbury-buffer' and using that
-;; instead -- but would be great if there was a visual effect associated with a
-;; buffer being buried as opposed to just switched out.
+;; instead -- but would prefer if there was a visual effect when a
+;; buffer gets buried as opposed to just switched out.
 ;; Note that `unbury-buffer' is just a debatably-named wrapper for
 ;; (switch-to-buffer (last-buffer)).  So maybe you could use it all the time in
 ;; place of `iflipb-previous-buffer'/`iflipb-next-buffer'.
@@ -133,7 +133,7 @@
   (setopt inline-anki-use-tags t)
   (after! org 
     (add-to-list 'org-structure-template-alist '("f" . "flashcard"))))
-
+-
 (after! ws-butler
   ;; Fix guix.el
   (add-to-list 'ws-butler-global-exempt-modes #'minibuffer-inactive-mode)
@@ -166,7 +166,8 @@
   (setopt massmapper-debug-level 1)
   (add-hook 'after-init-hook #'massmapper-mode)
   (add-hook 'massmapper-keymap-found-hook #'massmapper-define-super-like-ctl)
-  (add-hook 'massmapper-keymap-found-hook #'massmapper-homogenize-all-keymaps)
+  (add-hook 'massmapper-keymap-found-hook #'massmapper-protect-ret-and-tab -75)
+  (add-hook 'massmapper-keymap-found-hook #'massmapper-homogenize -50)
   (setopt massmapper-homogenizing-winners
           '(("C-x C-s" . global-map)
             ("C-x C-f" . global-map)
@@ -196,6 +197,7 @@
   ;; swung dash ⁓ tilde op ∼ sine ∿ almost eq ≈
   ;; four dot mark ⁛ lock 🔒 ⊝ ◯ ⁐ ○ ⚞⁖ ⋐⚟⤳〜
   (setopt nameless-prefix "⁓")
+  ;; (setopt nameless-prefix "⚟")
   (setopt nameless-private-prefix t)
   (setopt nameless-affect-indentation-and-filling nil)
   ;; (add-hook 'nameless-mode-hook #'my-adjust-scale-2)
