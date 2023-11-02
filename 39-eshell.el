@@ -144,7 +144,7 @@
             into hints
             finally return
             (concat
-             "Welcome to the Emacs shell ⚘  \nCheatsheet \n\n"
+             "Welcome to the Emacs shell ⚘  \nCommands you may find groovy \n\n"
              (string-join hints "\n")
              "\n"))))
 

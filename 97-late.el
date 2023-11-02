@@ -133,7 +133,7 @@
   (setopt inline-anki-use-tags t)
   (after! org 
     (add-to-list 'org-structure-template-alist '("f" . "flashcard"))))
--
+
 (after! ws-butler
   ;; Fix guix.el
   (add-to-list 'ws-butler-global-exempt-modes #'minibuffer-inactive-mode)
@@ -159,23 +159,6 @@
 
 (use-package! nov
   :mode ("\\.epub\\'" . nov-mode))
-
-(use-package! massmapper
-  :config
-  (general-auto-unbind-keys 'undo) ;; ensure it works with and without general
-  (setopt massmapper-debug-level 1)
-  (add-hook 'after-init-hook #'massmapper-mode)
-  (add-hook 'massmapper-keymap-found-hook #'massmapper-define-super-like-ctl)
-  (add-hook 'massmapper-keymap-found-hook #'massmapper-protect-ret-and-tab -75)
-  (add-hook 'massmapper-keymap-found-hook #'massmapper-homogenize -50)
-  (setopt massmapper-homogenizing-winners
-          '(("C-x C-s" . global-map)
-            ("C-x C-f" . global-map)
-            ("C-x C-q" . global-map)
-            ("C-x C-;" . global-map)
-            ("C-x C-l" . global-map)
-            ("C-c C-c")
-            ("C-c C-," . org-mode-map))))
 
 (use-package! deianira
   :config
