@@ -556,6 +556,7 @@
   (setopt massmapper-debug-level 1)
   (add-hook 'after-init-hook #'massmapper-mode)
   (add-hook 'massmapper-keymap-found-hook #'massmapper-define-super-like-ctl)
+  (add-hook 'massmapper-keymap-found-hook #'massmapper-define-metasuper-like-ctlmeta)
   ;; (add-hook 'massmapper-keymap-found-hook #'massmapper-protect-ret-and-tab -75)
   ;; (add-hook 'massmapper-keymap-found-hook #'massmapper-homogenize -50)
   (add-hook 'massmapper-keymap-found-hook #'massmapper-homogenize-keymaps -50)
