@@ -266,9 +266,9 @@
 (use-package! hyperbole
   :commands hkey-either)
 
-;; FIXME: need to hook prism-set-colors...
 ;; (use-package! circadian
 ;;   :config
+;;   (add-hook 'circadian-after-load-theme-hook #'prism-set-colors)
 ;;   (setq circadian-themes '(("8:00"   . doom-storage-tube-green)
 ;;                            ("18:00"  . doom-storage-tube-amber-2)))
 ;;   (circadian-setup))
