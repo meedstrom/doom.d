@@ -19,7 +19,12 @@
 (package! nameless)
 (package! gif-screencast)
 (package! screencast)
-;; (package! keymap-utils) ;; prefix kmu-*
+(package! keymap-utils) ;; prefix kmu-*
+(package! compat)
+
+;; Doom provides
+;; (package! backup-walker)
+;; (package! sly)
 
 ;; The rest
 
@@ -35,7 +40,6 @@
 ;; (package! org-anki)
 (package! app-launcher :recipe (:host github :repo "SebastienWae/app-launcher"))
 (package! artbollocks-mode)
-(package! backup-walker)
 ;; (package! firefox-bookmarks :recipe (:host github :repo "tangxinfa/firefox-bookmarks"))
 (package! consult-ffdata :recipe (:host github :repo "chen-chao/consult-ffdata"))
 (package! helm-firefox)
@@ -59,12 +63,13 @@
 (package! esup)
 (package! tempel)
 (package! tempel-collection)
-;; (package! asyncloop :recipe (:host github :repo "meedstrom/asyncloop"))
 (package! massmapper :recipe (:host github :repo "meedstrom/massmapper"))
 (package! deianira :recipe (:host github :repo "meedstrom/deianira"))
 (package! inline-anki :recipe (:host github :repo "meedstrom/inline-anki"))
 (package! exwm)
 (package! exwm-edit)
+(package! pinboard-popular)
+(package! pinboard)
 (package! exwm-firefox :recipe (:host github :repo "ieure/exwm-firefox"))
 (package! form-feed)
 (package! gif-screencast)
@@ -79,7 +84,6 @@
 (package! iscroll)
 (package! key-assist)
 (package! key-chord)
-;; (package! keyfreq)
 (package! mediawiki)
 (package! mw-thesaurus)
 ;; (package! ox-rss)
@@ -112,31 +116,28 @@
 
 ;; (package! popper)
 ;; (package! beancount :recipe (:host github :repo "cnsunyour/beancount.el"))
-;; (package! feebleline)
 ;; (package! forge)
 ;; (package! magit)
-;; (package! mini-modeline)
-;; (package! org-fc :recipe (:repo "https://git.sr.ht/~l3kn/org-fc"))
+
 ;; (package! repeaters :recipe (:host github :repo "mmarshall540/repeaters"))
 ;; (package! xah-elisp-mode) ;; try xah-elisp-prettify-root-sexp
 ;; (package! subed :recipe (:host github :repo "rndusr/subed"))
 ;; (package! cycle-region)
 ;; (package! jammer)
 ;; (package! frames-only-mode)
-;; (package! mini-frame)
-;; (package! maple-minibuffer :recipe (:host github :repo "honmaple/emacs-maple-minibuffer"))
 ;; (package! frame-mode)
+;; (package! fullframe)
+;;
+;; (package! mini-frame)
 ;; (package! cdlatex)
 ;; (package! docker-tramp)
 ;; (package! emms)
-;; (package! fullframe)
 ;; (package! good-scroll)
 ;; (package! helm-bibtex)
 ;; (package! helm-navi)
 ;; (package! helm-org-recent-headings)
 ;; (package! literate-calc-mode)
 ;; (package! matrix-client)
-;; (package! mini-frame)
 ;; (package! mu4e-dashboard)
 ;; (package! prodigy)
 ;; (package! unpackaged :recipe (:host github :repo "alphapapa/unpackaged.el"))
@@ -160,15 +161,17 @@
 ;; (package! delve :recipe (:host github :repo "publicimageltd/delve"))
 (package! hyperbole)
 ;; (package! suggest)
-;; (package! sly)
 ;; (package! osm)
 ;; (package! transmission)
 ;; (package! trashed)
 (package! snitch)
 ;; (package! eshell-prompt-extras)
 ;; (package! navi-mode)
-;; (package! snow)
+(package! snow)
 ;; (package! sx)
 
-;; another alternative to feebleline!
+;; Minimalist modelines that merge with echo area
+;; (package! maple-minibuffer :recipe (:host github :repo "honmaple/emacs-maple-minibuffer"))
+;; (package! mini-modeline)
+;; (package! feebleline)
 (package! awesome-tray :recipe (:host github :repo "manateelazycat/awesome-tray"))

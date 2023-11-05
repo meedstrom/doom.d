@@ -7,7 +7,8 @@ Sources of more feeds
 - https://bookdown.org/content/1850/horoscopes-insights.html#check-out-other-social-media-too
 - https://theconversation.com/uk/feeds
 - https://retractionwatch.com/2018/06/17/meet-the-scientific-sleuths-ten-whove-had-an-impact-on-the-scientific-literature/
-
+- 
+  
 Not tried
 https://nautil.us/
 https://www.project-syndicate.org/
@@ -31,15 +32,15 @@ deprecated
 - http :: I favour https feeds, so I flagged the sites serving http only. As of [2021-03-02], I had 68 https and 4 http feeds. 
 
 * Feeds I follow                                                     :elfeed:
-** People living relatively close to me!
-*** https://two-wrongs.com/feed.xml                       :rss:1p:tech:geo:
+** People living relatively close to me!  :geo:
+*** https://two-wrongs.com/feed.xml                       :rss:1p:tech:
+*** [[https://lars.ingebrigtsen.no/atom][Lars Ingebrigtsen]]                                                  :1p:
 ** Tech :tech:
 *** [[http://www.aaronsw.com/2002/feeds/pgessays.rss][Paul Graham]]                                                   :1p:http:
 *** [[https://sachachua.com/blog/category/emacs/feed/atom/][Sacha Chua]]                                                       :f:1p:
 *** [[https://wingolog.org/feed/atom][Andy Wingo]]                                                     :1p:fav:
 *** [[https://ambrevar.xyz/atom.xml][Pierre Neidhardt]]                                     :1p:fav:emacs:geo:
 *** [[https://nullprogram.com/feed][Christopher Wellons]]                                      :1p:fav:emacs:
-*** [[https://lars.ingebrigtsen.no/atom][Lars Ingebrigtsen]]                                                  :1p:
 *** [[https://www.wisdomandwonder.com/atom][Grant Rettke]]                                                 :1p:emacs:
 *** [[https://flak.tedunangst.com/rss][Ted Unangst]]                                                    :1p:rss:
 *** https://0x65.dev/atom.xml
@@ -49,8 +50,11 @@ deprecated
 *** https://mullvad.net/en/blog/feed/atom
 *** https://shape-of-code.coding-guidelines.com/atom                   :1p:
 *** [[https://hacks.mozilla.org/feed][Mozilla Hacks]]                                                     :rss:
+** Retrofuturist techno-optimism
+*** https://berjon.com/feed.atom
+*** https://nyxt.atlas.engineer/feed
 ** Nutrition
-*** [[http://www.empiri.ca/feeds/posts/default][Amber O'Hearn]]                                                f:1p:http:
+*** [[http://www.empiri.ca/feeds/posts/default][Amber O'Hearn]]                                                :f:1p:http:
 *** http://www.ketotic.org/feeds/posts/default                       :http:
 ** News :big:news:
 *** https://tidningencurie.se/sv/atom                             :swe:sci:
@@ -59,7 +63,7 @@ deprecated
 *** https://theconversation.com/global/articles.atom
 *** https://api.quantamagazine.org/atom
 ** Statistics :stat:
-*** [[https://evidence.blogg.lu.se/atom][Ullrika Sahlin]]                                               :f:fav:geo:
+*** [[https://evidence.blogg.lu.se/atom][Ullrika Sahlin]]                                              :f:fav:geo:
 *** [[https://statmodeling.stat.columbia.edu/atom][Andrew Gelman]]                                  :1p:sci:fav:trawlworthy:
 *** [[http://www.sumsar.net/atom.xml][Rasmus Bååth]]                                          :1p:fav:geo:http:
 *** [[https://understandinguncertainty.org/rss.xml][David Spiegelhalter]]                                  :kaput:sci:rss:1p:
@@ -79,7 +83,7 @@ deprecated
 *** https://rviews.rstudio.com/index.xml                              :rss:
 *** https://medium.com/feed/scite                                     :rss:
 ** Rationality :rat:
-*** [[https://maggieappleton.com/rss.xml][Maggie Appleton]]                                            :f:fav:1p:rss:
+*** [[https://maggieappleton.com/rss.xml][Maggie Appleton]]                                            :f:fav:1p:rss:geo:
 *** [[https://alicorn.elcenia.com/rss.xml][Hannah Blume]]  :f:1p:
 *** [[https://mhollyelmoreblog.wordpress.com/feed/][Holly Elmore]]  :f:1p: 
 *** https://hollyelmore.substack.com/feed

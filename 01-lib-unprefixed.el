@@ -23,19 +23,20 @@
 (require 'subr-x)
 
 ;; Backport from Emacs 29 in case I'm on 28
-(unless (version<= "29" emacs-version)
-  (require 'general)
-  (defmacro keymap-unset (a b &optional _c) ;; drop the extra emacs29 arg
-    "Note: silently fails if you pass sexps inside A or B."
-    `(general-unbind ,a ,b))
-  (defun keymap-set (map key cmd)
-    ;;(map! :map map key cmd)
-    (define-key map (kbd key) cmd))
-  ;; (keymap-set global-map "M-<backspace>" (lambda()(interactive)(message "yn")))
-   ;; (fset #'keymap-set #'general-def)
-  ;;(defmacro keymap-set (&rest args)
-  ;;  `(general-def ,@args))
-  (defalias #'setopt #'general-setq))
+;; DEPRECATED by compat.el
+;; (unless (version<= "29" emacs-version)
+;;   (require 'general)
+;;   (defmacro keymap-unset (a b &optional _c) ;; drop the extra emacs29 arg
+;;     "Note: silently fails if you pass sexps inside A or B."
+;;     `(general-unbind ,a ,b))
+;;   (defun keymap-set (map key cmd)
+;;     ;;(map! :map map key cmd)
+;;     (define-key map (kbd key) cmd))
+;;   ;; (keymap-set global-map "M-<backspace>" (lambda()(interactive)(message "yn")))
+;;    ;; (fset #'keymap-set #'general-def)
+;;   ;;(defmacro keymap-set (&rest args)
+;;   ;;  `(general-def ,@args))
+;;   (defalias #'setopt #'general-setq))
 
 (defmacro when-car-fbound (form)
   `(when (fboundp (car #',form)) ,form))
@@ -97,29 +98,29 @@ with ADDITIONS and sets that as the variable's new value."
 ;; Lifted from Doom
 (unless (boundp 'doom-version)
   (defmacro quiet! (&rest forms)
-  "Run FORMS without generating any output.
+    "Run FORMS without generating any output.
 
 This silences calls to `message', `load', `write-region' and anything that
 writes to `standard-output'. In interactive sessions this inhibits output to the
 echo-area, but not to *Messages*."
-  `(if init-file-debug
-       (progn ,@forms)
-     ,(if noninteractive
-          `(letf! ((standard-output (lambda (&rest _)))
-                   (defun message (&rest _))
-                   (defun load (file &optional noerror nomessage nosuffix must-suffix)
-                     (funcall load file noerror t nosuffix must-suffix))
-                   (defun write-region (start end filename &optional append visit lockname mustbenew)
-                     (unless visit (setq visit 'no-message))
-                     (funcall write-region start end filename append visit lockname mustbenew)))
-             ,@forms)
-        `(let ((inhibit-message t)
-               (save-silently t))
-           (prog1 ,@forms (message "")))))))
+    `(if init-file-debug
+         (progn ,@forms)
+       ,(if noninteractive
+            `(letf! ((standard-output (lambda (&rest _)))
+                     (defun message (&rest _))
+                     (defun load (file &optional noerror nomessage nosuffix must-suffix)
+                       (funcall load file noerror t nosuffix must-suffix))
+                     (defun write-region (start end filename &optional append visit lockname mustbenew)
+                       (unless visit (setq visit 'no-message))
+                       (funcall write-region start end filename append visit lockname mustbenew)))
+               ,@forms)
+          `(let ((inhibit-message t)
+                 (save-silently t))
+             (prog1 ,@forms (message "")))))))
 
 (unless (boundp 'doom-version)
   (defmacro after! (package &rest body)
-  "Evaluate BODY after PACKAGE have loaded.
+    "Evaluate BODY after PACKAGE have loaded.
 
 PACKAGE is a symbol or list of them. These are package names, not modes,
 functions or variables. It can be:
@@ -142,30 +143,30 @@ This is a wrapper around `eval-after-load' that:
 2. No-ops for package that are disabled by the user (via `package!')
 3. Supports compound package statements (see below)
 4. Prevents eager expansion pulling in autoloaded macros all at once"
-  (declare (indent defun) (debug t))
-  (if (symbolp package)
-      (list (if (or (not (bound-and-true-p byte-compile-current-file))
-                    (require package nil 'noerror))
-                #'progn
-              #'with-no-warnings)
-            (let ((body (macroexp-progn body)))
-              `(if (featurep ',package)
-                   ,body
-                 ;; We intentionally avoid `with-eval-after-load' to prevent
-                 ;; eager macro expansion from pulling (or failing to pull) in
-                 ;; autoloaded macros/packages.
-                 (eval-after-load ',package ',body))))
-    (let ((p (car package)))
-      (cond ((not (keywordp p))
-             `(after! (:and ,@package) ,@body))
-            ((memq p '(:or :any))
-             (macroexp-progn
-              (cl-loop for next in (cdr package)
-                       collect `(after! ,next ,@body))))
-            ((memq p '(:and :all))
-             (dolist (next (cdr package))
-               (setq body `((after! ,next ,@body))))
-             (car body)))))))
+    (declare (indent defun) (debug t))
+    (if (symbolp package)
+        (list (if (or (not (bound-and-true-p byte-compile-current-file))
+                      (require package nil 'noerror))
+                  #'progn
+                #'with-no-warnings)
+              (let ((body (macroexp-progn body)))
+                `(if (featurep ',package)
+                     ,body
+                   ;; We intentionally avoid `with-eval-after-load' to prevent
+                   ;; eager macro expansion from pulling (or failing to pull) in
+                   ;; autoloaded macros/packages.
+                   (eval-after-load ',package ',body))))
+      (let ((p (car package)))
+        (cond ((not (keywordp p))
+               `(after! (:and ,@package) ,@body))
+              ((memq p '(:or :any))
+               (macroexp-progn
+                (cl-loop for next in (cdr package)
+                         collect `(after! ,next ,@body))))
+              ((memq p '(:and :all))
+               (dolist (next (cdr package))
+                 (setq body `((after! ,next ,@body))))
+               (car body)))))))
 
 (defun my-symbol-name-or-string-as-is (x)
   "Like `symbol-name', but accept string input too."

@@ -28,6 +28,7 @@
 
 (require 'defrepeater) ;; not needed if i would just remember to call `repeat'!
 (require 'define-repeat-map)
+(require 'compat)
 
 
 ;;; Clean house a bit
@@ -571,6 +572,6 @@
   ;; theory: superfluous when have super-like-ctl?
   ;; (add-hook 'massmapper-keymap-found-hook #'massmapper-define-metasuper-like-ctlmeta)
 
-  (add-hook 'massmapper-keymap-found-hook #'massmapper-protect-ret-and-tab -75)
+  ;; (add-hook 'massmapper-keymap-found-hook #'massmapper-protect-ret-and-tab -75)
   (setopt massmapper-Cm-Ci-override '((global-map . (("C-m" . nil)
                                                      ("C-i" . nil))))))
