@@ -19,15 +19,16 @@
   :config
   ;; (setq awesome-tray-date-format "%H:%M")
 
-  ;; wishlist: defun to check if message plus tray would exceed frame width, and
-  ;; hide tray while that message is shown
-  (let ((widest-tray (+ awesome-tray-file-name-max-length 11)))
-    (when (> (+ (length (current-message)) widest-tray) (frame-width))
-      (awesome-tray-disable)))
+  ;; ;; wishlist: defun to check if message plus tray would exceed frame width, and
+  ;; ;; hide tray while that message is shown
+  ;; (defun boca ()
+  ;;     (let ((widest-tray (+ awesome-tray-file-name-max-length 11)))
+  ;;       (when (> (+ (length (current-message)) widest-tray) (frame-width))
+  ;;         (awesome-tray-disable))))
 
   (setq awesome-tray-active-modules '("location" "belong" "file-path" "battery"))
-  (setq awesome-tray-refresh-idle-delay nil)
-  (setq awesome-tray-update-interval nil)
+  ;; (setq awesome-tray-refresh-idle-delay nil)
+  ;; (setq awesome-tray-update-interval nil)
   ;; Patch to always show the percentage, even if plugged in.  No decimal.
   (el-patch-defun awesome-tray-module-battery-info ()
     (let ((current-seconds (awesome-tray-current-seconds)))
