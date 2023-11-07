@@ -22,12 +22,9 @@
 (package! keymap-utils) ;; prefix kmu-*
 (package! compat)
 
-;; Doom provides
-;; (package! backup-walker)
-;; (package! sly)
-
 ;; The rest
 
+(package! backup-walker)
 (package! kbd-mode :recipe (:host github :repo "kmonad/kbd-mode"))
 (package! circadian)
 (package! academic-phrases)
