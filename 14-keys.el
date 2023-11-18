@@ -170,22 +170,24 @@
      "<left>"   previous-buffer
      "C-<left>" previous-buffer))
 
-  (define-repeat-map my-nav
-    ("f" forward-char
-     "b" backward-char
-     "n" next-line
-     "p" previous-line))
+  ;; (define-repeat-map my-nav
+  ;;   ("f" forward-char
+  ;;    "b" backward-char
+  ;;    "n" next-line
+  ;;    "p" previous-line))
 
-  ;; from author of define-repeat-map
-  (define-repeat-map my-case
-    ("c" capitalize-word
-     "u" upcase-word
-     "l" downcase-word)
-    (:continue "f" forward-word
-               "b" backward-word)
-    (:enter downcase-dwim
-            upcase-dwim
-            capitalize-dwim)))
+  ;; ;; from author of define-repeat-map
+  ;; (define-repeat-map my-case
+  ;;   ("c" capitalize-word
+  ;;    "u" upcase-word
+  ;;    "l" downcase-word)
+  ;;   (:continue "f" forward-word
+  ;;              "b" backward-word)
+  ;;   (:enter downcase-dwim
+  ;;           upcase-dwim
+  ;;           capitalize-dwim))
+
+  )
 
 (define-key global-map [remap org-roam-node-random] (defrepeater #'org-roam-node-random))
 
@@ -207,7 +209,6 @@
 
 ;; Let me type a digit such as 5 after a `repeat' to repeat another 5 times.
 (advice-add #'repeat :after #'my-enable-post-repeat-transient-map)
-
 
 
 ;;; Create minor mode maps for modes that lack them
@@ -233,7 +234,7 @@
 (define-key function-key-map    (kbd "<escape>") (kbd "C-g"))
 (define-key key-translation-map (kbd "<escape>") (kbd "C-g"))
 (define-key input-decode-map    (kbd "<escape>") (kbd "C-g"))
-(define-key input-decode-map    (kbd "C-g") (kbd "<f35>")) ;; to unlearn it
+;; (define-key input-decode-map    (kbd "C-g") (kbd "<f35>")) ;; to unlearn it
 
 
 ;;; Main
@@ -383,8 +384,8 @@
 
 (after! org-keys
   (keymap-set org-mode-map "C-c u" #'my-insert-heading-with-id)
-  (keymap-set org-mode-map "C-c f"#'org-roam-node-find)
-  (keymap-set org-mode-map "C-c i"#'org-roam-node-insert))
+  (keymap-set org-mode-map "C-c f" #'org-roam-node-find)
+  (keymap-set org-mode-map "C-c i" #'org-roam-node-insert))
 
 ;; Use the key physically labelled "Caps Lock" as my new M-x.
 ;; TIP: it also unlocks the comfy combo M-<menu>.
@@ -396,7 +397,8 @@
 ;; Grand list
 
 
-(keymap-set global-map "C-q"                        #'my-dired-shell-cycle)
+;; (keymap-set global-map "C-q"                        #'my-dired-shell-cycle)
+(keymap-set global-map "C-q"                        #'+shell/here)
 (keymap-set global-map "M-r"                        #'hkey-either)
 (keymap-set global-map "<f10> a"                    #'my-save-buffer-and-amend)
 (keymap-set global-map "<f10> d"                    #'org-download-yank)
@@ -457,7 +459,9 @@
 (keymap-set global-map "C-x C-\;"      (defrepeater #'comment-line))
 (keymap-set global-map "C-0"                        #'hippie-expand)
 (keymap-set global-map "C-1"                        #'switch-to-buffer)
+(keymap-set global-map "M-1"                        #'switch-to-buffer)
 (keymap-set global-map "C-2"                        #'my-other-window-any-frame-hyprland)
+(keymap-set global-map "M-2"                        #'my-other-window-any-frame-hyprland)
 (keymap-set global-map "C-3"                        #'unexpand-abbrev)
 (keymap-set global-map "C-4"                        #'my-stim)
 (keymap-set global-map "C-5"                        #'my-prev-file-in-dir)
@@ -520,6 +524,9 @@
 ;; (keymap-set ""                        #'consult-imenu-multi)
 ;; (keymap-set ""                        #'consult-kmacro)
 ;; (keymap-set ""                        #'browse-url)
+
+(keymap-set global-map "M-o -" #'doom/decrease-font-size)
+(keymap-set global-map "M-o M--" #'doom/decrease-font-size)
 
 ;; Some Greek letters
 (define-key key-translation-map (kbd "<f7> a") (kbd "α")) ;;alpha

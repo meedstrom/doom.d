@@ -25,6 +25,7 @@
 ;; The rest
 
 (package! backup-walker)
+;; (package! eot :recipe (:host github :repo "kmonad/kbd-mode"))
 (package! kbd-mode :recipe (:host github :repo "kmonad/kbd-mode"))
 (package! circadian)
 (package! academic-phrases)
@@ -60,9 +61,10 @@
 (package! esup)
 (package! tempel)
 (package! tempel-collection)
-(package! massmapper :recipe (:host github :repo "meedstrom/massmapper"))
-(package! deianira :recipe (:host github :repo "meedstrom/deianira"))
-(package! inline-anki :recipe (:host github :repo "meedstrom/inline-anki"))
+(package! asyncloop :recipe (:host github :repo "meedstrom/asyncloop" :depth 'full))
+(package! massmapper :recipe (:host github :repo "meedstrom/massmapper" :depth 'full))
+(package! deianira :recipe (:host github :repo "meedstrom/deianira" :depth 'full))
+(package! inline-anki :recipe (:host github :repo "meedstrom/inline-anki" :depth 'full))
 (package! exwm)
 (package! exwm-edit)
 (package! pinboard-popular)
@@ -143,6 +145,7 @@
 (package! eva
   :recipe (:host github
            :repo "meedstrom/eva"
+           :depth 'full
            :files (:defaults "assets" "renv" "*.R" "*.gnuplot")))
 
 ;;(package! taxy

@@ -18,6 +18,7 @@
 (use-package! awesome-tray
   :config
   ;; (setq awesome-tray-date-format "%H:%M")
+  (setq awesome-tray-file-path-show-filename t)
 
   ;; ;; wishlist: defun to check if message plus tray would exceed frame width, and
   ;; ;; hide tray while that message is shown
@@ -52,7 +53,12 @@
             ;; Update battery cache.
             (setq awesome-tray-battery-status-cache (concat battery-type battery-status)))
         awesome-tray-battery-status-cache)))
-  (add-hook 'emacs-startup-hook #'awesome-tray-mode))
+  (add-hook 'emacs-startup-hook #'awesome-tray-mode)
+  (add-hook 'emacs-startup-hook (lambda ()
+                                  (set-face-foreground 'mode-line-inactive "gray")
+                                  (set-face-background 'mode-line-inactive "gray"))
+            50)
+  )
 
 
 (setopt mode-line-percent-position nil)

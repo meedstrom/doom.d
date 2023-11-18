@@ -1,5 +1,8 @@
 .eshell-*
 02-lib-external.el
+*.swp
+*~
+*#
 wip.el
 mothball/
 wip/

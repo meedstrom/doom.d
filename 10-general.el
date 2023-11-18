@@ -199,12 +199,13 @@
 ;; useful for `my-stim'.
 (defvar internet nil)
 
-;; TODO: how to find out parent process?
+;; TODO: how to find parent process?
 ;; (defvar child-emacs nil)
 ;; (process-attributes (emacs-pid))
 
 ;; In case I'm not on a tiling WM.
-(add-to-list 'initial-frame-alist '(fullscreen . fullheight))
+;; (add-to-list 'initial-frame-alist '(fullscreen . fullboth))
+(add-to-list 'initial-frame-alist '(fullscreen . maximized))
 
 ;; Blacken background, to make transparent windows more back-transparent
 ;; (set-face-background 'default "#000000")
@@ -217,7 +218,24 @@
 (after! recentf
   (setopt recentf-max-saved-items nil))
 
-;; FIXME: doom doesn't respect this during init
+;; "Because an 80 char wide Emacs window starts wrapping at 79."
+;; --Guido van Rossum on why Python style mandates 79
+;; https://www.reddit.com/r/learnpython/comments/1h2eug
+;;
+;; Most times you have a problem like that, you can just set your windows to 81
+;; chars wide, but in my case, my current screen+font fits exactly 2x80, a
+;; cursed windfall since it limits me as much as a physical terminal.
+;; Shrinking the font one notch is not an option since that would take it all
+;; the way down to 2x110 or so.  I want the text as big as possible because I
+;; want to sit far from the screen.
+(after! doom-editor
+  (setq-default fill-column 79))
+;; the setting didn't stick...
+;; (general-after-init
+;; (setopt fill-column 79))
+
+;; FIXME: the setting isn't t during init, which i'd like. guess i'll just make
+;; a habit of M-& doom sync RET.
 (setopt load-prefer-newer t) ;; don't spend another minute confused by this
 (general-after-init
   (setopt load-prefer-newer t))
@@ -228,7 +246,7 @@
 (setopt save-interprogram-paste-before-kill t)
 (setopt select-enable-primary t)
 (setopt custom-safe-themes t)
-;; (setopt suggest-key-bindings nil)
+;; (setopt suggest-key-bindings nil) ;; show command's return value instead
 (setopt kill-read-only-ok t)
 (setopt kill-ring-max 600)
 ;; (setopt byte-compile-warnings '(not free-vars))
@@ -237,9 +255,11 @@
 (setopt vc-msg-newbie-friendly-msg nil)
 (setopt vc-msg-copy-id-to-kill-ring nil)
 ;; (setopt display-line-numbers-type nil)
+(setopt shift-select-mode nil)
+
+;; don't clear my echo area
 (setopt garbage-collection-messages nil)
 (setopt auto-save-no-message t)
-(setopt shift-select-mode nil)
 
 (setopt browse-url-generic-program "firefox")
 (setopt browse-url-handlers

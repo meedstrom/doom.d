@@ -56,7 +56,7 @@
 ;; - new fn: org-get-title
 (when (version<= "29" emacs-version)
   (pixel-scroll-precision-mode)
-  (add-to-list 'default-frame-alist '(alpha-background . 90))
+  ;; (add-to-list 'default-frame-alist '(alpha-background . 90))
   ;; (setopt mouse-drag-and-drop-region-cross-program t)
   (setopt show-paren-context-when-offscreen t)
   (setopt help-enable-variable-value-editing t)
@@ -130,6 +130,7 @@
       (concat "<a href=\"" url "\">" url "</a>")))
   (add-to-list 'inline-anki-fields '("Online mirror" . my-anki-field:webpage))
   (add-to-list 'inline-anki-ignore "/daily/")
+  (add-to-list 'inline-anki-ignore "/lesswrong-org/")
   (setopt inline-anki-use-tags t)
   (after! org 
     (add-to-list 'org-structure-template-alist '("f" . "flashcard"))))
@@ -291,3 +292,9 @@
 ;;                              (buffer-substring-no-properties
 ;;                               (match-end 0) (point-at-eol))
 ;;                              directory))))
+
+
+(use-package! smart-tabs-mode
+  :config
+  (smart-tabs-insinuate 'c 'c++ 'java 'javascript 'cperl 'python
+                        'ruby 'nxml))

@@ -1,20 +1,5 @@
 ;;; my-lib-unprefixed.el -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2020-2023 Martin Edström
-;;
-;; This program is free software: you can redistribute it and/or modify
-;; it under the terms of the GNU General Public License as published by
-;; the Free Software Foundation, either version 3 of the License, or
-;; (at your option) any later version.
-;;
-;; This program is distributed in the hope that it will be useful,
-;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-;; GNU General Public License for more details.
-;;
-;; You should have received a copy of the GNU General Public License
-;; along with this program. If not, see <http://www.gnu.org/licenses/>.
-
 ;;; Commentary:
 
 ;;; Code:
@@ -22,21 +7,13 @@
 (require 'cl-lib)
 (require 'subr-x)
 
-;; Backport from Emacs 29 in case I'm on 28
-;; DEPRECATED by compat.el
-;; (unless (version<= "29" emacs-version)
-;;   (require 'general)
-;;   (defmacro keymap-unset (a b &optional _c) ;; drop the extra emacs29 arg
-;;     "Note: silently fails if you pass sexps inside A or B."
-;;     `(general-unbind ,a ,b))
-;;   (defun keymap-set (map key cmd)
-;;     ;;(map! :map map key cmd)
-;;     (define-key map (kbd key) cmd))
-;;   ;; (keymap-set global-map "M-<backspace>" (lambda()(interactive)(message "yn")))
-;;    ;; (fset #'keymap-set #'general-def)
-;;   ;;(defmacro keymap-set (&rest args)
-;;   ;;  `(general-def ,@args))
-;;   (defalias #'setopt #'general-setq))
+;; Backports for when I'm on an old Emacs
+(unless (version<= "29" emacs-version)
+  (require 'compat)
+  (require 'general)
+  (defalias #'setopt #'general-setq)
+  (require 'crux)
+  (defalias #'duplicate-dwim #'crux-duplicate-current-line-or-region))
 
 (defmacro when-car-fbound (form)
   `(when (fboundp (car #',form)) ,form))

@@ -40,7 +40,7 @@
   (keymap-set eshell-mode-map "C-l" #'recenter-top-bottom))
 
 (after! ws-butler
-  ;; Bug IMO.  Having it nil jibes badly with auto-save-visited-mode.
+  ;; Bug IMO.  Having nil jibes badly with auto-save-visited-mode.
   ;; https://github.com/doomemacs/doomemacs/issues/7516
   (setopt ws-butler-keep-whitespace-before-point t))
 
