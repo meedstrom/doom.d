@@ -379,3 +379,8 @@
 
 ;; Prevent accidental edits
 (add-hook 'so-long-mode-hook #'read-only-mode)
+
+(after! multiple-cursors
+  ;; auto-save every 5 seconds, destroys what youre doing!
+  (add-to-list 'mc/unsupported-minor-modes 'auto-save-visited-mode)
+  (add-to-list 'mc/unsupported-minor-modes 'nameless-mode))

@@ -65,6 +65,7 @@
 (package! massmapper :recipe (:host github :repo "meedstrom/massmapper" :depth 'full))
 (package! deianira :recipe (:host github :repo "meedstrom/deianira" :depth 'full))
 (package! inline-anki :recipe (:host github :repo "meedstrom/inline-anki" :depth 'full))
+(package! beginend)
 (package! exwm)
 (package! exwm-edit)
 (package! pinboard-popular)

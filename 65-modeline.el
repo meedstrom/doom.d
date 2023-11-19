@@ -27,7 +27,9 @@
   ;;       (when (> (+ (length (current-message)) widest-tray) (frame-width))
   ;;         (awesome-tray-disable))))
 
-  (setq awesome-tray-active-modules '("location" "belong" "file-path" "battery"))
+  ;; (setq awesome-tray-active-modules '("location" "belong" "file-path" "battery"))
+  (setq awesome-tray-active-modules '("location" "belong" "file-path"))
+
   ;; (setq awesome-tray-refresh-idle-delay nil)
   ;; (setq awesome-tray-update-interval nil)
   ;; Patch to always show the percentage, even if plugged in.  No decimal.

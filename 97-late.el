@@ -146,7 +146,7 @@
   (global-form-feed-mode)
   (add-hook 'emacs-lisp-compilation-mode-hook #'form-feed-mode))
 
-;; flash effect on deletion, yank and the like
+;; flash effect on deletion, paste etc
 (use-package! goggles
   :hook ((prog-mode text-mode) . goggles-mode))
 
@@ -161,9 +161,14 @@
 (use-package! nov
   :mode ("\\.epub\\'" . nov-mode))
 
+(use-package! beginend :disabled
+              :config
+              (beginend-global-mode))
+
 (use-package! deianira
   :config
   ;; (fset 'which-key-mode #'ignore)
+  (setq dei-ignore "C-")
   (after! hydra
     (define-key hydra-base-map (kbd "<f5>") #'hydra-repeat))
   (setq dei-invisible-leafs
