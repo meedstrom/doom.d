@@ -37,7 +37,7 @@
   (org-publish "my-slipbox-blog-attachments" t)
   ;; ensure it's gone from recentf so I don't accidentally edit these instead of
   ;; the originals
-  (rm -rf "/tmp/roam")
+  (shell-command "rm -rf /tmp/roam")
   (my-check-id-collisions))
 
 (setopt org-publish-project-alist
@@ -89,7 +89,7 @@ beyond a general one that cuts one char off the ID.")
 Since I intend to run `org-publish' in a subordinate Emacs, this
 function is where I can make destructive env changes that I don't
 want in my main Emacs."
-   ;; Speed up publishing
+  ;; Speed up publishing
   (setopt org-mode-hook nil)
   (gcmh-mode 0)
   (setopt gc-cons-threshold most-positive-fixnum)
@@ -194,7 +194,7 @@ want in my main Emacs."
    when uuid do
    (let ((permalink (substring (my-uuid-to-base62 uuid) -4)))
      (push uuid (alist-get (substring permalink 1) my-ids
-                                 nil nil #'equal))
+                           nil nil #'equal))
      (when (file-exists-p permalink)
        ;; So far, I've had 0 collisions.  How many can I expect?  Taking into
        ;; account the birthday paradox, and assuming a perfect RNG:
@@ -221,10 +221,10 @@ want in my main Emacs."
 
   ;; Lookup table used by `my-replace-web-links-with-ref-note-links'
   (setq my-refs-cache (org-roam-db-query
-                     [:select [ref id title]
-                      :from refs
-                      :left-join nodes
-                      :on (= refs:node-id nodes:id)])))
+                       [:select [ref id title]
+                        :from refs
+                        :left-join nodes
+                        :on (= refs:node-id nodes:id)])))
 
 ;; Give each h2...h6 heading an ID attribute that matches its source org-id, if
 ;; it has one, instead of e.g. "org953031".  That way, hash-links such as
@@ -348,18 +348,18 @@ will not modify the source file."
 ;; files so it becomes :DATE:, or more likely :CREATED:.
 ;; (org-roam-db-query [:select [title] :from nodes :where (like title '"%How%")])
 ;; (org-roam-db-query [:select * :from nodes
-                    ;; :where (in properties (= CREATED "2023-02-15"))])
-                    ;; :where (= properties:id "be3674fa-870b-4198-9688-a351eba83270")])
-                    ;; :where (in properties (= ID "be3674fa-870b-4198-9688-a351eba83270"))])
-                    ;; :where (in "be3674fa-870b-4198-9688-a351eba83270" properties)])
-                    ;; :where (= (in properties [:select "ID"]) "be3674fa-870b-4198-9688-a351eba83270")])
-                    ;; :where (= (in properties [:select ID]) "be3674fa-870b-4198-9688-a351eba83270")])
-                    ;; :where (like (in properties [:select ["CREATED"]]) '"2023-02-15")])
-                    ;; :where (like [:select ["CREATED"] from properties] '"2023-02-15")])
+;; :where (in properties (= CREATED "2023-02-15"))])
+;; :where (= properties:id "be3674fa-870b-4198-9688-a351eba83270")])
+;; :where (in properties (= ID "be3674fa-870b-4198-9688-a351eba83270"))])
+;; :where (in "be3674fa-870b-4198-9688-a351eba83270" properties)])
+;; :where (= (in properties [:select "ID"]) "be3674fa-870b-4198-9688-a351eba83270")])
+;; :where (= (in properties [:select ID]) "be3674fa-870b-4198-9688-a351eba83270")])
+;; :where (like (in properties [:select ["CREATED"]]) '"2023-02-15")])
+;; :where (like [:select ["CREATED"] from properties] '"2023-02-15")])
 ;; (org-roam-db-query (concat
-                    ;; "SELECT * FROM nodes n, table(n.properties) p"
-                    ;; ;; " WHERE 'be3674fa-870b-4198-9688-a351eba83270' IN (SELECT id FROM properties)"
-                           ;; ))
+;; "SELECT * FROM nodes n, table(n.properties) p"
+;; ;; " WHERE 'be3674fa-870b-4198-9688-a351eba83270' IN (SELECT id FROM properties)"
+;; ))
 
 ;; test: (my-strip-hashlink-if-same-as-permalink "0vwRV27mRVLFd6yoyUM0PI/some-slug#ID-10b59a2a-bf95-4f20-9b4f-f27e23e51f46")
 ;; test: (my-strip-hashlink-if-same-as-permalink "../0vwRV27mRVLFd6yoyUM0PI/some-slug#ID-10b59a2a-bf95-4f20-9b4f-f27e23e51f46")
@@ -692,7 +692,7 @@ will not modify the source file."
             ;; give dailies titles a fancy date format too
             (when (member "daily" tags)
               (setq title created-fancy))
-      
+
             (setq data-for-json
                   `((slug . ,slug)
                     (permalink . ,permalink)

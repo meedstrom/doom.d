@@ -29,6 +29,7 @@
 
   ;; (setq awesome-tray-active-modules '("location" "belong" "file-path" "battery"))
   (setq awesome-tray-active-modules '("location" "belong" "file-path"))
+  (setq awesome-tray-essential-modules nil)
 
   ;; (setq awesome-tray-refresh-idle-delay nil)
   ;; (setq awesome-tray-update-interval nil)
