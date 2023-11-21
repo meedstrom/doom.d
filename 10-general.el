@@ -246,7 +246,7 @@
 (setopt save-interprogram-paste-before-kill t)
 (setopt select-enable-primary t)
 (setopt custom-safe-themes t)
-;; (setopt suggest-key-bindings nil) ;; show command's return value instead
+(setopt suggest-key-bindings nil) ;; show command's return value instead
 (setopt kill-read-only-ok t)
 (setopt kill-ring-max 600)
 ;; (setopt byte-compile-warnings '(not free-vars))

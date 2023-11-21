@@ -161,9 +161,9 @@
 (use-package! nov
   :mode ("\\.epub\\'" . nov-mode))
 
-(use-package! beginend :disabled
-              :config
-              (beginend-global-mode))
+(use-package! beginend
+  :config
+  (beginend-global-mode))
 
 (use-package! deianira
   :config
