@@ -130,11 +130,12 @@ want in my main Emacs."
   ;; Switch theme for 2 reasons
   ;; 1. Show me that this is not a normal Emacs
   ;; 2. Syntax-highlight source blocks in a way that looks OK on the web
-  (fset 'rainbow-delimiters-mode #'prism-mode)
-  (add-hook 'doom-load-theme-hook #'prism-set-colors)
   ;; (load-theme 'doom-rouge)
   ;; (load-theme 'doom-zenburn)
   (load-theme 'doom-monokai-machine)
+
+  ;; (fset 'rainbow-delimiters-mode #'prism-mode)
+  ;; (prism-set-colors)
 
   ;; For hygiene, ensure that this subordinate emacs syncs nothing to disk
   (cancel-timer my-state-sync-timer)

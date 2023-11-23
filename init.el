@@ -48,8 +48,8 @@
        ess
        nix
        (go +tree-sitter +lsp)
-       (web +tree-sitter)
-       (javascript +tree-sitter)
+       (web +tree-sitter +lsp)
+       (javascript +tree-sitter +lsp)
        ;; javascript
        rust
        json
