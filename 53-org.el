@@ -367,9 +367,18 @@ to the new note in the \"timeline\" note."
 ;; Because CAPFs don't do what I want in Roam
 (add-hook 'org-mode-hook #'my-corfu-turn-off 99)
 
+;; (add-hook 'org-mode-hook
+;;           (defun my-warn-org-init ()
+;;             (warn (message "Org loaded during init, I don't want this"))))
+
+;; (add-hook 'after-init-hook
+;;           (defun my-warn-org-init-remove ()
+;;             (remove-hook 'org-mode-hook #'my-warn-org-init)))
+
 (after! org
   (unless after-init-time
-    (warn (message "Org loaded during init, I don't want this")))
+    (toggle-debug-on-error)
+    (error (message "Org loaded during init, I don't want this")))
   (setopt org-babel-load-languages '((R . t)
                                      (emacs-lisp . t)
                                      (calc . t)
