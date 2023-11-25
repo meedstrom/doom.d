@@ -118,16 +118,24 @@
 
 (setopt mediawiki-site-default "WikEmacs")
 
+(defun my-anki-field:webpage ()
+  (cl-letf ((org-mode-hook nil))
+    (org-mode))
+  (when-let* ((uuid (or (org-id-get)
+                        (progn (goto-char (point-min)) (org-id-get))))
+              (pageid (substring (my-uuid-to-base62 uuid) -4))
+              (url (concat "https://edstrom.dev/" pageid)))
+    (concat "<a href=\"" url "\">" url "</a>")))
+
 (use-package! inline-anki
   :config
-  (defun my-anki-field:webpage ()
-    (cl-letf ((org-mode-hook nil))
-      (org-mode))
-    (when-let* ((uuid (or (org-id-get)
-                          (progn (goto-char (point-min)) (org-id-get))))
-                (pageid (substring (my-uuid-to-base62 uuid) -4))
-                (url (concat "https://edstrom.dev/" pageid)))
-      (concat "<a href=\"" url "\">" url "</a>")))
+  (setq inline-anki-tags '(not
+                           "noexport"
+                           "ARCHIVE"
+                           "stub"
+                           "eyes_partner"
+                           "eyes_friend"
+                           "eyes_therapist"))
   (add-to-list 'inline-anki-fields '("Online mirror" . my-anki-field:webpage))
   (add-to-list 'inline-anki-ignore "/daily/")
   (add-to-list 'inline-anki-ignore "/lesswrong-org/")
@@ -166,6 +174,7 @@
   (beginend-global-mode))
 
 (use-package! deianira
+  :commands deianira-mode
   :config
   ;; (fset 'which-key-mode #'ignore)
   (setq dei-ignore "C-")
