@@ -134,8 +134,14 @@ want in my main Emacs."
   ;; (load-theme 'doom-zenburn)
   (load-theme 'doom-monokai-machine)
 
-  ;; (fset 'rainbow-delimiters-mode #'prism-mode)
-  ;; (prism-set-colors)
+  (use-package! prism
+    :config
+    (setopt prism-comments nil)
+    (setopt prism-desaturations nil)
+    (fset 'rainbow-delimiters-mode #'prism-mode)
+    (add-hook 'typescript-mode-hook #'prism-mode)
+    (add-hook 'typescript-tsx-mode-hook #'prism-mode)
+    (add-hook 'js-base-mode-hook #'prism-mode))
 
   ;; For hygiene, ensure that this subordinate emacs syncs nothing to disk
   (cancel-timer my-state-sync-timer)
@@ -147,6 +153,7 @@ want in my main Emacs."
   ;; Copy the files to /tmp to work from there
   (shell-command "rm -r /tmp/roam/")
   (shell-command "cp -a /home/kept/roam /tmp/")
+  (shell-command "cp -a /home/sync-phone/beorg/* /tmp/roam/")
   (shell-command "rm -r /tmp/roam/*/logseq/") ;; no logseq backups
   (shell-command "rm -r /tmp/roam/lesswrong-org/")
   (shell-command "shopt -s globstar && rm /tmp/roam/**/*.gpg") ;; no crypts
