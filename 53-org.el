@@ -269,7 +269,7 @@ to the new note in the \"timeline\" note."
                         ,(lines
                           "#+title: ${title}"
                           "#+filetags: :noexport:stub:"
-                          "#+date: \[%<%Y-%m-%d>\]"))
+                          "#+date: "))
              :immediate-finish t
              :jump-to-captured t)
             ("i" "instantly create this node" plain "%?" :if-new
@@ -277,11 +277,11 @@ to the new note in the \"timeline\" note."
                         ,(lines
                           "#+title: ${title}"
                           "#+filetags: :noexport:stub:"
-                          "#+date: \[%<%Y-%m-%d>\]"))
+                          "#+date: "))
              :immediate-finish t)
             ("a" "acquaintance" plain "%?" :if-new
              (file+head "${slug}.org"
-                        ,(lines "#+title: ${title}\n#+filetags: :stub:acquaintance:eyes_therapist:\n#+date: \[%<%Y-%m-%d>\]\n"
+                        ,(lines "#+title: ${title}\n#+filetags: :stub:acquaintance:eyes_therapist:\n#+date: \n"
                                 ":noexport:"
                                 "- Email :: "
                                 "- Phone :: "
