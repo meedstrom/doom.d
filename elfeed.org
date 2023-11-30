@@ -84,6 +84,8 @@ deprecated
 *** https://medium.com/feed/scite                                     :rss:
 ** Rationality :rat:
 *** [[https://maggieappleton.com/rss.xml][Maggie Appleton]]                                            :f:fav:1p:rss:geo:
+*** [[https://carado.moe/rss.xml][Tamsin Leake]]  :f:1p:
+*** [[https://unstableontology.com/feed][Jessica Taylor]]  :f:1p:
 *** [[https://alicorn.elcenia.com/rss.xml][Hannah Blume]]  :f:1p:
 *** [[https://mhollyelmoreblog.wordpress.com/feed/][Holly Elmore]]  :f:1p: 
 *** https://hollyelmore.substack.com/feed
