@@ -7,7 +7,8 @@
 ;; (at your option) any later version.
 ;;
 ;; This program is distributed in the hope that it will be useful,
-;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; but
+;; WITHOUT ANY WARRANTY; without even the implied warranty of
 ;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 ;; GNU General Public License for more details.
 ;;
@@ -118,7 +119,7 @@
 
 (setopt mediawiki-site-default "WikEmacs")
 
-(defun my-anki-field:webpage ()
+(defun my-anki-webpage-field ()
   (cl-letf ((org-mode-hook nil))
     (org-mode))
   (when-let* ((uuid (or (org-id-get)
@@ -129,17 +130,16 @@
 
 (use-package! inline-anki
   :config
-  (setq inline-anki-tags '(not
-                           "noexport"
-                           "ARCHIVE"
-                           "stub"
-                           "eyes_partner"
-                           "eyes_friend"
-                           "eyes_therapist"))
-  (add-to-list 'inline-anki-fields '("Online mirror" . my-anki-field:webpage))
-  (add-to-list 'inline-anki-ignore "/daily/")
+  (setq inline-anki-send-tags '(not
+                                "noexport"
+                                "ARCHIVE"
+                                "stub"
+                                "eyes_partner"
+                                "eyes_friend"
+                                "eyes_therapist"))
+  (add-to-list 'inline-anki-fields '("Online mirror" . my-anki-webpage-field))
+  (add-to-list 'inline-anki-ignore-file-regexps "/daily/")
   (add-to-list 'inline-anki-ignore "/lesswrong-org/")
-  (setopt inline-anki-use-tags t)
   (after! org 
     (add-to-list 'org-structure-template-alist '("f" . "flashcard"))))
 
@@ -222,7 +222,7 @@
   ;; are a diff color from the symbols inside -- people arent used to this
   ;; either, it makes em stand out too much imo
   :config
-  ;; Replace rainbow-delimiters (it's on a dozen hooks in Doom, so this is easiest).
+  ;; Replace rainbow-delimiters (it's on a dozen hooks in Doom, so this method is easiest).
   (fset 'rainbow-delimiters-mode #'prism-mode)
   ;; (require 'prism)
   ;; (add-hook 'doom-load-theme-hook #'prism-set-colors)

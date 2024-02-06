@@ -1,9 +1,8 @@
 ;;; init.el -*- lexical-binding: t; -*-
 
 (doom! :completion
-       ;; (helm +childframe +icons)
+       ;; (helm +icons)
        (vertico +icons)
-       ;; (vertico +childframe +icons)
        ;; company
 
        :ui
@@ -56,8 +55,8 @@
        ledger
        ;; markdown
        ;; (org +dragndrop +pomodoro +roam2 +pretty)
-       ;; (org +roam2)
-       (scheme +guile)
+       (org +roam2)
+       ;; (scheme +guile)
        (sh +fish)
        yaml
 

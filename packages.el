@@ -61,10 +61,10 @@
 (package! esup)
 (package! tempel)
 (package! tempel-collection)
-(package! asyncloop :recipe (:host github :repo "meedstrom/asyncloop" :depth 'full))
-(package! massmapper :recipe (:host github :repo "meedstrom/massmapper" :depth 'full))
-(package! deianira :recipe (:host github :repo "meedstrom/deianira" :depth 'full))
-(package! inline-anki :recipe (:host github :repo "meedstrom/inline-anki" :depth 'full))
+(package! asyncloop :recipe (:host github :repo "meedstrom/asyncloop" :depth full))
+(package! massmapper :recipe (:host github :repo "meedstrom/massmapper" :depth full))
+(package! deianira :type 'local :recipe (:host github :repo "meedstrom/deianira" :depth full))
+(package! inline-anki :recipe (:host github :repo "meedstrom/inline-anki" :depth full))
 (package! beginend)
 (package! exwm)
 (package! exwm-edit)
@@ -82,7 +82,7 @@
 (package! iedit)
 (package! iflipb) ;; vs cycle-buffer?
 (package! iscroll)
-(package! key-assist)
+;; (package! key-assist)
 (package! key-chord)
 (package! mediawiki)
 (package! mw-thesaurus)
@@ -110,7 +110,7 @@
 ;; (package! which-key :ignore t)
 ;; (package! github-review :ignore t) ;; causes errors
 
-(package! org-roam)
+;; (package! org-roam)
 (package! org-transclusion)
 (package! htmlize)
 
@@ -146,7 +146,7 @@
 (package! eva
   :recipe (:host github
            :repo "meedstrom/eva"
-           :depth 'full
+           :depth full
            :files (:defaults "assets" "renv" "*.R" "*.gnuplot")))
 
 ;;(package! taxy

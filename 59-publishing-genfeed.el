@@ -59,8 +59,7 @@
 ;; an alist of (ORG-ID . N-LINES-CHANGED), where the org-id is unique.
 ;;
 ;; Then you can probably reshape this into another kind of table.  I think it'll
-;; take less fighting with git's output.  You can then summarize-by-month
-;; "manually" with nice and pleasant Lisp code.
+;; take less fighting with git's output.
 ;;
 ;; You don't even need to ID the commits themselves other than by their
 ;; timestamp.  Then summarizing per-day or per-month is a simple `cl-loop' that
@@ -79,9 +78,15 @@
   ;;                                                             (ID ADDS DELS)
   ;;                                                             ...))
 
-  (let ((default-directory "/tmp/genfeed"))
-    ;; step 1
-    (shell-command "git log")
+  ;; step 1
+  (let* ((default-directory "/tmp/genfeed/")
+         (hashes (split-string (shell-command-to-string
+                                "git log --format='%h' --since=2023-01-01")))
+         (final nil))
+    (dolist (hash (reverse hashes))
+      (shell-command (format "git checkout %s" hash))
+      (shell-command-to-string (format "git whatchanged %s" hash))
+      )
 
 
     )

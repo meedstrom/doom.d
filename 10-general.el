@@ -360,6 +360,11 @@
                             (setq c-basic-offset 4
                                   tab-width 4)))
 
+;; workaround a startup bug that appeared on update 2024-01-15 (did doom change
+;; default tab-width?)
+(setq-default tab-width 8)
+;; (add-hook 'org-mode-hook (defun my-org-setup () (setq tab-width 8)))
+
 ;; ;; FIXME
 ;; ;; Try to fix the interference from hl-line-mode that deprives us of the trick
 ;; ;; of calling M-x describe-face to discover which face is under point.
