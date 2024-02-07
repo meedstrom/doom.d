@@ -18,34 +18,15 @@
 
 (define-key global-map [remap org-open-at-point] #'my-org-open-at-point-as-maybe-roam-ref)
 
-;; ;; Workaround bugs causing functions to be called before they're loaded.
-;; ;; I can only guess there's something wrong with the autoloads...
-;; ;; I have a lot of bugs with Org atm, 2023-09-26
-;; (setopt org-element-use-cache nil) ;; heavily bugged, no idea how to debug
-;; (after! org
-;;   (require 'org-element) ;; org-element-at-point not found
-;;   (require 'org-archive) ;; `org-add-archive-files'
-;;   ;; (require 'ox-html)  ;; htmlize not found , maybe this helps
-;;   ;; (org-require-package 'htmlize) ;; cannot be found!!! have to install it in packages.el
-;;   )
-
 ;; PERFORMANCE (Org-roam is slow)
 
-;; ;; Use vulpea
-;; (use-package! vulpea
-;;   :hook ((org-roam-db-autosync-mode . vulpea-db-autosync-enable)))
-;; (define-key global-map [remap org-roam-node-find] #'vulpea-find)
-;; (define-key global-map [remap org-roam-node-insert] #'vulpea-insert)
-
-;; Don't enable autosync mode, it slows saving
-;; (remove-hook 'org-load-hook #'+org-init-roam-h)
-
-;; Speed up `org-roam-db-sync'
+(setopt org-roam-link-auto-replace nil)
 (setq org-roam-db-gc-threshold most-positive-fixnum)
 
 ;; Make `org-roam-node-find' & `org-roam-node-insert' instant.
 ;; Drawback: new notes won't be visible until it auto-refreshes the cached
 ;; value after 30s of idle, or you call `org-roam-db-sync'.
+
 (use-package! memoize)
 
 (defun my-roam-memo-refresh (&rest _)
@@ -64,7 +45,7 @@ as the user is idle."
   (setq file-path (or file-path (buffer-file-name (buffer-base-buffer))))
   (let ((content-hash (org-roam-db--file-hash file-path))
         (db-hash (caar (org-roam-db-query [:select hash :from files
-                                           :where (= file $s1)] file-path))))
+                                                   :where (= file $s1)] file-path))))
     (unless (string= content-hash db-hash)
       (cancel-timer my-roam-memo-timer)
       (setq my-roam-memo-timer
@@ -115,8 +96,8 @@ as the user is idle."
 
 ;; ---------------------------------
 
-;; for inline-anki: override underlines to represent cloze deletions, as I never
-;; use underlines anyway
+;; For inline-anki: override underlines to represent cloze deletions, as I
+;; never use underlines anyway
 (defface my-cloze '((t . (:box t))) "Cloze face")
 (setq org-emphasis-alist '(("*" bold)
                            ("/" italic)
@@ -125,16 +106,17 @@ as the user is idle."
                            ("~" org-code verbatim)
                            ("+" (:strike-through t))))
 
-(after! org
-  (dolist (x '(org-level-1
-               org-level-2
-               org-level-3
-               org-level-4
-               org-level-5
-               org-level-6
-               org-level-7
-               org-level-8))
-    (set-face-bold x nil)))
+;; ;; Never bold, thanks
+;; (after! org
+;;   (dolist (x '(org-level-1
+;;                org-level-2
+;;                org-level-3
+;;                org-level-4
+;;                org-level-5
+;;                org-level-6
+;;                org-level-7
+;;                org-level-8))
+;;     (set-face-bold x nil)))
 
 (after! ox-latex
   (add-to-list 'org-latex-classes
@@ -155,8 +137,8 @@ as the user is idle."
 
 ;; (setopt org-startup-folded 'fold)
 
+;; Use my own slug style
 (after! org-roam-node
-  ;; Use my own slug style
   (cl-defmethod org-roam-node-slug ((node org-roam-node))
     "Return the slug of NODE."
     (my-slugify (org-roam-node-title node))))
@@ -238,7 +220,8 @@ as the user is idle."
 (setopt org-cycle-separator-lines 3)
 (setopt org-datetree-add-timestamp nil)
 (setopt org-edit-src-content-indentation 0)
-(setopt org-ellipsis "⤵")
+;; (setopt org-ellipsis "⤵")
+(setopt org-ellipsis "…")
 (setopt org-hide-emphasis-markers t) ; hide the *, =, and / markers
 (setopt org-image-actual-width '(200)) ; use #ATTR if available, else 200 px
 (setopt org-insert-heading-respect-content t)

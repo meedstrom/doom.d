@@ -7,14 +7,14 @@
 
        :ui
        doom
+       vc-gutter
+       hl-todo
        ;; unicode
        ;; (emoji +unicode)
        ;; doom-dashboard
        ;; modeline
-       hl-todo
        ;; (ligatures +extra)
        ligatures
-       vc-gutter
        ;; window-select ;; good on big monitors, otherwise no
        ;; (popup +defaults) ;; terrible org capture window size...
 

@@ -55,7 +55,7 @@
 (package! disable-mouse)
 (package! disk-usage)
 (package! dmenu)
-(package! helpful :ignore t) ;; slowwww
+(package! helpful :disable t) ;; slowwww
 (package! doom-snippets :ignore t) ;; disable doom's yasnippets
 (package! elisp-format)
 (package! emacs-piper :recipe (:host gitlab :repo "howardabrams/emacs-piper"))
@@ -161,7 +161,7 @@
 ;; (package! org-timeline)
 ;; (package! embrace)
 ;; (package! pulseaudio-control)
-;; (package! delve :recipe (:host github :repo "publicimageltd/delve"))
+(package! delve :recipe (:host github :repo "publicimageltd/delve"))
 (package! hyperbole)
 ;; (package! suggest)
 ;; (package! osm)

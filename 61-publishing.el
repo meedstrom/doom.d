@@ -504,10 +504,11 @@ will not modify the source file."
 
             ;; 03 Insert roam_refs before the post body
             (when refs
-              (insert "<p>Ref: "  )
+              (insert "<p>Ref. "  )
               (dolist (ref (split-string refs))
                 (setq ref (string-replace "\"" "" ref)) ;; in case I wrapped it in quotes
-                (insert " <a href=\"" ref "f\">" (replace-regexp-in-string "http.?://" "" ref) "</a> "))
+                (insert " <a href=\"" ref "f\">" (replace-regexp-in-string "http.?://" "" ref) "</a>, "))
+              (delete-char -2)
               (insert "</p>"))
 
             ;; 05 Insert the post body: the HTML produced by Org-export
