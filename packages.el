@@ -24,6 +24,7 @@
 
 ;; The rest
 
+(package! vulpea)
 (package! backup-walker)
 ;; (package! eot :recipe (:host github :repo "kmonad/kbd-mode"))
 (package! kbd-mode :recipe (:host github :repo "kmonad/kbd-mode"))
@@ -54,6 +55,7 @@
 (package! disable-mouse)
 (package! disk-usage)
 (package! dmenu)
+(package! helpful :ignore t) ;; slowwww
 (package! doom-snippets :ignore t) ;; disable doom's yasnippets
 (package! elisp-format)
 (package! emacs-piper :recipe (:host gitlab :repo "howardabrams/emacs-piper"))
@@ -66,11 +68,11 @@
 (package! deianira :type 'local :recipe (:host github :repo "meedstrom/deianira" :depth full))
 (package! inline-anki :recipe (:host github :repo "meedstrom/inline-anki" :depth full))
 (package! beginend)
-(package! exwm)
-(package! exwm-edit)
+;; (package! exwm)
+;; (package! exwm-edit)
+;; (package! exwm-firefox :recipe (:host github :repo "ieure/exwm-firefox"))
 (package! pinboard-popular)
 (package! pinboard)
-(package! exwm-firefox :recipe (:host github :repo "ieure/exwm-firefox"))
 (package! form-feed)
 (package! gif-screencast)
 (package! git-messenger)

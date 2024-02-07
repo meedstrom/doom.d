@@ -18,34 +18,102 @@
 
 (define-key global-map [remap org-open-at-point] #'my-org-open-at-point-as-maybe-roam-ref)
 
-;; Workaround bugs causing functions to be called before they're loaded.
-;; I can only guess there's something wrong with the autoloads...
-;; I have a lot of bugs with Org atm, 2023-09-26
-(setopt org-element-use-cache nil) ;; heavily bugged, no idea how to debug
-(after! org
-  (require 'org-element) ;; org-element-at-point not found
-  (require 'org-archive) ;; `org-add-archive-files'
-  ;; (require 'ox-html)  ;; htmlize not found , maybe this helps
-  ;; (org-require-package 'htmlize) ;; cannot be found!!! have to install it in packages.el
-  )
+;; ;; Workaround bugs causing functions to be called before they're loaded.
+;; ;; I can only guess there's something wrong with the autoloads...
+;; ;; I have a lot of bugs with Org atm, 2023-09-26
+;; (setopt org-element-use-cache nil) ;; heavily bugged, no idea how to debug
+;; (after! org
+;;   (require 'org-element) ;; org-element-at-point not found
+;;   (require 'org-archive) ;; `org-add-archive-files'
+;;   ;; (require 'ox-html)  ;; htmlize not found , maybe this helps
+;;   ;; (org-require-package 'htmlize) ;; cannot be found!!! have to install it in packages.el
+;;   )
+
+;; PERFORMANCE (Org-roam is slow)
+
+;; ;; Use vulpea
+;; (use-package! vulpea
+;;   :hook ((org-roam-db-autosync-mode . vulpea-db-autosync-enable)))
+;; (define-key global-map [remap org-roam-node-find] #'vulpea-find)
+;; (define-key global-map [remap org-roam-node-insert] #'vulpea-insert)
+
+;; Don't enable autosync mode, it slows saving
+;; (remove-hook 'org-load-hook #'+org-init-roam-h)
 
 ;; Speed up `org-roam-db-sync'
 (setq org-roam-db-gc-threshold most-positive-fixnum)
 
 ;; Make `org-roam-node-find' & `org-roam-node-insert' instant.
-;; Drawback: new posts won't be visible until the cached value is auto-refreshed
-;; (shelf-life 2 hours) or you call `org-roam-db-sync'.
+;; Drawback: new notes won't be visible until it auto-refreshes the cached
+;; value after 30s of idle, or you call `org-roam-db-sync'.
 (use-package! memoize)
-(after! org-roam 
-  (memoize #'org-roam-node-read--completions)
-  (advice-add #'org-roam-db-sync :after
-              (defun my-refresh-roam-memo (&rest _)
-                (memoize-restore #'org-roam-node-read--completions)
-                (memoize         #'org-roam-node-read--completions)
-                (let ((gcmh-high-cons-theshold most-positive-fixnum)
-                      (gc-cons-threshold       most-positive-fixnum))
-                  (org-roam-node-read--completions)
-                  nil))))
+
+(defun my-roam-memo-refresh (&rest _)
+  (memoize-restore #'org-roam-node-read--completions)
+  (memoize         #'org-roam-node-read--completions)
+  (let ((gcmh-high-cons-theshold most-positive-fixnum)
+        (gc-cons-threshold       most-positive-fixnum))
+    (org-roam-node-read--completions)
+    nil))
+
+(defvar my-roam-memo-timer (timer-create))
+(defun my-roam-memo-if-updated-schedule-refresh (&optional file-path _)
+  "If the roam DB got updated, schedule a re-memoization as soon
+as the user is idle."
+  ;; Hash-comparison axed from source `org-roam-db-update-file'
+  (setq file-path (or file-path (buffer-file-name (buffer-base-buffer))))
+  (let ((content-hash (org-roam-db--file-hash file-path))
+        (db-hash (caar (org-roam-db-query [:select hash :from files
+                                           :where (= file $s1)] file-path))))
+    (unless (string= content-hash db-hash)
+      (cancel-timer my-roam-memo-timer)
+      (setq my-roam-memo-timer
+            (run-with-idle-timer 30 nil #'my-roam-memo-refresh)))))
+
+(after! org-roam
+  (ignore-errors (memoize #'org-roam-node-read--completions))
+  (advice-add 'org-roam-db-sync :after
+              'my-roam-memo-refresh)
+  (advice-add 'org-roam-db-update-file :after
+              'my-roam-memo-if-updated-schedule-refresh))
+
+;; OK so I considered making an async `consult--read'.  But the problem is that
+;; consult--read can be async-capable all it wants---it handles a callback like
+;; a button it can press many times for output, but the callback needs itself
+;; to be async, i.e. it's likely a process sentinel.  This works for ripgrep
+;; because the external program ripgrep returns its output incrementally. Does
+;; sqlite do that? I doubt it.  If sqlite MUST return all results at once,
+;; then we cannot use org-roam's SQL database in this way.
+;;
+;; That is, we cannot filter via SQL. It can only send us the whole list (which
+;; we could save in an Emacs variable in case the sql connection is laggy, but
+;; whatever) and then we "fetch incrementally" from the variable.  More
+;; specifically, we pass the variable to a filterer algorithm that outputs
+;; incrementally.
+;;
+;; How to do that in an Emacs function?  We may have benefit of async.el, but
+;; that isn't even necessary, it can use `while-no-input'.  And I guess that
+;; might be built-in to `consult--read'.  But.. ugh, where do I---
+;;
+;; Scratch that.
+;;
+;; It was illuminating to think about, but I've been barking up the wrong tree.
+;; Async completion is for when, AFTER having a giant table of data in hand,
+;; and your minibuffer loaded and ready, you try to filter the results, and
+;; find that it's laggy.  We don't have that problem: `completing-read' works
+;; basically instant for ~1000 nodes (of course).  Our problem is in a
+;; different domain: it takes time to open up the prompt in the first place.
+;; That's so nonintuitive, because I didn't think SQLite was slow or that
+;; anyone would bother to make a SQL DB if they were gonna use it
+;; inefficiently, and yet `org-roam-node-list' takes ages just to cough up the
+;; dataset.
+;;
+;; Here vulpea.el helps, it maintains a table in-memory that's optimized for
+;; reading, although it's still not instant, so ultimately I'd like to to
+;; memoize `vulpea-select-from' for a perfect UX.  But I can't seem to memoize
+;; it.
+
+;; ---------------------------------
 
 ;; for inline-anki: override underlines to represent cloze deletions, as I never
 ;; use underlines anyway

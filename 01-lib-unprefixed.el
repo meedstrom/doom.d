@@ -16,11 +16,12 @@
   (defalias #'duplicate-dwim #'crux-duplicate-current-line-or-region))
 
 (defmacro time (&rest body)
-  "Evaluate BODY and print time elapsed."
+  "Evaluate BODY and print time elapsed.
+Then return the last value of BODY."
   (let ((T (cl-gensym)))
     `(let ((,T (current-time)))
-       ,@body
-       (message "Elapsed: %fs" (float-time (time-since ,T))))))
+       (prog1 (progn ,@body)
+         (message "Elapsed: %fs" (float-time (time-since ,T)))))))
 
 (defmacro when-car-fbound (form)
   `(when (fboundp (car #',form)) ,form))

@@ -46,6 +46,13 @@
 
 (setopt abbrev-file-name (expand-file-name "abbrevs" doom-user-dir))
 
+
+(add-hook 'emacs-startup-hook
+          (defun my-eager-startup ()
+            (run-hooks 'doom-first-input-hook)
+            (run-hooks 'doom-first-buffer-hook)
+            (run-hooks 'doom-first-file-hook)))
+
 
 ;;; Font and theme
 
@@ -86,7 +93,6 @@
 (setq doom-unicode-font doom-font) ;; if it has good unicode coverage alrdy
 
 ;; -----------------------------------------------------------------------------
-
 
 ;; (setq doom-theme 'doom-pine)
 ;; (setq doom-theme 'doom-one)
@@ -245,6 +251,7 @@
 (setopt mouse-yank-at-point t)
 (setopt save-interprogram-paste-before-kill t)
 (setopt select-enable-primary t)
+(setopt enable-local-variables :all)
 (setopt custom-safe-themes t)
 (setopt suggest-key-bindings nil) ;; show command's return value instead
 (setopt kill-read-only-ok t)

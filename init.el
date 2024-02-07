@@ -7,8 +7,8 @@
 
        :ui
        doom
-       unicode
-       (emoji +unicode)
+       ;; unicode
+       ;; (emoji +unicode)
        ;; doom-dashboard
        ;; modeline
        hl-todo
@@ -20,24 +20,24 @@
 
        :editor
        ;; fold
-       multiple-cursors
+       ;; multiple-cursors
        ;; snippets
        ;; format ;; check if the upstream started using apheleia
-       word-wrap
+       ;; word-wrap
 
        :emacs
        dired
-       vc
+       ;; vc
 
        :term
        ;; vterm
        ;; eshell
-       shell
+       ;; shell
        ;; term
 
        :checkers
        ;; syntax
-       grammar
+       ;; grammar
        ;; spell
 
        :lang
@@ -46,9 +46,9 @@
        data
        ess
        nix
-       (go +tree-sitter +lsp)
-       (web +tree-sitter +lsp)
-       (javascript +tree-sitter +lsp)
+       (go +tree-sitter)
+       (web +tree-sitter)
+       (javascript +tree-sitter)
        ;; javascript
        rust
        json
@@ -66,7 +66,7 @@
        :tools
        ;; biblio
        (magit +forge)
-       (lsp +eglot)
+       ;; (lsp +eglot)
        tree-sitter
        pdf
 
