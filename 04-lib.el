@@ -30,6 +30,11 @@
 (autoload #'piper "piper")
 
 
+(defun my-last-daily-file ()
+  (interactive)
+  (require 'org-roam-dailies)
+  (find-file (car (last (org-roam-dailies--list-files)))))
+
 ;; bloggable 2023-10-23
 (defvar my-dsc-orig-buf nil)
 (defvar my-dsc-ctr nil)

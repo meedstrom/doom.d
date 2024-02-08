@@ -122,11 +122,19 @@
 (defun my-anki-webpage-field ()
   (cl-letf ((org-mode-hook nil))
     (org-mode))
-  (when-let* ((uuid (or (org-id-get)
-                        (progn (goto-char (point-min)) (org-id-get))))
+  (when-let* ((uuid (progn (goto-char (point-min)) (org-id-get)))
               (pageid (substring (my-uuid-to-base62 uuid) -4))
               (url (concat "https://edstrom.dev/" pageid)))
     (concat "<a href=\"" url "\">" url "</a>")))
+
+(defun my-anki-webpage-field-fast ()
+  (save-excursion
+    (goto-char (point-min))
+    (re-search-forward ":ID: +")
+    (when-let* ((uuid (buffer-substring (point) (line-end-position)))
+                (pageid (substring (my-uuid-to-base62 uuid) -4))
+                (url (concat "https://edstrom.dev/" pageid)))
+      (concat "<a href=\"" url "\">" url "</a>"))))
 
 (use-package! inline-anki
   :config
@@ -139,7 +147,7 @@
                                 "eyes_therapist"))
   (add-to-list 'inline-anki-fields '("Online mirror" . my-anki-webpage-field))
   (add-to-list 'inline-anki-ignore-file-regexps "/daily/")
-  (add-to-list 'inline-anki-ignore "/lesswrong-org/")
+  (add-to-list 'inline-anki-ignore-file-regexps "/lesswrong/")
   (after! org 
     (add-to-list 'org-structure-template-alist '("f" . "flashcard"))))
 

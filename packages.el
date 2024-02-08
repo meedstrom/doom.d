@@ -24,6 +24,10 @@
 
 ;; The rest
 
+(package! org-crypt :disable t) ;; slowwww
+(package! helpful :disable t) ;; slowwww
+(package! doom-snippets :ignore t) ;; disable doom's yasnippets
+
 (package! vulpea)
 (package! backup-walker)
 ;; (package! eot :recipe (:host github :repo "kmonad/kbd-mode"))
@@ -35,8 +39,7 @@
 (package! copy-as-format)
 (package! memoize)
 (package! smart-tabs-mode)
-;; (package! anki-editor)
-;; (package! org-anki)
+(package! org-anki)
 (package! app-launcher :recipe (:host github :repo "SebastienWae/app-launcher"))
 (package! artbollocks-mode)
 ;; (package! firefox-bookmarks :recipe (:host github :repo "tangxinfa/firefox-bookmarks"))
@@ -55,8 +58,6 @@
 (package! disable-mouse)
 (package! disk-usage)
 (package! dmenu)
-(package! helpful :disable t) ;; slowwww
-(package! doom-snippets :ignore t) ;; disable doom's yasnippets
 (package! elisp-format)
 (package! emacs-piper :recipe (:host gitlab :repo "howardabrams/emacs-piper"))
 (package! ess-rproj :recipe (:host github :repo "chainsawriot/ess-rproj"))

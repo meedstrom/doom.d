@@ -20,10 +20,22 @@
 
 ;; PERFORMANCE (Org-roam is slow)
 
+;; Undo a Doom setting that slows saving on large buffers
+;; Note that Doom also
+;;
+;; FIXME: doesn't work, so just disable org-crypt in packages.el
+(add-hook 'org-mode-hook
+          (defun my-remove-crypt-hook ()
+            (remove-hook 'before-save-hook 'org-encrypt-entries))
+          99)
+
+;; Don't search for "roam:" links (slows saving)
 (setopt org-roam-link-auto-replace nil)
+
+;; Speed up `org-roam-db-sync'
 (setq org-roam-db-gc-threshold most-positive-fixnum)
 
-;; Make `org-roam-node-find' & `org-roam-node-insert' instant.
+;; Make the commands `org-roam-node-find' & `org-roam-node-insert' instant.
 ;; Drawback: new notes won't be visible until it auto-refreshes the cached
 ;; value after 30s of idle, or you call `org-roam-db-sync'.
 
@@ -38,25 +50,19 @@
     nil))
 
 (defvar my-roam-memo-timer (timer-create))
-(defun my-roam-memo-if-updated-schedule-refresh (&optional file-path _)
-  "If the roam DB got updated, schedule a re-memoization as soon
-as the user is idle."
-  ;; Hash-comparison axed from source `org-roam-db-update-file'
-  (setq file-path (or file-path (buffer-file-name (buffer-base-buffer))))
-  (let ((content-hash (org-roam-db--file-hash file-path))
-        (db-hash (caar (org-roam-db-query [:select hash :from files
-                                                   :where (= file $s1)] file-path))))
-    (unless (string= content-hash db-hash)
-      (cancel-timer my-roam-memo-timer)
-      (setq my-roam-memo-timer
-            (run-with-idle-timer 30 nil #'my-roam-memo-refresh)))))
+(defun my-roam-memo-schedule-refresh (&rest _)
+  "Schedule a re-caching as soon as the user is idle."
+  (cancel-timer my-roam-memo-timer)
+  (setq my-roam-memo-timer
+        (run-with-idle-timer 30 nil #'my-roam-memo-refresh)))
 
 (after! org-roam
   (ignore-errors (memoize #'org-roam-node-read--completions))
   (advice-add 'org-roam-db-sync :after
               'my-roam-memo-refresh)
+  ;; Triggered when `org-roam-db-autosync-mode' syncs on save
   (advice-add 'org-roam-db-update-file :after
-              'my-roam-memo-if-updated-schedule-refresh))
+              'my-roam-memo-schedule-refresh))
 
 ;; OK so I considered making an async `consult--read'.  But the problem is that
 ;; consult--read can be async-capable all it wants---it handles a callback like
@@ -130,7 +136,6 @@ as the user is idle."
 
 (add-hook 'delve-mode-hook #'delve-compact-view-mode)
 
-;; (add-hook 'lister-mode-hook #'View-exit)
 (after! delve
   ;; It normally inherits from org-roam-title, which I find too big
   (set-face-attribute 'delve-title-face () :inherit 'org-document-title))
@@ -143,11 +148,6 @@ as the user is idle."
     "Return the slug of NODE."
     (my-slugify (org-roam-node-title node))))
 
-(defun my-last-daily-file ()
-  (interactive)
-  (require 'org-roam-dailies)
-  (find-file (car (last (org-roam-dailies--list-files)))))
-
 (add-hook 'org-roam-buffer-postrender-functions #'magit-section-show-level-2)
 (setopt org-roam-directory "/home/kept/roam/")
 (setopt org-roam-dailies-capture-templates
@@ -159,9 +159,9 @@ as the user is idle."
 ;; See also C-h d m :tools biblio
 (setopt citar-bibliography '("/home/kept/roam/refs/library_biblatex.bib"))
 
-(setopt org-roam-db-node-include-function
-        (lambda ()
-          (not (string-search "lw" default-directory))))
+;; (setopt org-roam-db-node-include-function
+;;         (lambda ()
+;;           (not (string-search "lw" default-directory))))
 
 (add-hook 'org-noter-notes-mode-hook #'abbrev-mode)
 (add-hook 'org-noter-notes-mode-hook (l'rainbow-delimiters-mode 0))
