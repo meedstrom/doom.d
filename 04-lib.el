@@ -127,6 +127,44 @@ For all other uses, see `org-get-tags'."
                       (string-trim)
                       (string-split ":" t))))))
 
+(defun my-uuid-to-pageid (uuid)
+  (let ((decimal (string-to-number (string-replace "-" "" uuid) 16)))
+    (if (or (= 0 decimal) (/= 36 (length uuid)))
+        (error "String should only contain a valid UUID 36 chars long: %s" uuid)
+      (string-pad (substring (my-int-to-consonants decimal) -5) 5 "0"))))
+
+(defun my-int-to-consonants (integer &optional length)
+  (let ((s "")
+        (i integer))
+    (while (> i 0)
+      (setq s (concat (char-to-string
+                       (my-int-to-consonants-one-digit (mod i 21))) s)
+            i (/ i 21)))
+    (setq length (max 1 (or length 1)))
+    (if (< (length s) length)
+        (setq s (concat (make-string (- length (length s)) ?0) s)))
+    s))
+
+(defun my-int-to-consonants-one-digit (integer)
+  "Convert INTEGER between 0 and 20 into one non-vowel letter."
+  ;; A b c d E f g h I j k l m n O p q r s t U v w x y z
+  ;; bcdfghjklmnpqrstvwxyz
+  ;; start counting from b, E would've been 4th char
+  (cond
+   ((< integer 3) (+ ?b integer))
+   ((< integer 6) (+ ?f integer -3))
+   ((< integer 11) (+ ?j integer -6))
+   ((< integer 16) (+ ?p integer -11))
+   ((< integer 21) (+ ?v integer -16))
+   (t (error "Input was larger than 20"))))
+
+(defun my-uuid-to-pageid2 (uuid)
+  (let ((decimal (string-to-number (string-replace "-" "" uuid) 16)))
+    (if (or (= 0 decimal) (/= 36 (length uuid)))
+        (error "String should only contain a valid UUID 36 chars long: %s" uuid)
+      (string-pad (substring (org-id-int-to-b36 decimal) -5) 5 "0"))))
+
+;;(org-id-int-to-b36 3453453452312)
 (defun my-uuid-to-base62 (uuid)
   (let ((decimal (string-to-number (string-replace "-" "" uuid) 16)))
     (if (or (= 0 decimal) (/= 36 (length uuid)))

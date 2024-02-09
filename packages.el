@@ -28,7 +28,6 @@
 (package! helpful :disable t) ;; slowwww
 (package! doom-snippets :ignore t) ;; disable doom's yasnippets
 
-(package! vulpea)
 (package! backup-walker)
 ;; (package! eot :recipe (:host github :repo "kmonad/kbd-mode"))
 (package! kbd-mode :recipe (:host github :repo "kmonad/kbd-mode"))
@@ -39,7 +38,6 @@
 (package! copy-as-format)
 (package! memoize)
 (package! smart-tabs-mode)
-(package! org-anki)
 (package! app-launcher :recipe (:host github :repo "SebastienWae/app-launcher"))
 (package! artbollocks-mode)
 ;; (package! firefox-bookmarks :recipe (:host github :repo "tangxinfa/firefox-bookmarks"))
@@ -51,7 +49,7 @@
 (package! corfu)
 (package! embark)
 (package! crux)
-(package! cycle-buffer) ;; last updated 1997, but has more useful commands than iflipb
+(package! cycle-buffer) ;; last updated 1997, but more useful commands than iflipb
 (package! define-repeat-map :recipe (:host nil :repo "https://tildegit.org/acdw/define-repeat-map.el"))
 (package! director)
 (package! dired-hacks)
@@ -64,10 +62,10 @@
 (package! esup)
 (package! tempel)
 (package! tempel-collection)
-(package! asyncloop :recipe (:host github :repo "meedstrom/asyncloop" :depth full))
-(package! massmapper :recipe (:host github :repo "meedstrom/massmapper" :depth full))
+(package! asyncloop :type 'local :recipe (:host github :repo "meedstrom/asyncloop" :depth full))
+(package! massmapper :type 'local :recipe (:host github :repo "meedstrom/massmapper" :depth full))
 (package! deianira :type 'local :recipe (:host github :repo "meedstrom/deianira" :depth full))
-(package! inline-anki :recipe (:host github :repo "meedstrom/inline-anki" :depth full))
+(package! inline-anki :type 'local :recipe (:host github :repo "meedstrom/inline-anki" :depth full))
 (package! beginend)
 ;; (package! exwm)
 ;; (package! exwm-edit)
@@ -77,6 +75,7 @@
 (package! form-feed)
 (package! gif-screencast)
 (package! git-messenger)
+(package! git-timemachine)
 (package! goggles)
 ;; (package! golden-ratio)
 (package! hacker-typer)
@@ -113,7 +112,9 @@
 ;; (package! which-key :ignore t)
 ;; (package! github-review :ignore t) ;; causes errors
 
-;; (package! org-roam)
+(package! vulpea)
+(package! org-anki)
+(package! org-roam)
 (package! org-transclusion)
 (package! htmlize)
 

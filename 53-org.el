@@ -18,6 +18,14 @@
 
 (define-key global-map [remap org-open-at-point] #'my-org-open-at-point-as-maybe-roam-ref)
 
+(setopt org-element-use-cache nil) ;; heavily bugged, no idea how to debug
+(after! org
+  (require 'org-element) ;; org-element-at-point not found
+  (require 'org-archive) ;; `org-add-archive-files'
+  ;;   ;; (require 'ox-html)  ;; htmlize not found , maybe this helps
+  ;;   ;; (org-require-package 'htmlize) ;; cannot be found!!! have to install it in packages.el
+  )
+
 ;; PERFORMANCE (Org-roam is slow)
 
 ;; Undo a Doom setting that slows saving on large buffers

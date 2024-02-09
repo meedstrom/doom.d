@@ -38,7 +38,9 @@
   ;; ensure it's gone from recentf so I don't accidentally edit these instead of
   ;; the originals
   (shell-command "rm -rf /tmp/roam")
-  (my-check-id-collisions))
+  (my-check-id-collisions)
+  (f-write (json-encode-alist my-36-62-alist)
+           'utf-8 "/home/kept/pub/idMappings.json"))
 
 (setopt org-publish-project-alist
         `(("my-slipbox-blog"
@@ -56,7 +58,7 @@
 
           ("my-slipbox-blog-attachments"
            :base-directory "/tmp/roam/attachments/"
-           :base-extension "png\\|jpg"
+           :base-extension "png\\|jpg\\|gif"
            :publishing-directory "/home/kept/pub/attachments/"
            :publishing-function org-publish-attachment)))
 
@@ -80,7 +82,8 @@ beyond a general one that cuts one char off the ID.")
   (cl-loop for id-uuids in my-ids
            as uuids = (-distinct (cdr id-uuids))
            when (> (length uuids) 1)
-           do (message "These uuids made same 3-char id: %s" uuids)))
+           do (message "These uuids make same id, if id was 1 char less: %s"
+                       uuids)))
 
 ;; (defconst my-date-regexp (rx (= 4 digit) "-" (= 2 digit) "-" (= 2 digit)))
 (defvar my-publish-ran-already nil)
@@ -95,6 +98,8 @@ want in my main Emacs."
   (setopt gc-cons-threshold most-positive-fixnum)
   (fset 'org-publish-write-cache-file #'ignore)
   (advice-remove 'after-find-file #'doom--shut-up-autosave-a)
+  ;; (undefadvice! '+org--fix-async-export-a :around '(org-export-to-file org-export-as))
+  ;; (undefadvice! +org-babel-disable-async-maybe-a :around #'ob-async-org-babel-execute-src-block)
 
   ;; Not sure it helps speed at all
   (global-emojify-mode 0)
@@ -120,7 +125,8 @@ want in my main Emacs."
   ;; (setopt org-html-self-link-headlines t)
   (setopt org-html-html5-fancy t)
   ;; why does it skip environments like \begin{align}?
-  (setopt org-html-with-latex 'html) ;; use `org-latex-to-html-convert-command'
+  (setopt org-html-with-latex 'verbatim)
+  ;; (setopt org-html-with-latex 'html) ;; use `org-latex-to-html-convert-command'
   (setopt org-latex-to-html-convert-command "node /home/kept/pub/texToMathML.js \"%i\"")
   (setopt case-fold-search t) ;; for all the searches in `my-publish-to-blog'
   (setopt org-inhibit-startup t) ;; from org-publish-org-to
@@ -200,10 +206,14 @@ want in my main Emacs."
    for path in (directory-files "/tmp/roam" t "\\.org$")
    as uuid = (my-org-file-id path)
    when uuid do
-   (let ((permalink (substring (my-uuid-to-base62 uuid) -4)))
-     (push uuid (alist-get (substring permalink 1) my-ids
+   (let ((pageid (my-uuid-to-pageid uuid)))
+     (push uuid (alist-get (substring pageid 1) my-ids
                            nil nil #'equal))
-     (when (file-exists-p permalink)
+     ;; record old ID
+     (setf (alist-get (substring (my-uuid-to-base62 uuid) -4)
+                      my-36-62-alist nil nil #'equal)
+           pageid)
+     (when (file-exists-p pageid)
        ;; So far, I've had 0 collisions.  How many can I expect?  Taking into
        ;; account the birthday paradox, and assuming a perfect RNG:
        ;; - At 7 chars, would need to generate ~1,000,000 IDs for a 50%
@@ -215,8 +225,9 @@ want in my main Emacs."
        ;; Reduced it to 3, got only 6 collisions per 1,000 IDs.
        ;; Tried reducing to 2, got 360 collisions per 1,000 IDs
        (error "Probable page ID collision, suggest renewing UUID %s" uuid))
-     (mkdir permalink t)
-     (rename-file path (concat permalink "/"))))
+     ;; TODO: make a 5-char base36 name, and make the base62 a symlink
+     (mkdir pageid t)
+     (rename-file path (concat pageid "/"))))
 
   ;; Tell `org-id-locations' and the org-roam DB about the new directory.
   (setopt org-roam-directory "/tmp/roam/")
@@ -240,6 +251,8 @@ want in my main Emacs."
 ;; that heading.  Thank org-roam for this convenience!  Note that I convert
 ;; these IDs to base62 later in this file.
 (after! ox (require 'org-roam-export))
+
+(defvar my-36-62-alist nil)
 
 ;; Change some things about the Org files, before org-export does its thing.
 (add-hook 'org-export-before-parsing-functions #'my-add-backlinks)
@@ -551,10 +564,10 @@ will not modify the source file."
               (let* ((beg (point))
                      (end (1- (save-excursion (search-forward "\""))))
                      (uuid (buffer-substring beg end))
-                     (id (substring (my-uuid-to-base62 uuid) -4)))
+                     (id (my-uuid-to-pageid uuid)))
                 (push uuid (alist-get (substring id 1) my-ids nil nil #'equal))
                 (delete-region (- beg 3) end)
-                (insert (substring (my-uuid-to-base62 uuid) -4))))
+                (insert id)))
 
             ;; 14
             ;; DEPENDS ON 10
@@ -651,14 +664,16 @@ will not modify the source file."
             ;; force it.  I'm pretty sure it won't break anything...
             (goto-char (point-min))
             (while (search-forward "---" nil t)
-              (replace-match "&mdash;"))
+              (unless (looking-at-p "-")
+                (replace-match "&mdash;")))
             ;; A little more risky but I'm hoping it's fine.  Situations where we
             ;; might not want to transform a double-dash:
             ;; - css variables in code blocks (i have none)
             ;; - a code block showing this very code (i have none)
             (goto-char (point-min))
             (while (search-forward "--" nil t)
-              (replace-match "&ndash;"))
+              (unless (looking-at-p "-")
+                (replace-match "&ndash;")))
 
             ;; 45 While we're at it, the title needs the same fix
             (setq title (->> title

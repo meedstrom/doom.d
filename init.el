@@ -54,8 +54,7 @@
        json
        ledger
        ;; markdown
-       ;; (org +dragndrop +pomodoro +roam2 +pretty)
-       (org +roam2)
+       (org +dragndrop +roam2) ;; gotta fix the way it affects `my-publish'
        ;; (scheme +guile)
        (sh +fish)
        yaml
