@@ -1496,10 +1496,11 @@ instead of hippie-expand and set `tab-always-indent' to
 
 (defun my-revisit-buffer ()
   (interactive)
-  (unless (bound-and-true-p exwm-class-name)
-    (message "Attempting to revisit buffer"))
-  (kill-buffer)
-  (my-undo-kill-buffer))
+  (if (not buffer-file-name)
+      (message "Not a file-visiting buffer, won't attempt a revisit")
+    (message "Attempting to revisit buffer")
+    (kill-buffer)
+    (my-undo-kill-buffer)))
 
 (defun my-undo-kill-buffer ()
   (interactive)
