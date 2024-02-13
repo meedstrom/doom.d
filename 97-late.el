@@ -169,6 +169,11 @@
 (use-package! iscroll
   :hook ((text-mode elfeed-show-mode eww-mode shr-mode) . iscroll-mode))
 
+(use-package! iedit
+  :init
+  ;; default is C-;
+  (setq iedit-toggle-key-default nil))
+
 (use-package! objed
   :commands objed-ipipe)
 
