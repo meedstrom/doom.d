@@ -29,6 +29,11 @@
 (autoload #'objed-ipipe "objed")
 (autoload #'piper "piper")
 
+(defun my-replace-in-file (file text replacement)
+  (with-temp-file file
+    (insert-file-contents file)
+    (while (search-forward text nil t)
+      (replace-match replacement t t))))
 
 (defun my-last-daily-file ()
   (interactive)
@@ -128,22 +133,34 @@ For all other uses, see `org-get-tags'."
                       (string-split ":" t))))))
 
 (defun my-uuid-to-pageid (uuid)
-  (let ((decimal (string-to-number (string-replace "-" "" uuid) 16)))
-    (if (or (= 0 decimal) (/= 36 (length uuid)))
-        (error "String should only contain a valid UUID 36 chars long: %s" uuid)
-      (string-pad (substring (my-int-to-consonants decimal) -5) 5 "0"))))
+  (let* ((sans-dashes (string-replace "-" "" uuid))
+         (decimal (string-to-number sans-dashes 16)))
+    (if (or (= 0 decimal) (/= 32 (length sans-dashes)))
+        (error "String should be a valid UUID 36 chars long: %s" uuid)
+      (substring (my-int-to-consonants decimal 4) -4))))
+
+;; Inspired by these results
+;; (ceiling (log 9999 10))
+;; (ceiling (log 10000 10))
+;; (ceiling (log 10001 10))
+(defun my-digits-length (num)
+  (let ((log (log num 10)))
+    (if (= (ceiling log) (floor log))
+        (+ 1 (ceiling log))
+      (ceiling log))))
 
 (defun my-int-to-consonants (integer &optional length)
-  (let ((s "")
-        (i integer))
-    (while (> i 0)
-      (setq s (concat (char-to-string
-                       (my-int-to-consonants-one-digit (mod i 21))) s)
-            i (/ i 21)))
+  (let ((result "")
+        (remainder integer))
+    (while (> remainder 0)
+      (setq result (concat (char-to-string (my-int-to-consonants-one-digit
+                                            (mod remainder 21)))
+                           result))
+      (setq remainder (/ remainder 21)))
     (setq length (max 1 (or length 1)))
-    (if (< (length s) length)
-        (setq s (concat (make-string (- length (length s)) ?0) s)))
-    s))
+    (if (< (length result))
+        (string-pad result length ?b t)
+      result)))
 
 (defun my-int-to-consonants-one-digit (integer)
   "Convert INTEGER between 0 and 20 into one non-vowel letter."
@@ -158,11 +175,8 @@ For all other uses, see `org-get-tags'."
    ((< integer 21) (+ ?v integer -16))
    (t (error "Input was larger than 20"))))
 
-(defun my-uuid-to-pageid2 (uuid)
-  (let ((decimal (string-to-number (string-replace "-" "" uuid) 16)))
-    (if (or (= 0 decimal) (/= 36 (length uuid)))
-        (error "String should only contain a valid UUID 36 chars long: %s" uuid)
-      (string-pad (substring (org-id-int-to-b36 decimal) -5) 5 "0"))))
+(defun my-uuid-to-pageid-old2 (uuid)
+  (substring (my-uuid-to-base62 uuid) -4))
 
 ;;(org-id-int-to-b36 3453453452312)
 (defun my-uuid-to-base62 (uuid)

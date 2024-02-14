@@ -149,6 +149,26 @@
 ;;                     green-cooler
 ;;                     yellow-faint))))
 
+
+;; (unless (modulep! :ui doom)
+;;   ;; copy-pasted
+;;   (defadvice! doom--load-theme-a (fn theme &optional no-confirm no-enable)
+;;     "Disable old themes."
+;;     :around #'load-theme
+;;     ;; Run `load-theme' from an estranged buffer, where we can ensure that
+;;     ;; buffer-local face remaps (by `mixed-pitch-mode', for instance) won't
+;;     ;; interfere with recalculating faces in new themes.
+;;     (with-temp-buffer
+;;       (let ((last-themes (copy-sequence custom-enabled-themes)))
+;;         (mapc #'disable-theme custom-enabled-themes)
+;;         (funcall fn theme no-confirm no-enable))))
+;;   (setq custom-safe-themes t)
+;;   (use-package! doom-themes
+;;     :config
+;;     (load-theme 'doom-Iosvkem))
+;;   ;; (custom-set-faces '(default (:family "Iosevka Nerd Font" :size 33)))
+;;   )
+
 
 ;;; Debugging
 

@@ -54,7 +54,7 @@
   (memoize         #'org-roam-node-read--completions)
   (let ((gcmh-high-cons-theshold most-positive-fixnum)
         (gc-cons-threshold       most-positive-fixnum))
-    (org-roam-node-read--completions)
+    (funcall #'org-roam-node-read--completions)
     nil))
 
 (defvar my-roam-memo-timer (timer-create))

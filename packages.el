@@ -88,6 +88,8 @@
 (package! key-chord)
 (package! mediawiki)
 (package! mw-thesaurus)
+(package! dired-git-info)
+(package! doom-themes)
 ;; (package! ox-rss)
 ;; (package! nov)
 (package! objed) ;; for objed-ipipe

@@ -200,6 +200,7 @@
 
 (use-package! apheleia
   :config
+  (setopt apheleia-log-debug-info t)
   (apheleia-global-mode))
 
 (use-package! nameless

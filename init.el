@@ -1,72 +1,37 @@
 ;;; init.el -*- lexical-binding: t; -*-
 
 (doom! :completion
-       ;; (helm +icons)
        (vertico +icons)
+       ;; (helm +icons)
        ;; company
 
        :ui
-       doom
-       vc-gutter
+       (vc-gutter +diff-hl +pretty)
        hl-todo
-       ;; unicode
-       ;; (emoji +unicode)
-       ;; doom-dashboard
-       ;; modeline
-       ;; (ligatures +extra)
        ligatures
-       ;; window-select ;; good on big monitors, otherwise no
-       ;; (popup +defaults) ;; terrible org capture window size...
-
-       :editor
-       ;; fold
-       ;; multiple-cursors
-       ;; snippets
-       ;; format ;; check if the upstream started using apheleia
-       ;; word-wrap
 
        :emacs
        dired
-       ;; vc
-
-       :term
-       ;; vterm
-       ;; eshell
-       ;; shell
-       ;; term
-
-       :checkers
-       ;; syntax
-       ;; grammar
-       ;; spell
 
        :lang
        emacs-lisp
        common-lisp
        data
-       ess
+       (ess +tree-sitter +stan)
        nix
        (go +tree-sitter)
        (web +tree-sitter)
        (javascript +tree-sitter)
-       ;; javascript
        rust
        json
        ledger
-       ;; markdown
-       (org +dragndrop +roam2) ;; gotta fix the way it affects `my-publish'
-       ;; (scheme +guile)
+       (org +dragndrop +roam2)
        (sh +fish)
-       yaml
-
-       :email
-       ;; mu4e
+       (yaml +tree-sitter)
 
        :tools
-       ;; biblio
-       (magit +forge)
-       ;; (lsp +eglot)
        tree-sitter
+       (magit +forge)
        pdf
 
        :config

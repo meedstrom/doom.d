@@ -35,12 +35,15 @@
   (cd "/home/kept/roam") ;; for me to quick-search when an id fails to resolve
   (org-publish "my-slipbox-blog" t)
   (org-publish "my-slipbox-blog-attachments" t)
-  ;; ensure it's gone from recentf so I don't accidentally edit these instead of
-  ;; the originals
+  ;; ensure it's gone from recentf so I don't accidentally edit these instead
+  ;; of the originals
   (shell-command "rm -rf /tmp/roam")
   (my-check-id-collisions)
-  (f-write (json-encode-alist my-36-62-alist)
-           'utf-8 "/home/kept/pub/idMappings.json"))
+  (f-write (json-encode-alist my-id-old-new-alist)
+           'utf-8 "/home/kept/pub/idMappings.json")
+  (f-write (json-encode-alist my-heading-locations)
+           'utf-8 "/home/kept/pub/idsInPages.json")
+  )
 
 (setopt org-publish-project-alist
         `(("my-slipbox-blog"
@@ -69,6 +72,8 @@
 (el-patch-defun org-info-export (path desc _format)
   (or desc path))
 
+(defvar my-heading-locations nil)
+
 (defvar my-ids nil
   "Database for checking ID collisions.
 This is not as important as it sounds.  I am using 4-char IDs,
@@ -82,7 +87,7 @@ beyond a general one that cuts one char off the ID.")
   (cl-loop for id-uuids in my-ids
            as uuids = (-distinct (cdr id-uuids))
            when (> (length uuids) 1)
-           do (message "These uuids make same id, if id was 1 char less: %s"
+           do (message "These uuids make same page-id: %s"
                        uuids)))
 
 ;; (defconst my-date-regexp (rx (= 4 digit) "-" (= 2 digit) "-" (= 2 digit)))
@@ -104,7 +109,7 @@ want in my main Emacs."
   ;; Not sure it helps speed at all
   (global-emojify-mode 0)
   (apheleia-global-mode 0)
-  (solaire-global-mode 0)
+  ;; (solaire-global-mode 0)
   (ws-butler-global-mode 0)
   (smartparens-global-mode 0)
   (setq whitespace-global-modes nil)
@@ -207,12 +212,12 @@ want in my main Emacs."
    as uuid = (my-org-file-id path)
    when uuid do
    (let ((pageid (my-uuid-to-pageid uuid)))
-     (push uuid (alist-get (substring pageid 1) my-ids
-                           nil nil #'equal))
+     (push uuid (alist-get pageid my-ids nil nil #'equal))
      ;; record old ID
-     (setf (alist-get (substring (my-uuid-to-base62 uuid) -4)
-                      my-36-62-alist nil nil #'equal)
-           pageid)
+     (map-put! my-id-old-new-alist (my-uuid-to-pageid-old2 uuid) pageid)
+     ;; (setf (alist-get (my-uuid-to-pageid-old2 uuid)
+     ;;                  nil nil #'equal)
+     ;;       pageid)
      (when (file-exists-p pageid)
        ;; So far, I've had 0 collisions.  How many can I expect?  Taking into
        ;; account the birthday paradox, and assuming a perfect RNG:
@@ -225,7 +230,6 @@ want in my main Emacs."
        ;; Reduced it to 3, got only 6 collisions per 1,000 IDs.
        ;; Tried reducing to 2, got 360 collisions per 1,000 IDs
        (error "Probable page ID collision, suggest renewing UUID %s" uuid))
-     ;; TODO: make a 5-char base36 name, and make the base62 a symlink
      (mkdir pageid t)
      (rename-file path (concat pageid "/"))))
 
@@ -252,7 +256,7 @@ want in my main Emacs."
 ;; these IDs to base62 later in this file.
 (after! ox (require 'org-roam-export))
 
-(defvar my-36-62-alist nil)
+(defvar my-id-old-new-alist nil)
 
 ;; Change some things about the Org files, before org-export does its thing.
 (add-hook 'org-export-before-parsing-functions #'my-add-backlinks)
@@ -384,6 +388,7 @@ will not modify the source file."
 
 ;; test: (my-strip-hashlink-if-same-as-permalink "0vwRV27mRVLFd6yoyUM0PI/some-slug#ID-10b59a2a-bf95-4f20-9b4f-f27e23e51f46")
 ;; test: (my-strip-hashlink-if-same-as-permalink "../0vwRV27mRVLFd6yoyUM0PI/some-slug#ID-10b59a2a-bf95-4f20-9b4f-f27e23e51f46")
+;; test: (my-strip-hashlink-if-same-as-permalink "../0vwRV27mRVLFd6yoyUM0PI/some-slug#0vwRV27mRVLFd6yoyUM0PI")
 (defun my-strip-hashlink-if-same-as-permalink (link)
   (if-let* ((hash-pos (string-search "#" link))
             (hash-part (substring link (1+ hash-pos)))
@@ -558,29 +563,40 @@ will not modify the source file."
               (goto-char (marker-position m1)))
 
             ;; 10
-            ;; Replace all UUIDv4 with truncated base62 translations.
+            ;; Replace all UUID with my shortened form.
             (goto-char (point-min)) ;; gotcha! include the ToC
             (while (re-search-forward "[\"#]ID-" nil t)
               (let* ((beg (point))
                      (end (1- (save-excursion (search-forward "\""))))
                      (uuid (buffer-substring beg end))
-                     (id (my-uuid-to-pageid uuid)))
-                (push uuid (alist-get (substring id 1) my-ids nil nil #'equal))
+                     (old-id (my-uuid-to-pageid-old2 uuid))
+                     (new-id (my-uuid-to-pageid uuid)))
                 (delete-region (- beg 3) end)
-                (insert id)))
+                ;; If point is on a heading, record that this heading ID is to
+                ;; be found on this page, for automagic redirects.
+                (when (looking-back "\"" (1- (point)))
+                  (map-put! my-heading-locations new-id permalink))
+                (insert new-id)
+                ;; Record old ID for redirects on the website
+                (map-put! my-id-old-new-alist old-id new-id)
+                ;; (setf (alist-get (substring (my-uuid-to-base62 uuid) -4)
+                ;;                  my-id-old-new-alist nil nil #'equal)
+                ;;       new-id)
+                ;; Record ID to check for collisions
+                (push uuid (alist-get new-id my-ids nil nil #'equal))))
 
             ;; 14
             ;; DEPENDS ON 10
             ;; For all links, remove the lengthy hash-part of the link (i.e. the
             ;; bit after the # character in http://.../PAGE-ID/LINK#ORG-ID) if the
             ;; ORG-ID matches PAGE-ID anyway (i.e. it's a file-level id)
-            ;; (goto-char content-start)
-            ;; (while (re-search-forward "<a .*?href=\"" nil t)
-            ;;   (let* ((beg (point))
-            ;;          (end (1- (save-excursion (search-forward "\""))))
-            ;;          (link (buffer-substring beg end)))
-            ;;     (delete-region beg end)
-            ;;     (insert (my-strip-hashlink-if-same-as-permalink link))))
+            (goto-char content-start)
+            (while (re-search-forward "<a .*?href=\"" nil t)
+              (let* ((beg (point))
+                     (end (1- (save-excursion (search-forward "\""))))
+                     (link (buffer-substring beg end)))
+                (delete-region beg end)
+                (insert (my-strip-hashlink-if-same-as-permalink link))))
 
             ;; 16
             ;; Implement collapsible sections
