@@ -29,6 +29,20 @@
 (autoload #'objed-ipipe "objed")
 (autoload #'piper "piper")
 
+(defun my-org-id-get-create-and-copy ()
+  "Combine `org-id-get-create' with `org-id-copy' behavior.
+Also add an ID-CREATED property with the current date, if a new
+ID had to be generated."
+  (interactive)
+  (if (derived-mode-p 'org-mode)
+      (prog1 (or (org-id-get)
+                 (prog1 (org-id-get-create)
+                   (org-set-property "ID-CREATED"
+                                     (format-time-string "[%F]"))))
+        (org-id-copy))
+    (message "Not an org-mode buffer")
+    nil))
+
 (defun my-replace-in-file (file text replacement)
   (with-temp-file file
     (insert-file-contents file)

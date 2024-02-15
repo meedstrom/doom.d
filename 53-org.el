@@ -64,13 +64,13 @@
   (setq my-roam-memo-timer
         (run-with-idle-timer 30 nil #'my-roam-memo-refresh)))
 
-(after! org-roam
-  (ignore-errors (memoize #'org-roam-node-read--completions))
-  (advice-add 'org-roam-db-sync :after
-              'my-roam-memo-refresh)
-  ;; Triggered when `org-roam-db-autosync-mode' syncs on save
-  (advice-add 'org-roam-db-update-file :after
-              'my-roam-memo-schedule-refresh))
+;; (after! org-roam
+;;   (ignore-errors (memoize #'org-roam-node-read--completions))
+;;   (advice-add 'org-roam-db-sync :after
+;;               'my-roam-memo-refresh)
+;;   ;; Triggered when `org-roam-db-autosync-mode' syncs on save
+;;   (advice-add 'org-roam-db-update-file :after
+;;               'my-roam-memo-schedule-refresh))
 
 ;; OK so I considered making an async `consult--read'.  But the problem is that
 ;; consult--read can be async-capable all it wants---it handles a callback like
@@ -82,9 +82,9 @@
 ;;
 ;; That is, we cannot filter via SQL. It can only send us the whole list (which
 ;; we could save in an Emacs variable in case the sql connection is laggy, but
-;; whatever) and then we "fetch incrementally" from the variable.  More
-;; specifically, we pass the variable to a filterer algorithm that outputs
-;; incrementally.
+;; whatever, I don't know about that) and then we "fetch incrementally" from
+;; the variable.  More specifically, we pass the variable to a filterer
+;; algorithm that outputs incrementally.
 ;;
 ;; How to do that in an Emacs function?  We may have benefit of async.el, but
 ;; that isn't even necessary, it can use `while-no-input'.  And I guess that
@@ -105,8 +105,48 @@
 ;;
 ;; Here vulpea.el helps, it maintains a table in-memory that's optimized for
 ;; reading, although it's still not instant, so ultimately I'd like to to
-;; memoize `vulpea-select-from' for a perfect UX.  But I can't seem to memoize
-;; it.
+;; memoize `vulpea-db-query' for a perfect UX.  Let's see.
+
+(defun my-vulpea-memo-refresh (&rest _)
+  (memoize-restore #'vulpea-db-query)
+  (memoize         #'vulpea-db-query))
+
+;; Love this lib. Thank you
+(use-package! vulpea
+  :hook ((org-roam-db-autosync-mode . vulpea-db-autosync-enable))
+  :config
+  (memoize #'vulpea-db-query)
+  (after! org-roam-db
+    ;; Triggered when `org-roam-db-autosync-mode' syncs on save
+    (advice-add 'org-roam-db-update-file :after
+                'my-vulpea-memo-refresh)))
+
+
+;; (defun vulpea-db-query (&optional filter-fn)
+;;   "Query list of `vulpea-note' from database.
+
+;; When FILTER-FN is non-nil, only notes that satisfy it are
+;; returned."
+;;   (let* ((rows
+;;           (org-roam-db-query
+;;            "select
+;;   id,
+;;   path,
+;;   \"level\",
+;;   title,
+;;   properties,
+;;   aliases,
+;;   tags,
+;;   meta,
+;;   links,
+;;   attach
+;; from notes")))
+;;     (seq-filter
+;;      (or filter-fn #'identity)
+;;      (seq-mapcat
+;;       #'vulpea-db--notes-from-row
+;;       rows))))
+
 
 ;; ---------------------------------
 

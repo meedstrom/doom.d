@@ -211,10 +211,12 @@ want in my main Emacs."
    for path in (directory-files "/tmp/roam" t "\\.org$")
    as uuid = (my-org-file-id path)
    when uuid do
-   (let ((pageid (my-uuid-to-pageid uuid)))
+   (let ((pageid (my-uuid-to-pageid uuid))
+         (old-id (my-uuid-to-pageid-old2 uuid)))
      (push uuid (alist-get pageid my-ids nil nil #'equal))
      ;; record old ID
-     (map-put! my-id-old-new-alist (my-uuid-to-pageid-old2 uuid) pageid)
+     (unless (assoc old-id my-id-old-new-alist)
+       (push (cons old-id pageid) my-id-old-new-alist))
      ;; (setf (alist-get (my-uuid-to-pageid-old2 uuid)
      ;;                  nil nil #'equal)
      ;;       pageid)
@@ -575,10 +577,12 @@ will not modify the source file."
                 ;; If point is on a heading, record that this heading ID is to
                 ;; be found on this page, for automagic redirects.
                 (when (looking-back "\"" (1- (point)))
-                  (map-put! my-heading-locations new-id permalink))
+                  (unless (assoc new-id my-heading-locations)
+                    (push (cons new-id permalink) my-heading-locations)))
                 (insert new-id)
                 ;; Record old ID for redirects on the website
-                (map-put! my-id-old-new-alist old-id new-id)
+                (unless (assoc old-id my-id-old-new-alist)
+                  (push (cons old-id new-id) my-id-old-new-alist))
                 ;; (setf (alist-get (substring (my-uuid-to-base62 uuid) -4)
                 ;;                  my-id-old-new-alist nil nil #'equal)
                 ;;       new-id)

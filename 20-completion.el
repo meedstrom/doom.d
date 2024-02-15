@@ -126,9 +126,7 @@
   (setopt completion-cycle-threshold 3)
   ;; invoke corfu for dabbrev instead of its own dabbrev-expand
   ;; (keymap-set [remap hippie-expand])
-  (keymap-set global-map "M-/" #'dabbrev-completion)
-  (keymap-set global-map "C-M-/" #'dabbrev-expand)
-  (global-corfu-mode)
+  ;; (global-corfu-mode)
 
   (defun corfu-send-shell (&rest _)
     "Send completion candidate when inside comint/eshell.
