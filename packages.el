@@ -110,6 +110,7 @@
 (package! wgrep)
 (package! xr)
 (package! dired-hist :recipe (:host github :repo "karthink/dired-hist"))
+(package! consult)
 
 ;; (package! which-key :ignore t)
 ;; (package! github-review :ignore t) ;; causes errors

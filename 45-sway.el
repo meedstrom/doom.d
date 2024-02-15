@@ -1,5 +1,5 @@
 ;; -*- lexical-binding: t; -*-
-;; Copyright (C) 2020-2023 Martin Edström
+;; Copyright (C) 2020-2024 Martin Edström
 ;;
 ;; This program is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -63,43 +63,43 @@ WINDOW is a hash table, typically one of the members of
      (start-process-shell-command cmd nil (concat "swaymsg " cmd)))))
 
 (use-package! sway :disabled
-  :config
-  (el-patch-defun sway-list-frames (&optional tree visible-only focused-only)
-    "List all Emacs frames in TREE.
+              :config
+              (el-patch-defun sway-list-frames (&optional tree visible-only focused-only)
+                "List all Emacs frames in TREE.
 
 VISIBLE-ONLY and FOCUSED-ONLY select only frames that are,
 respectively, visible and focused.
 
 Return value is a list of (FRAME-OBJECT . SWAY-ID)"
-    (unless tree (setq tree (sway-tree)))
-    (let* ((wins (sway-list-windows tree visible-only focused-only)))
-      (seq-filter (lambda (x) (car x))
-                  (-zip
-                   (mapcar (if (eq window-system 'pgtk)
-                               #'sway-find-wayland-window-frame
-                             #'sway-find-x-window-frame)
-                           wins)
-                   (mapcar #'sway-get-id wins)))))
-  (setq Man-notify-method 'pushy)
-  ;; (setq shackle-display-buffer-frame-function #'sway-shackle-display-buffer-frame)
-  ;; (setq shackle-default-rule '(:frame t :other t))
-  ;; (setq shackle-inhibit-window-quit-on-same-windows t)
-  (sway-undertaker-mode)
-  (sway-socket-tracker-mode)
-  (sway-x-focus-through-sway-mode)
-  )
+                (unless tree (setq tree (sway-tree)))
+                (let* ((wins (sway-list-windows tree visible-only focused-only)))
+                  (seq-filter (lambda (x) (car x))
+                              (-zip
+                               (mapcar (if (eq window-system 'pgtk)
+                                           #'sway-find-wayland-window-frame
+                                         #'sway-find-x-window-frame)
+                                       wins)
+                               (mapcar #'sway-get-id wins)))))
+              (setq Man-notify-method 'pushy)
+              ;; (setq shackle-display-buffer-frame-function #'sway-shackle-display-buffer-frame)
+              ;; (setq shackle-default-rule '(:frame t :other t))
+              ;; (setq shackle-inhibit-window-quit-on-same-windows t)
+              (sway-undertaker-mode)
+              (sway-socket-tracker-mode)
+              (sway-x-focus-through-sway-mode)
+              )
 
 (defun my-sway-bury-oldest-window ()
   "Among currently visible windows, bury the oldest unfocused one.
 If it's an Emacs frame, kill it."
   (let* ((oldest (car (s-split "\n"
-                                  (shell-command-to-string
-                              (concat "swaymsg -t get_tree "
-                                      " | jq 'recurse(.nodes[]) "
-                                      " | select(.visible) "
-                                      " | select(.focused == false) "
-                                      " | .id"
-                                      "'"))))))
+                               (shell-command-to-string
+                                (concat "swaymsg -t get_tree "
+                                        " | jq 'recurse(.nodes[]) "
+                                        " | select(.visible) "
+                                        " | select(.focused == false) "
+                                        " | .id"
+                                        "'"))))))
     (unless (s-blank? oldest)
       (start-process-shell-command
        "swaymsg" nil

@@ -1,5 +1,5 @@
 ;; -*- lexical-binding: t; -*-
-;; Copyright (C) 2020-2023 Martin Edström
+;; Copyright (C) 2020-2024 Martin Edström
 ;;
 ;; This program is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -37,21 +37,8 @@
   (setq backup-directory-alist nil)
   (setq make-backup-files nil))
 
-;; Learned a lesson
+;; Lesson learned
 (add-hook 'after-save-hook #'my-fix-invalid-backup-settings)
-
-;; Doom puts eww-bookmarks in doomemacs/.local/cache, which I find dangerous
-;; since I may unthinkingly wipe it.  Put it where I won't delete it.
-(setopt eww-bookmarks-directory doom-user-dir)
-
-(setopt abbrev-file-name (expand-file-name "abbrevs" doom-user-dir))
-
-
-(add-hook 'emacs-startup-hook
-          (defun my-eager-startup ()
-            (run-hooks 'doom-first-input-hook)
-            (run-hooks 'doom-first-buffer-hook)
-            (run-hooks 'doom-first-file-hook)))
 
 
 ;;; Font and theme
@@ -273,6 +260,7 @@
 (setopt select-enable-primary t)
 (setopt enable-local-variables :all)
 (setopt custom-safe-themes t)
+(setopt message-log-max 8000)
 (setopt suggest-key-bindings nil) ;; show command's return value instead
 (setopt kill-read-only-ok t)
 (setopt kill-ring-max 600)

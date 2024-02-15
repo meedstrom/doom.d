@@ -1,5 +1,5 @@
 ;; -*- lexical-binding: t; -*-
-;; Copyright (C) 2020-2023 Martin Edström
+;; Copyright (C) 2020-2024 Martin Edström
 ;;
 ;; This program is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -14,16 +14,29 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+;; wishlist: buffer preview
+(after! helm
+  (setopt helm-ff-DEL-up-one-level-maybe t)
+  (when (modulep! helm)
+    (define-key global-map [remap switch-to-buffer] #'helm-mini)))
 
-;; Prevent all-the-icons from fattening text line heights on small terminus font
+(advice-remove 'embark-completing-read-prompter
+               '+vertico--embark-which-key-prompt-a)
 
-(defun my-adjust-scale-1 ()
-  (text-scale-decrease 1))
+(which-key-mode 0)
 
-(defun my-adjust-scale-2 ()
-  (text-scale-set -2)
-  ;; (text-scale-decrease 2)
+(defun embark-act-with-completing-read (&optional arg)
+  (interactive "P")
+  (let* ((embark-prompter 'embark-completing-read-prompter)
+         (act (propertize "Act" 'face 'highlight))
+         (embark-indicator (lambda (_keymap targets) nil)))
+    (embark-act arg)))
+
+(after! vertico
+  ;; (vertico-buffer-mode)
+  ;; (keymap-set vertico-map "<tab>" #'embark-act-with-completing-read)
   )
+
 
 ;; my first action after startup is often to reach for virtual buffers, so preload please
 (recentf-mode)
