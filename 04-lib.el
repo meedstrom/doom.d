@@ -1,6 +1,6 @@
 ;; my-lib.el -- a collection of defuns -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2019-2023 Martin Edström
+;; Copyright (C) 2019-2024 Martin Edström
 ;; This program is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
 ;; the Free Software Foundation, either version 3 of the License, or
@@ -31,14 +31,15 @@
 
 (defun my-org-id-get-create-and-copy ()
   "Combine `org-id-get-create' with `org-id-copy' behavior.
-Also add an ID-CREATED property with the current date, if a new
-ID had to be generated."
+If a new ID had to be generated and there is no CREATED property,
+also add a CREATED property with the current date."
   (interactive)
   (if (derived-mode-p 'org-mode)
       (prog1 (or (org-id-get)
                  (prog1 (org-id-get-create)
-                   (org-set-property "ID-CREATED"
-                                     (format-time-string "[%F]"))))
+                   (unless (org-entry-get nil "CREATED")
+                     (org-set-property "CREATED"
+                                       (format-time-string "[%F]")))))
         (org-id-copy))
     (message "Not an org-mode buffer")
     nil))

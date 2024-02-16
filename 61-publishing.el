@@ -132,7 +132,7 @@ want in my main Emacs."
   ;; why does it skip environments like \begin{align}?
   (setopt org-html-with-latex 'verbatim)
   (setopt org-html-with-latex 'html) ;; use `org-latex-to-html-convert-command'
-  (setopt org-latex-to-html-convert-command "node /home/kept/pub/texToMathML.js \"%i\"")
+  (setopt org-latex-to-html-convert-command "node /home/kept/pub/texToMathML.js '%i'")
   (setopt case-fold-search t) ;; for all the searches in `my-publish-to-blog'
   (setopt org-inhibit-startup t) ;; from org-publish-org-to
   (toggle-debug-on-error)

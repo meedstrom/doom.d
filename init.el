@@ -13,6 +13,9 @@
        :emacs
        dired
 
+       :term
+       shell
+
        :lang
        emacs-lisp
        common-lisp
@@ -33,6 +36,9 @@
        tree-sitter
        (magit +forge)
        pdf
+
+       :email
+       (mu4e +org)
 
        :config
        (default +bindings +smartparens))
