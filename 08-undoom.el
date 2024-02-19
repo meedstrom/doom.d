@@ -18,7 +18,7 @@
 
 
 
-;; Yep
+;; Yep... slower init please!
 (add-hook 'emacs-startup-hook
           (defun my-eager-startup ()
             (run-hooks 'doom-first-input-hook)
@@ -40,7 +40,7 @@
 (setopt eww-bookmarks-directory doom-user-dir)
 (setopt abbrev-file-name (expand-file-name "abbrevs" doom-user-dir))
 
-;; I'll do M-x dlnm RET when I want it (a couple of occasions per year)
+;; I'll do M-x dlnm RET when I want it (couple of occasions per year)
 (remove-hook! '(prog-mode-hook text-mode-hook conf-mode-hook)
   #'display-line-numbers-mode)
 
@@ -51,7 +51,14 @@
   ;; Having exactly two states makes for comfy toggling.
   (setopt org-todo-keywords '((sequence "TODO" "DONE"))))
 
-;; IDK why, but I find this doom-docs-mode just gets in my way.  Nice idea tho.
+;; Undo a Doom setting that slows saving on large buffers
+;; FIXME: doesn't work, so just disable org-crypt in packages.el.
+(add-hook 'org-mode-hook
+          (defun my-remove-crypt-hook ()
+            (remove-hook 'before-save-hook 'org-encrypt-entries))
+          99)
+
+;; I find this doom-docs-mode just gets in my way.  Nice idea in principle.
 (fset 'doom-docs-org-mode #'ignore)
 (fset 'doom-docs--toggle-read-only-h #'ignore)
 
@@ -68,8 +75,8 @@
   (keymap-set eshell-mode-map "C-l" #'recenter-top-bottom))
 
 (after! ws-butler
-  ;; Bug IMO.  Having nil jibes badly with auto-save-visited-mode.
-  ;; https://github.com/doomemacs/doomemacs/issues/7516
+  ;; Having nil jibes badly with auto-save-visited-mode.
+  ;; Bug report: https://github.com/doomemacs/doomemacs/issues/7516
   (setopt ws-butler-keep-whitespace-before-point t))
 
 (remove-hook 'dired-mode-hook #'dired-omit-mode)

@@ -87,7 +87,8 @@
 ;; (setq doom-theme 'doom-dark+)
 ;; (setq doom-theme 'doom-manegarm)
 ;; (setq doom-theme 'doom-storage-tube-amber-2)
-(setq doom-theme 'doom-Iosvkem)
+;; (setq doom-theme 'doom-Iosvkem)
+(setq doom-theme 'ef-bio)
 ;; (setq doom-theme 'doom-zenburn)
 ;; (setq doom-theme 'doom-outrun-electric)
 ;; (setq doom-theme 'doom-badger)
@@ -193,10 +194,6 @@
 
 ;;; Stuff
 
-;; For Magit, also for email when I get around to that.
-(setq user-full-name "Martin Edström")
-(setq user-mail-address "meedstrom91@gmail.com")
-
 ;; Set up booleans I can use here and there throughout init.
 (defvar debian (executable-find "apt-get"))
 (defvar arch (or (string-search "arch" operating-system-release)
@@ -220,12 +217,6 @@
 ;; (add-to-list 'initial-frame-alist '(fullscreen . fullboth))
 (add-to-list 'initial-frame-alist '(fullscreen . maximized))
 
-;; Blacken background, to make transparent windows more back-transparent
-;; (set-face-background 'default "#000000")
-(after! solaire-mode
-  ;; (set-face-background 'solaire-default-face "#000700")
-  ;; (set-face-foreground 'solaire-default-face "pale green")
-  )
 (my-fix-pdf-midnight-colors)
 
 (after! recentf
@@ -243,12 +234,10 @@
 ;; want to sit far from the screen.
 (after! doom-editor
   (setq-default fill-column 79))
-;; the setting didn't stick...
-;; (general-after-init
-;; (setopt fill-column 79))
 
-;; FIXME: the setting isn't t during init, which i'd like. guess i'll just make
-;; a habit of M-& doom sync RET.
+;; FIXME: the setting isn't t during init, which i'd like. guess i'll just have
+;; to make a habit of M-& doom sync RET. Or launch emacs every time with:
+;; doom sync && emacs
 (setopt load-prefer-newer t) ;; don't spend another minute confused by this
 (general-after-init
   (setopt load-prefer-newer t))
@@ -395,7 +384,6 @@
 (remove-hook 'term-mode-hook #'hide-mode-line-mode)
 
 ;; (remove-hook 'doom-first-input-hook #'which-key-mode)
-
 
 ;; Prevent accidental edits
 (add-hook 'so-long-mode-hook #'read-only-mode)

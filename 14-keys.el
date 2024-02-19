@@ -243,9 +243,7 @@
 (setopt doom-localleader-alt-key "<f4>")
 
 (after! doom-keybinds
-  (keymap-set doom-leader-map "f d" (keymap-lookup doom-leader-map "f D"))
-  ;; the localleader stuff seems to require this special function
-  (map! :map org-mode-map :localleader "i" #'my-org-id-get-create-and-copy))
+  (keymap-set doom-leader-map "f d" (keymap-lookup doom-leader-map "f D")))
 
 (after! key-chord
   (key-chord-define-global "cd" #'calc-dispatch))
@@ -260,8 +258,17 @@
   (keymap-unset geiser-repl-mode-map "M-." t)
   (keymap-unset geiser-repl-mode-map "M-`" t))
 
+(after! mu4e-main
+  ;; .. thinking that I should let massmapper.el translate all capital bindings
+  ;; to lowercase letters when the lowercase is unbound anyway
+  ;; (keymap-unset mu4e-main-mode-map "C" t)
+  ;; (keymap-unset mu4e-main-mode-map "U" t)
+  (keymap-set mu4e-main-mode-map "c" #'mu4e-compose-new)
+  (keymap-set mu4e-main-mode-map "u" #'mu4e-update-mail-and-index))
+
 (after! dired-hist
   (keymap-set dired-mode-map "l" #'dired-hist-go-back)
+  ;; the hell
   (keymap-set dired-mode-map "L" #'dired-hist-go-forward))
 
 (after! cus-edit
@@ -389,8 +396,15 @@
 (after! view
   (keymap-set view-mode-map "e" #'my-view-exit-and-reopen-as-root))
 
+;; Override some Doom Org keys
+(my-hook-once 'org-load-hook
+  (map! :map org-mode-map :localleader "i" #'my-org-id-get-create-and-copy))
+
+;; (add-function
+;;  :after #'+org-init-keybinds-h
+;;  (##map! :map org-mode-map :localleader "i" #'my-org-id-get-create-and-copy))
+
 (after! org-keys
-  (keymap-set org-mode-map "<f4> i" #'my-org-id-get-create-and-copy) ;; no effect, C-s localleader
   (keymap-set org-mode-map "C-c u" #'my-insert-heading-with-id)
   (keymap-set org-mode-map "C-c f" #'org-roam-node-find)
   (keymap-set org-mode-map "C-c i" #'org-roam-node-insert))
@@ -403,7 +417,6 @@
 ;; (keymap-set global-map "M-<menu>" #'embark-act)
 
 ;; Grand list
-
 
 (keymap-set global-map "C-q" #'my-dired-shell-cycle)
 ;; (keymap-set global-map "C-q" #'+shell/here)

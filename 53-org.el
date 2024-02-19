@@ -28,15 +28,6 @@
 
 ;; PERFORMANCE (Org-roam is slow)
 
-;; Undo a Doom setting that slows saving on large buffers
-;; Note that Doom also
-;;
-;; FIXME: doesn't work, so just disable org-crypt in packages.el
-(add-hook 'org-mode-hook
-          (defun my-remove-crypt-hook ()
-            (remove-hook 'before-save-hook 'org-encrypt-entries))
-          99)
-
 ;; Don't search for "roam:" links (slows saving)
 (setopt org-roam-link-auto-replace nil)
 

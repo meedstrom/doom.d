@@ -1,5 +1,6 @@
 .eshell-*
 02-lib-external.el
+06-private.el
 *.swp
 *~
 *#
@@ -7,4 +8,5 @@ wip.el
 mothball/
 wip/
 subed/
+mail/
 *.bak

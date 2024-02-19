@@ -29,6 +29,23 @@
 (autoload #'objed-ipipe "objed")
 (autoload #'piper "piper")
 
+(defun my-anki-webpage-field ()
+  (cl-letf ((org-mode-hook nil))
+    (org-mode))
+  (when-let* ((uuid (progn (goto-char (point-min)) (org-id-get)))
+              (pageid (substring (my-uuid-to-base62 uuid) -4))
+              (url (concat "https://edstrom.dev/" pageid)))
+    (concat "<a href=\"" url "\">" url "</a>")))
+
+(defun my-anki-webpage-field-fast ()
+  (save-excursion
+    (goto-char (point-min))
+    (re-search-forward ":ID: +")
+    (when-let* ((uuid (buffer-substring (point) (line-end-position)))
+                (pageid (substring (my-uuid-to-base62 uuid) -4))
+                (url (concat "https://edstrom.dev/" pageid)))
+      (concat "<a href=\"" url "\">" url "</a>"))))
+
 (defun my-org-id-get-create-and-copy ()
   "Combine `org-id-get-create' with `org-id-copy' behavior.
 If a new ID had to be generated and there is no CREATED property,
@@ -148,11 +165,11 @@ For all other uses, see `org-get-tags'."
                       (string-split ":" t))))))
 
 (defun my-uuid-to-pageid (uuid)
-  (let* ((sans-dashes (string-replace "-" "" uuid))
-         (decimal (string-to-number sans-dashes 16)))
-    (if (or (= 0 decimal) (/= 32 (length sans-dashes)))
+  (let* ((hexa (string-trim (string-replace "-" "" uuid)))
+         (decimal (string-to-number hexa 16)))
+    (if (or (= 0 decimal) (/= 32 (length hexa)))
         (error "String should be a valid UUID 36 chars long: %s" uuid)
-      (substring (my-int-to-consonants decimal 4) -4))))
+      (substring (my-int-to-consonants decimal 5) -5))))
 
 ;; Inspired by these results
 ;; (ceiling (log 9999 10))
@@ -353,6 +370,10 @@ asynchronously so you can do something else."
 ;; REVIEW: this version uses the upstream `org-roam-node-slug' -- and should
 ;; cope well with overrides on that method
 (defun my-rename-roam-file-by-title (&optional path)
+  "Rename file in current buffer, based on its Org
+#+title property.
+
+Can also take a file PATH instead of current buffer."
   (interactive)
   (unless path
     (setq path (buffer-file-name)))
@@ -394,6 +415,10 @@ asynchronously so you can do something else."
 ;; NOTE: not used automatically in my publish process, I just use manually
 ;; sometimes
 (defun my-rename-roam-file-by-title (&optional path)
+  "Rename file in current buffer, based on its Org
+#+title property.
+
+Can also take a file PATH instead of current buffer."
   (interactive)
   (unless path
     (setq path (buffer-file-name)))
@@ -550,18 +575,18 @@ The prescribed way to use this function is:
 ;; bloggable
 (defmacro my-hook-once (hook &rest body)
   "Add temporary actions to HOOK to run only once.
-BODY is wrapped in a function run the next time HOOK is
-triggered, and the function removes itself from HOOK before
-executing BODY."
+BODY is wrapped in a function run the next time the hook is
+triggered, whereupon the function removes itself from the hook.
+
+It gets a DEPTH of 95, see `add-hook'."
   (declare (indent defun))
   (let ((funcname (cl-gensym)))
     `(add-hook
       ,hook
       (defun ,funcname (&rest _)
         (remove-hook ,hook #',funcname)
-        ;; (fmakunbound ',funcname)
-        ;; (unintern (symbol-name ',funcname))
-        ,@body))))
+        ,@body)
+      95)))
 
 (defconst my--ignore-keys-regexp
   (regexp-opt '("mouse" "remap" "scroll-bar" "select" "switch" "help" "state"

@@ -1,131 +1,146 @@
 ;; -*- no-byte-compile: t; -*-
 
-;; Need for init
-
+;; Need during init
 (package! named-timer)
-(package! l) ;; anonymous fn literal: (l'concat %) is (lambda (%) (concat %))
+(package! l) ;; fn literal so i can write (l'rainbow-mode 0)
 (package! defrepeater)
 (package! el-patch)
-
-;; Pkg dev stuff
-
-(package! pfuture)
-(package! persist)
-(package! bui)
-(package! ts)
-(package! flycheck-package)
-(package! package-lint)
-(package! buttercup)
-(package! nameless)
-(package! gif-screencast)
-(package! screencast)
-(package! keymap-utils) ;; prefix kmu-*
 (package! compat)
+(package! dash)
 
-;; The rest
-
-(package! org-crypt :disable t) ;; slowwww
-(package! helpful :disable t) ;; slowwww
-(package! doom-snippets :ignore t) ;; disable doom's yasnippets
-
-(package! backup-walker)
-;; (package! eot :recipe (:host github :repo "kmonad/kbd-mode"))
-(package! kbd-mode :recipe (:host github :repo "kmonad/kbd-mode"))
-(package! circadian)
-(package! academic-phrases)
-;; (package! affe)
-(package! apheleia)
-(package! copy-as-format)
-(package! memoize)
-(package! smart-tabs-mode)
-(package! app-launcher :recipe (:host github :repo "SebastienWae/app-launcher"))
-(package! artbollocks-mode)
-;; (package! firefox-bookmarks :recipe (:host github :repo "tangxinfa/firefox-bookmarks"))
-(package! consult-ffdata :recipe (:host github :repo "chen-chao/consult-ffdata"))
-(package! helm-firefox)
-(package! bm)
-(package! calibredb)
-(package! cape)
-(package! corfu)
-(package! embark)
-(package! crux)
-(package! cycle-buffer) ;; last updated 1997, but more useful commands than iflipb
-(package! define-repeat-map :recipe (:host nil :repo "https://tildegit.org/acdw/define-repeat-map.el"))
-(package! director)
-(package! dired-hacks)
-(package! disable-mouse)
-(package! disk-usage)
-(package! dmenu)
-(package! elisp-format)
-(package! emacs-piper :recipe (:host gitlab :repo "howardabrams/emacs-piper"))
-(package! ess-rproj :recipe (:host github :repo "chainsawriot/ess-rproj"))
-(package! esup)
-(package! tempel)
-(package! tempel-collection)
+;; My own packages
 (package! asyncloop :type 'local :recipe (:host github :repo "meedstrom/asyncloop" :depth full))
 (package! massmapper :type 'local :recipe (:host github :repo "meedstrom/massmapper" :depth full))
 (package! deianira :type 'local :recipe (:host github :repo "meedstrom/deianira" :depth full))
 (package! inline-anki :type 'local :recipe (:host github :repo "meedstrom/inline-anki" :depth full))
+(package! eva
+  :type 'local
+  :recipe (:host github
+           :repo "meedstrom/eva"
+           :depth full
+           :files (:defaults "assets" "renv" "*.R" "*.gnuplot")))
+
+;; Disable Doom-installed stuff
+(package! org-crypt :disable t) ;; slowwww
+(package! helpful :disable t) ;; slowwww
+(package! doom-snippets :disable t) ;; doom's yasnippets
+
+;; The rest
+(package! academic-phrases)
+(package! apheleia)
+(package! app-launcher :recipe (:host github :repo "SebastienWae/app-launcher"))
+(package! artbollocks-mode)
+(package! backup-walker)
 (package! beginend)
-;; (package! exwm)
-;; (package! exwm-edit)
-;; (package! exwm-firefox :recipe (:host github :repo "ieure/exwm-firefox"))
-(package! pinboard-popular)
-(package! pinboard)
+(package! bm)
+(package! leaf)
+(package! bui)
+(package! buttercup)
+(package! calibredb)
+(package! cape)
+(package! circadian)
+(package! consult)
+(package! consult-ffdata :recipe (:host github :repo "chen-chao/consult-ffdata"))
+(package! copy-as-format)
+(package! corfu)
+(package! crux)
+(package! cycle-buffer) ;; last updated 1997, but more useful commands than iflipb
+(package! define-repeat-map :recipe (:host nil :repo "https://tildegit.org/acdw/define-repeat-map.el"))
+(package! director)
+(package! dired-git-info)
+(package! dired-hacks)
+(package! dired-hist :recipe (:host github :repo "karthink/dired-hist"))
+(package! disable-mouse)
+(package! disk-usage)
+(package! dmenu)
+(package! doom-themes)
+(package! elisp-format)
+(package! elisp-autofmt)
+(package! emacs-piper :recipe (:host gitlab :repo "howardabrams/emacs-piper"))
+(package! embark)
+(package! ess-rproj :recipe (:host github :repo "chainsawriot/ess-rproj"))
+(package! esup)
+(package! firefox-bookmarks :recipe (:host github :repo "tangxinfa/firefox-bookmarks"))
+(package! flycheck-package)
 (package! form-feed)
 (package! gif-screencast)
 (package! git-messenger)
 (package! git-timemachine)
 (package! goggles)
-;; (package! golden-ratio)
 (package! hacker-typer)
-;; (package! helm-selector)
+(package! helm-firefox)
 (package! help-find)
+;; (package! hyperbole)
 (package! iedit)
 (package! iflipb) ;; vs cycle-buffer?
 (package! iscroll)
-;; (package! key-assist)
-(package! key-chord)
+(package! kbd-mode :recipe (:host github :repo "kmonad/kbd-mode"))
+(package! keymap-utils) ;; prefix kmu-*
+(package! mastodon)
 (package! mediawiki)
+(package! memoize)
 (package! mw-thesaurus)
-(package! dired-git-info)
-(package! doom-themes)
-;; (package! ox-rss)
-;; (package! nov)
+(package! nameless)
 (package! objed) ;; for objed-ipipe
-;; (package! org-drill)
-;; (package! org-recent-headings)
-;; (package! org-roam-bibtex) ;; yes still relevant for org 9.5
-;; (package! org-roam-ui)
-;; (package! org-tanglesync)
+(package! package-lint)
 (package! peep-dired)
+(package! persist)
+(package! pfuture)
+(package! pinboard)
+(package! pinboard-popular)
 (package! prism)
+(package! screencast)
 (package! shelldon)
 (package! sicp)
-(package! stan-mode)
-(package! sway)
+(package! smart-tabs-mode)
+(package! ef-themes)
+(package! lem)
+(package! ement)
+(package! snitch)
+(package! snow)
+(package! tempel)
+(package! tempel-collection)
+(package! ts)
+(package! unpackaged :recipe (:host github :repo "alphapapa/unpackaged.el"))
 (package! vc-msg)
 (package! vimgolf)
 (package! visual-regexp)
 (package! wgrep)
 (package! xr)
-(package! dired-hist :recipe (:host github :repo "karthink/dired-hist"))
-(package! consult)
 
-;; (package! which-key :ignore t)
-;; (package! github-review :ignore t) ;; causes errors
-
+;; Org
 (package! vulpea)
 (package! org-anki)
 (package! org-roam)
 (package! org-transclusion)
 (package! htmlize)
+(package! delve :recipe (:host github :repo "publicimageltd/delve"))
+;; (package! org-recent-headings)
+;; (package! org-roam-bibtex) ;; yes still relevant for org 9.5
+;; (package! org-roam-ui)
+;; (package! org-tanglesync)
+;; (package! ox-rss)
 
+;; Minimalist modelines that merge with echo area
+(package! awesome-tray :recipe (:host github :repo "manateelazycat/awesome-tray"))
+;; (package! maple-minibuffer :recipe (:host github :repo "honmaple/emacs-maple-minibuffer"))
+;; (package! mini-modeline)
+;; (package! feebleline)
+
+;; (package! sway)
+;; (package! eot :recipe (:host github :repo ""))
+;; (package! affe)
+;; (package! exwm)
+;; (package! exwm-edit)
+;; (package! exwm-firefox :recipe (:host github :repo "ieure/exwm-firefox"))
+;; (package! golden-ratio)
+;; (package! helm-selector)
+;; (package! key-assist)
+;; (package! nov)
 ;; (package! popper)
 ;; (package! beancount :recipe (:host github :repo "cnsunyour/beancount.el"))
 ;; (package! forge)
 ;; (package! magit)
-
 ;; (package! repeaters :recipe (:host github :repo "mmarshall540/repeaters"))
 ;; (package! xah-elisp-mode) ;; try xah-elisp-prettify-root-sexp
 ;; (package! subed :recipe (:host github :repo "rndusr/subed"))
@@ -134,7 +149,6 @@
 ;; (package! frames-only-mode)
 ;; (package! frame-mode)
 ;; (package! fullframe)
-;;
 ;; (package! mini-frame)
 ;; (package! cdlatex)
 ;; (package! docker-tramp)
@@ -144,17 +158,8 @@
 ;; (package! helm-navi)
 ;; (package! helm-org-recent-headings)
 ;; (package! literate-calc-mode)
-;; (package! matrix-client)
-;; (package! mu4e-dashboard)
 ;; (package! prodigy)
-;; (package! unpackaged :recipe (:host github :repo "alphapapa/unpackaged.el"))
 ;; (package! weechat)
-
-(package! eva
-  :recipe (:host github
-           :repo "meedstrom/eva"
-           :depth full
-           :files (:defaults "assets" "renv" "*.R" "*.gnuplot")))
 
 ;;(package! taxy
 ;;  :recipe (:host github
@@ -166,20 +171,10 @@
 ;; (package! org-timeline)
 ;; (package! embrace)
 ;; (package! pulseaudio-control)
-(package! delve :recipe (:host github :repo "publicimageltd/delve"))
-(package! hyperbole)
 ;; (package! suggest)
 ;; (package! osm)
 ;; (package! transmission)
 ;; (package! trashed)
-(package! snitch)
 ;; (package! eshell-prompt-extras)
 ;; (package! navi-mode)
-(package! snow)
 ;; (package! sx)
-
-;; Minimalist modelines that merge with echo area
-;; (package! maple-minibuffer :recipe (:host github :repo "honmaple/emacs-maple-minibuffer"))
-;; (package! mini-modeline)
-;; (package! feebleline)
-(package! awesome-tray :recipe (:host github :repo "manateelazycat/awesome-tray"))

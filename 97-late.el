@@ -38,47 +38,19 @@
 (display-battery-mode)
 
 ;; From reading Emacs 29 news
-;; - image-dired is faster now
-;; - image-dired slideshow on S
-;; - in image-dired, marking an image in the display buffer shows the next
-;;   image
-;; - new hotkeys in help buffers n(next) p(prev) e(edit)
-;; - leuven-dark
-;; - describe-buffer-bindings no longer prints "Prefix Command"
-;; - new fn: setopt (like setq!/setc/csetq)
-;; - new fn: buffer-match-p and match-buffers
-;; - new fn: key-valid-p
-;; - new fn: key-parse that always returns vector output unlike kbd, but
-;;   (key-parse "<TAB>") and (key-parse "TAB") still differ
-;; - keymap-set instsead of define-key
-;; - keymap-lookup instead of lookup-key and key-binding
-;; - new fn: define-keymap and defvar-keymap
-;; - M-x shortdoc RET keymaps RET
-;; - new fn: org-get-title
+;; https://edstrom.dev/tsdt/notable-emacs-news/
 (when (version<= "29" emacs-version)
   (pixel-scroll-precision-mode)
   ;; (add-to-list 'default-frame-alist '(alpha-background . 90))
   ;; (setopt mouse-drag-and-drop-region-cross-program t)
+  ;; (add-hook 'org-cycle-hook #'org-cycle-display-inline-images)
   (setopt show-paren-context-when-offscreen t)
   (setopt help-enable-variable-value-editing t)
-  (setopt proced-enable-color-flag t)
-  ;; (add-hook 'org-cycle-hook #'org-cycle-display-inline-images)
-  )
-;; From reading Emacs 28 news
-;; - C-x x a new keymap for "buffer actions"
-;; - eval-last-sexp now actually does re-eval defvars!
-;; - C-x 5 5: other-frame-prefix!  no more multitude of *-other-frame.  is
-;;   there an embark "postfix" instead of prefix?
-;; - C-x t t: similar to above but for other tab
-;; - describe-keymap useful for e.g. image-dired-map or ess-mode-map
-;; - toggle-truncate-lines now disables visual-line-mode
-;; - M-o prefix gone
-;; - 'shell' now uses 'pop-to-buffer-same-window' consistent w/ eshell
-;; - eshell-mode-map works normally
+  (setopt proced-enable-color-flag t))
 (when (version<= "28" emacs-version)
   (context-menu-mode)
   (repeat-mode)
-  ;; (setq use-short-answers t)
+  ;; (setq use-short-answers t) ;; doom sets
   (setq abbrev-suggest t))
 
 ;; Don't filter the buffer list when cycling.  How do these people actually find
@@ -99,6 +71,7 @@
 (fset 'bury-buffer #'ignore)
 (fset 'bury-buffer-internal #'ignore)
 
+(setopt backtrace-on-redisplay-error t)
 (setopt helpful-max-buffers nil) ;; what's the point of killing buffers
 (setopt iflipb-wrap-around t)
 (setopt ranger-map-style 'emacs)
@@ -118,23 +91,6 @@
           ("WikEmacs" "http://wikemacs.org/" "username" "password" nil "Main Page")))
 
 (setopt mediawiki-site-default "WikEmacs")
-
-(defun my-anki-webpage-field ()
-  (cl-letf ((org-mode-hook nil))
-    (org-mode))
-  (when-let* ((uuid (progn (goto-char (point-min)) (org-id-get)))
-              (pageid (substring (my-uuid-to-base62 uuid) -4))
-              (url (concat "https://edstrom.dev/" pageid)))
-    (concat "<a href=\"" url "\">" url "</a>")))
-
-(defun my-anki-webpage-field-fast ()
-  (save-excursion
-    (goto-char (point-min))
-    (re-search-forward ":ID: +")
-    (when-let* ((uuid (buffer-substring (point) (line-end-position)))
-                (pageid (substring (my-uuid-to-base62 uuid) -4))
-                (url (concat "https://edstrom.dev/" pageid)))
-      (concat "<a href=\"" url "\">" url "</a>"))))
 
 (use-package! inline-anki
   :config
@@ -170,9 +126,9 @@
   :hook ((text-mode elfeed-show-mode eww-mode shr-mode) . iscroll-mode))
 
 (use-package! iedit
-  :init
   ;; default is C-;
-  (setq iedit-toggle-key-default nil))
+  :init (setq iedit-toggle-key-default nil)
+  :commands iedit-mode)
 
 (use-package! objed
   :commands objed-ipipe)

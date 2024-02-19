@@ -289,7 +289,12 @@ will not modify the source file."
           (if (bobp)
               (progn
                 (goto-char (point-max))
-                (insert "\n* What links here  :backlinks:"))
+                (insert "\n* What links here  :backlinks:")
+                ;; If it's a tag-page, make it clear that it can be used by
+                ;; link aggregators e.g.  IDK what something like Planet
+                ;; Emacslife is looking for, I'll get around to it later.
+                (when (string-prefix-p "#" (org-roam-node-title this-node))
+                  (insert "\n (Sorted by recent first)")))
             (org-insert-subheading nil)
             (insert "What links here"))
           ;; reverse alphabetic sort (z-a) so that newest daily-pages on top
@@ -510,12 +515,10 @@ will not modify the source file."
                               (when (search-forward "\n#+subtitle: " nil t)
                                 (buffer-substring (point) (line-end-position)))))
                (created-fancy
-                (format-time-string (car org-timestamp-custom-formats)
-                                    (date-to-time created)))
+                (format-time-string (car org-timestamp-custom-formats) (date-to-time created)))
                (updated-fancy
                 (when updated
-                  (format-time-string (car org-timestamp-custom-formats)
-                                      (date-to-time updated))))
+                  (format-time-string (car org-timestamp-custom-formats) (date-to-time updated))))
                (links 0)
                (m1 (make-marker))
                (content-start (make-marker))
@@ -690,6 +693,7 @@ will not modify the source file."
             ;; might not want to transform a double-dash:
             ;; - css variables in code blocks (i have none)
             ;; - a code block showing this very code (i have none)
+            ;; - FIXME a code block of elisp with private--vars
             (goto-char (point-min))
             (while (search-forward "--" nil t)
               (unless (looking-at-p "-")

@@ -2,7 +2,6 @@
 
 (doom! :completion
        (vertico +icons)
-       ;; (helm +icons)
        company
 
        :ui
@@ -18,27 +17,23 @@
 
        :lang
        emacs-lisp
-       common-lisp
        data
        (ess +tree-sitter +stan)
-       nix
        (go +tree-sitter)
        (web +tree-sitter)
        (javascript +tree-sitter)
-       rust
        json
-       ledger
        (org +dragndrop +roam2)
        (sh +fish)
-       (yaml +tree-sitter)
 
        :tools
        tree-sitter
        (magit +forge)
        pdf
 
-       :email
-       (mu4e +org)
+       :app
+       irc
+       emms
 
-       :config
-       (default +bindings +smartparens))
+       :email mu4e
+       :config (default +bindings +smartparens))
