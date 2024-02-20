@@ -611,13 +611,11 @@ will not modify the source file."
               (goto-char (point-min))
               ;; Give the ToC div a class, and remove its pointless inner div
               (when (re-search-forward "<div id=\"table-of-contents\".*?>" nil t)
-                (replace-match "<nav><details class=\"toc\"><summary>")
-                (search-forward "</h2>")
-                (insert "</summary>")
+                (replace-match "<nav class=\"toc\">")
                 (re-search-forward "<div id=\"text-table-of-contents\".*?>")
                 (replace-match "")
                 (search-forward "</div>\n</div>")
-                (replace-match "</details></nav>"))
+                (replace-match "</nav>"))
               ;; First strip all non-"outline" div tags and their
               ;; hard-to-identify anonymous closing tags.  That way we'll know
               ;; the only closing tags that remain will be the correct ones to
@@ -641,18 +639,20 @@ will not modify the source file."
               ;; class="tag"><span class="stub">stub</span></span>.)
               (goto-char (point-min))
               (while (re-search-forward "<div .*?>" nil t)
-                (replace-match "<details open><summary>")
+                (replace-match "<section>")
                 (let ((inside-div-pos (+ 8 (line-beginning-position))))
                   (forward-line)
+                  ;; but why did I want to grab the tag classes??
                   (when (search-forward "<span class=\"tag\">" (line-end-position) t)
                     (re-search-forward "class=\".+?\"")
                     (goto-char inside-div-pos)
                     (insert " " (match-string 0))))
                 (re-search-forward "</h[123456]>")
-                (insert "</summary>"))
+                ;; Placeholder; here I'll be able to pop in an accordion arrow
+                )
               (goto-char (point-min))
               (while (search-forward "</div>" nil t)
-                (replace-match "</details>")))
+                (replace-match "</section>")))
 
             ;; 26
             ;; MUST BEFORE 30
@@ -663,7 +663,9 @@ will not modify the source file."
                                  count t))
 
             ;; 30
-            ;; Add 🔗links to headings that have a permanent id
+            ;; Make headings link to themselves
+            ;; TODO: Try with org-html-self-link-headlines. If that works,
+            ;; remember to fix 26.
             (goto-char (marker-position content-start))
             (while (re-search-forward (rx "<h" (group (any "23456"))) nil t)
               (when-let ((digit (match-string 1))
@@ -678,8 +680,9 @@ will not modify the source file."
                                       (match-string 0)))))
                          (is-deterministic (not (string-prefix-p "org" id))))
                 (search-forward (concat "</h" digit ">"))
-                (goto-char (match-beginning 0))
-                (insert (concat "<a class=\"easylink\" href=\"#" id "\"> 🔗</a>"))))
+                (insert "</a>")
+                (goto-char beg)
+                (insert (concat "<a class=\"selflink\" href=\"#" id "\">"))))
 
             ;; 44
             ;; Org-export doesn't replace triple-dash in all situations (like in
