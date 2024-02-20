@@ -1,5 +1,6 @@
 ;; -*- lexical-binding: t; -*-
-;; Copyright (C) 2020-2023 Martin Edström
+
+;; Copyright (C) 2020-2024 Martin Edström
 ;;
 ;; This program is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -15,6 +16,7 @@
 ;; along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 
+;; best one so far
 (use-package! awesome-tray
   :config
   ;; (setq awesome-tray-date-format "%H:%M")
@@ -28,7 +30,7 @@
   ;;         (awesome-tray-disable))))
 
   ;; (setq awesome-tray-active-modules '("location" "belong" "file-path" "battery"))
-  (setq awesome-tray-active-modules '("location" "belong" "file-path"))
+  (setq awesome-tray-active-modules '("battery" "location" "belong" "file-path"))
   (setq awesome-tray-essential-modules nil)
 
   ;; (setq awesome-tray-refresh-idle-delay nil)
@@ -60,9 +62,7 @@
   (add-hook 'emacs-startup-hook (lambda ()
                                   (set-face-foreground 'mode-line-inactive "gray")
                                   (set-face-background 'mode-line-inactive "gray"))
-            50)
-  )
-
+            50))
 
 (setopt mode-line-percent-position nil)
 (setopt mode-line-modes nil)

@@ -1,6 +1,6 @@
 ;; -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2023 Martin Edström
+;; Copyright (C) 2023-2024 Martin Edström
 ;;
 ;; This program is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -20,9 +20,9 @@
 
 ;; Keep in mind that case-fold-search doesn't affect `equal', and therefore
 ;; doesn't affect list-comparisons such as `cl-intersection'!
-(defvar my-extinct-tags '("drill"  "fc" "anki" "partner" "friends-eyes" "therapist" "eyes-partner" "eyes-therapist" "eyes-diana" "eyes-friend"))
-(defvar my-tags-to-avoid-uploading (append my-extinct-tags '("noexport" "archive" "private" "censor")))
-(defvar my-tags-for-hiding '("eyes_therapist" "eyes_partner" "eyes_friend"))
+(defvar my-deprecated-tags '("drill"  "fc" "anki" "partner" "friends-eyes" "therapist" "eyes-partner" "eyes-therapist" "eyes-diana" "eyes-friend" "eyes_therapist" "eyes_partner" "eyes_friend"))
+(defvar my-tags-to-avoid-uploading (append my-deprecated-tags '("noexport" "archive" "private" "censor")))
+(defvar my-tags-for-hiding '("gri" "shrink" "privy" "lover" "fren"))
 
 (defvar my-refs-cache nil)
 
@@ -65,7 +65,7 @@
            :publishing-directory "/home/kept/pub/attachments/"
            :publishing-function org-publish-attachment)))
 
-;; Override so the special link type info: won't get exported to a meaningless
+;; Override so the special link type info: won't get exported to an empty
 ;; <a href>.  I may need more overrides like this for each special link type,
 ;; see `org-link-parameters'.
 (require 'ol-info)
@@ -455,7 +455,7 @@ will not modify the source file."
       (warn "CREATION-DATE MISSING: %s" filename))
      ((not id)
       (warn "ID MISSING: %s" filename))
-     ((-intersection tags my-extinct-tags)
+     ((-intersection tags my-deprecated-tags)
       (warn "OUTDATED TAG FOUND: %s" filename))
      ((-intersection tags my-tags-to-avoid-uploading)
       (message "Found exclude-tag, excluding: %s" filename))
@@ -465,7 +465,7 @@ will not modify the source file."
       (warn "UPPERCASE IN TAG FOUND: %s" filename))
 
      ;; OK, export
-     (t
+     ((-intersection tags (cons "pub" my-tags-for-hiding))
       (with-current-buffer (or (find-buffer-visiting filename)
                                (find-file-noselect filename))
         ;; The original export-function.  By Thy might, Bastien, Carsten &c.

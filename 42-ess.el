@@ -1,4 +1,5 @@
-;; -*- lexical-binding: t; -*-
+;; ESS (Emacs Speaks Statistics) config -*- lexical-binding: t; -*-
+
 ;; Copyright (C) 2020-2024 Martin Edström
 ;;
 ;; This program is free software: you can redistribute it and/or modify

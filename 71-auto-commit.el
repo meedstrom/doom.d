@@ -1,6 +1,6 @@
 ;; -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2023 Martin Edström
+;; Copyright (C) 2023-2024 Martin Edström
 ;;
 ;; This program is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -15,11 +15,10 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-
-;; Which directories do you want to auto-commit?
 (defvar my-auto-commit-dirs
   '("/home/kept/roam/"
-    "/home/me/.doom.d/"))
+    "/home/me/.doom.d/")
+  "Which directories do you want to auto-commit?")
 
 (defun my-auto-commit-maybe ()
   "Create a new commit if the last was on a different day.

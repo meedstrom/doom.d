@@ -1,4 +1,4 @@
-;; my-lib.el -- a collection of defuns -*- lexical-binding: t; -*-
+;; A collection of defuns -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2019-2024 Martin Edström
 ;; This program is free software: you can redistribute it and/or modify
@@ -28,6 +28,30 @@
 (autoload #'tramp-time-diff  "tramp")
 (autoload #'objed-ipipe "objed")
 (autoload #'piper "piper")
+
+(defun my-remove-pub-tag-if-noexport ()
+  (cl-loop
+   for file in (directory-files-recursively "/home/kept/roam/" "\\.org$" t)
+   do (progn
+        (find-file file)
+        (goto-char (point-min))
+        (let ((tags (org-get-tags)))
+          (and (-intersection tags (append my-tags-to-avoid-uploading
+                                           my-tags-for-hiding))
+               (member "pub" tags)
+               (org-roam-node-at-point)
+               (org-roam-tag-remove '("pub")))))))
+
+(defun my-add-pub-tag-if-not-noexport ()
+  (cl-loop
+   for file in (directory-files-recursively "/home/kept/roam/" "\\.org$" t)
+   do (progn
+        (find-file file)
+        (goto-char (point-min))
+        (unless (-intersection (org-get-tags) (append my-tags-to-avoid-uploading
+                                                      my-tags-for-hiding))
+          (when (org-roam-node-at-point)
+            (org-roam-tag-add '("pub")))))))
 
 (defun my-anki-webpage-field ()
   (cl-letf ((org-mode-hook nil))

@@ -1,6 +1,7 @@
 .eshell-*
-02-lib-external.el
-06-private.el
+/*-lib-external.el
+/*-private.el
+/*-org-roam-logseq.el
 *.swp
 *~
 *#

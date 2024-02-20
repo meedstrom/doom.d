@@ -1,5 +1,6 @@
 ;; -*- lexical-binding: t; -*-
-;; Copyright (C) 2020-2023 Martin Edström
+
+;; Copyright (C) 2020-2024 Martin Edström
 ;;
 ;; This program is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -22,22 +23,22 @@
                          (member ".git" (directory-files x))))
                   ;; List of my git repos
                   (apply #'append
-                   ;; Specific dirs
+                         ;; Specific dirs
                          (list "~/doomemacs/.local/straight/repos/eva/"
                                "~/doomemacs/.local/straight/repos/deianira/"
                                "~/doomemacs/.local/straight/repos/chain/"
                                )
-                   ;; Recursive (many subdirs of these are git repos)
-                   (-keep (lambda (path)
-                            (if (file-directory-p path)
-                                (directory-files path t)
-                              (warn "Not found: %s" path)
-                              nil))
-                          '("/home/kept/"
-                            "/home/kept/emacs/"
-                            "/home/kept/code/"
-                            "/home/kept/archive/uni/"
-                            )))))
+                         ;; Recursive (many subdirs of these are git repos)
+                         (-keep (lambda (path)
+                                  (if (file-directory-p path)
+                                      (directory-files path t)
+                                    (warn "Not found: %s" path)
+                                    nil))
+                                '("/home/kept/"
+                                  "/home/kept/emacs/"
+                                  "/home/kept/code/"
+                                  "/home/kept/archive/uni/"
+                                  )))))
 
 ;; duplicate repos (i make them sometimes)
 (setq my-all-git-repos
@@ -146,11 +147,11 @@
           :command (concat "git rev-list --all --pretty=raw > " tmpdir basename)
           :sentinel
           `(lambda ()
-            (unless (= 0 (doom-file-size ,(concat tmpdir basename)))
-              (pfuture-new "memacs_git" "-f" ,(concat tmpdir basename) "-o"
-                           ,(concat my-archive-dir basename ".org_archive"))
-              (f-touch ,(concat my-archive-dir basename ".org"))
-                (cl-pushnew ,(concat my-archive-dir basename ".org")
-                            org-agenda-files))))))))
+             (unless (= 0 (doom-file-size ,(concat tmpdir basename)))
+               (pfuture-new "memacs_git" "-f" ,(concat tmpdir basename) "-o"
+                            ,(concat my-archive-dir basename ".org_archive"))
+               (f-touch ,(concat my-archive-dir basename ".org"))
+               (cl-pushnew ,(concat my-archive-dir basename ".org")
+                           org-agenda-files))))))))
   ;; Re-run myself in an hour.
   (run-with-timer (* 60 60) nil #'my-memacs-scan-git))

@@ -1,4 +1,5 @@
-;; -*- lexical-binding: t; -*-
+;; Key bindings -*- lexical-binding: t; -*-
+
 ;; Copyright (C) 2020-2024 Martin Edström
 ;;
 ;; This program is free software: you can redistribute it and/or modify
@@ -390,8 +391,10 @@
 
 (after! embark
   (keymap-set embark-general-map "M-o"     #'hkey-either)
-  (keymap-set embark-general-map "C-;"     #'hkey-either)
-  )
+  (keymap-set embark-general-map "C-;"     #'hkey-either))
+
+(after! grep
+  (keymap-set grep-mode-map "C-x C-q" #'wgrep-change-to-wgrep-mode))
 
 (after! view
   (keymap-set view-mode-map "e" #'my-view-exit-and-reopen-as-root))

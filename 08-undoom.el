@@ -1,5 +1,4 @@
-;; -*- lexical-binding: t; -*-
-;; In this file are some reversions of Doom defaults.
+;; Reverse some Doom Emacs defaults -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2023-2024 Martin Edström
 ;;
@@ -25,7 +24,7 @@
             (run-hooks 'doom-first-buffer-hook)
             (run-hooks 'doom-first-file-hook)))
 
-;; I want readable backup names since I rename files all the time.
+;; I want readable backup names since I rename files and dirs all the time.
 (advice-remove #'make-backup-file-name-1 #'doom-make-hashed-backup-file-name-a)
 
 ;; I find customize a handy exploration tool
@@ -36,7 +35,8 @@
 (put 'customize-variable 'disabled nil)
 
 ;; Doom puts eww-bookmarks in doomemacs/.local/cache, which I find dangerous
-;; since I may unthinkingly wipe it.  Put it where I won't delete it.
+;; since I may unthinkingly wipe it.  Put it where I won't delete it: my own
+;; .doom.d.  Do same for abbrev.
 (setopt eww-bookmarks-directory doom-user-dir)
 (setopt abbrev-file-name (expand-file-name "abbrevs" doom-user-dir))
 
@@ -51,14 +51,14 @@
   ;; Having exactly two states makes for comfy toggling.
   (setopt org-todo-keywords '((sequence "TODO" "DONE"))))
 
-;; Undo a Doom setting that slows saving on large buffers
-;; FIXME: doesn't work, so just disable org-crypt in packages.el.
-(add-hook 'org-mode-hook
-          (defun my-remove-crypt-hook ()
-            (remove-hook 'before-save-hook 'org-encrypt-entries))
-          99)
+;; org-crypt really slows saving on large Org buffers
+;; NOTE: Doesn't work, so just disabled org-crypt in packages.el.
+;; (add-hook 'org-mode-hook
+;;           (defun my-remove-crypt-hook ()
+;;             (remove-hook 'before-save-hook 'org-encrypt-entries))
+;;           98)
 
-;; I find this doom-docs-mode just gets in my way.  Nice idea in principle.
+;; I find this doom-docs-mode just gets in my way.  But nice idea.
 (fset 'doom-docs-org-mode #'ignore)
 (fset 'doom-docs--toggle-read-only-h #'ignore)
 

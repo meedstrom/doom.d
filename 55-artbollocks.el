@@ -1,5 +1,6 @@
 ;; -*- lexical-binding: t; -*-
-;; Copyright (C) 2020-2023 Martin Edström
+
+;; Copyright (C) 2020-2024 Martin Edström
 ;;
 ;; This program is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -109,14 +110,14 @@
 ;;; Other English aspects
 
 (defconst my-subs-for-think '("conclude" "define" "expect" "generalize" "hear"
-                           "observe" "opine" "postulate" "state" "experience"
-                           "remember" "particularize" "deduce" "infer" "induce")
+                              "observe" "opine" "postulate" "state" "experience"
+                              "remember" "particularize" "deduce" "infer" "induce")
   "Specific evidentials, because \"think\" is overloaded.
 See also:
 https://lojban.org/publications/cll/cll_v1.1_xhtml-section-chunks/section-evidentials.html")
 
 (defconst my-subs-for-copula '("exist" "remain" "taste" "feel" "smell" "grow" "stay"
-                            "turn" "look")
+                               "turn" "look")
   "See English Prime: https://en.wikipedia.org/wiki/E-Prime")
 
 (defconst my-latinate-native-alist
