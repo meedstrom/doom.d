@@ -127,10 +127,10 @@ want in my main Emacs."
   ;; though I also set "" in the `org-publish-org-to' call.
   (setopt org-html-extension "")
   (setopt org-html-checkbox-type 'unicode) ;; how will it look in eww? test it.
-  ;; (setopt org-html-self-link-headlines t)
+  (setopt org-html-self-link-headlines t)
   (setopt org-html-html5-fancy t)
   ;; why does it skip environments like \begin{align}?
-  (setopt org-html-with-latex 'verbatim)
+  ;; (setopt org-html-with-latex 'verbatim)
   (setopt org-html-with-latex 'html) ;; use `org-latex-to-html-convert-command'
   (setopt org-latex-to-html-convert-command "node /home/kept/pub/texToMathML.js '%i'")
   (setopt case-fold-search t) ;; for all the searches in `my-publish-to-blog'
@@ -416,7 +416,7 @@ will not modify the source file."
 (defun my-publish-to-blog (plist filename pub-dir)
   (redisplay) ;; I like watching programs work    
   ;; Fast early check that avoids loading org-mode
-  (let (title id created tags)
+  (let (title id created tags link-in-heading)
     (with-temp-buffer
       (insert-file-contents filename)
       (forward-line 10)  ;; should be enough to grab the metadata
@@ -445,8 +445,15 @@ will not modify the source file."
                                    (string-trim)
                                    (string-split ":" t)
                                    (sort #'string-lessp))
-                   '(""))))
-    
+                   '("")))
+
+      ;; Links inside headings not allowed now that I use
+      ;; `org-html-self-link-headlines'.
+      (goto-char (point-min))
+      (while (re-search-forward "^\\*" nil t)
+        (when (search-forward "[[" (line-end-position) t)
+          (setq link-in-heading t))))
+
     (cond
      ;; Skip exporting if we won't use the result
      ((not title)
@@ -457,21 +464,26 @@ will not modify the source file."
       (warn "ID MISSING: %s" filename))
      ((-intersection tags my-deprecated-tags)
       (warn "OUTDATED TAG FOUND: %s" filename))
+     ((not (-intersection tags (cons "pub" my-tags-for-hiding)))
+      (message "Not selected for publishing"))
      ((-intersection tags my-tags-to-avoid-uploading)
       (message "Found exclude-tag, excluding: %s" filename))
      ;; ensure lowercase everywhere so `-intersection' works
      ((let ((case-fold-search nil))
         (string-match-p "[[:upper:]]" (string-join tags)))
       (warn "UPPERCASE IN TAG FOUND: %s" filename))
+     (link-in-heading
+      (warn "LINK INSIDE A HEADING: %s" filename))
 
      ;; OK, export
-     ((-intersection tags (cons "pub" my-tags-for-hiding))
+     (t
       (with-current-buffer (or (find-buffer-visiting filename)
                                (find-file-noselect filename))
-        ;; The original export-function.  By Thy might, Bastien, Carsten &c.
-        (org-publish-org-to 'html filename "" plist pub-dir)
+        (let ((org-html-self-link-headlines (not (member "logseq" tags))))
+          ;; The original export-function.  By thy might, Bastien/Carsten/&c.
+          (org-publish-org-to 'html filename "" plist pub-dir))
 
-        ;; Customize the resulting HTML file and wrap it in a JSON object
+        ;; Customize the resulting HTML file and pack it into a JSON object
         (let* ((output-path (org-export-output-file-name "" nil pub-dir))
                (slug (string-replace pub-dir "" output-path))
                ;; NOTE: All pages get a unique permalink, even daily-pages
@@ -606,7 +618,6 @@ will not modify the source file."
                 (insert (my-strip-hashlink-if-same-as-permalink link))))
 
             ;; 16
-            ;; Implement collapsible sections
             (unless (member "logseq" tags)
               (goto-char (point-min))
               ;; Give the ToC div a class, and remove its pointless inner div
@@ -619,7 +630,7 @@ will not modify the source file."
               ;; First strip all non-"outline" div tags and their
               ;; hard-to-identify anonymous closing tags.  That way we'll know
               ;; the only closing tags that remain will be the correct ones to
-              ;; turn into </details> tags.
+              ;; turn into </section> tags.
               (while (search-forward "<div" nil t)
                 (let ((beg (match-beginning 0)))
                   (unless (re-search-forward " id=\".*?\" class=\"outline-[123456]\"" (line-end-position) t)
@@ -630,59 +641,32 @@ will not modify the source file."
                     (search-forward "</div>")
                     (replace-match "")
                     (goto-char (1+ beg)))))
-              ;; Now turn all remaining <div> into <details>
-              ;; Also give each <details> tag a class based on the (first) tag
-              ;; in the heading.
-
-              ;; (Background info: If a headline is tagged with e.g. :stub:, the
-              ;; h2 tag will end in the objet d'art &nbsp;&nbsp;&nbsp;<span
-              ;; class="tag"><span class="stub">stub</span></span>.)
+              ;; Now turn all remaining <div> into <section>
               (goto-char (point-min))
-              (while (re-search-forward "<div .*?>" nil t)
-                (replace-match "<section>")
-                (let ((inside-div-pos (+ 8 (line-beginning-position))))
-                  (forward-line)
-                  ;; but why did I want to grab the tag classes??
-                  (when (search-forward "<span class=\"tag\">" (line-end-position) t)
-                    (re-search-forward "class=\".+?\"")
-                    (goto-char inside-div-pos)
-                    (insert " " (match-string 0))))
-                (re-search-forward "</h[123456]>")
-                ;; Placeholder; here I'll be able to pop in an accordion arrow
-                )
+              (while (re-search-forward "<div +?class=\"outline-\\([123456]\\).*?>" nil t)
+                (if (evenp (string-to-number (match-string 1)))
+                    (replace-match "<section class=\"even\">")
+                  (replace-match "<section class=\"odd\">")))
               (goto-char (point-min))
               (while (search-forward "</div>" nil t)
                 (replace-match "</section>")))
 
             ;; 26
-            ;; MUST BEFORE 30
-            ;; Count # of total links (except links to external sites)
+            ;; Count # of total links
             (goto-char (marker-position content-start))
             (setq links (cl-loop while (re-search-forward "<a .*?href=." nil t)
+                                 ;; Don't count external links
                                  unless (looking-at-p "http")
+                                 ;; Don't count headings' self-links
+                                 unless (progn
+                                          (search-forward "</a>")
+                                          (looking-at-p "</h"))
                                  count t))
-
-            ;; 30
-            ;; Make headings link to themselves
-            ;; TODO: Try with org-html-self-link-headlines. If that works,
-            ;; remember to fix 26.
-            (goto-char (marker-position content-start))
-            (while (re-search-forward (rx "<h" (group (any "23456"))) nil t)
-              (when-let ((digit (match-string 1))
-                         (beg (match-beginning 0))
-                         (bound (save-excursion
-                                  (save-match-data
-                                    (search-forward ">"))))
-                         (id (save-excursion
-                               (save-match-data
-                                 (and (search-forward "id=\"" bound t)
-                                      (re-search-forward (rx (* (not "\""))))
-                                      (match-string 0)))))
-                         (is-deterministic (not (string-prefix-p "org" id))))
-                (search-forward (concat "</h" digit ">"))
-                (insert "</a>")
-                (goto-char beg)
-                (insert (concat "<a class=\"selflink\" href=\"#" id "\">"))))
+            ;; Don't count the headings' self-links
+            ;; (goto-char (marker-position content-start))
+            ;; (setq links
+            ;; (- links (cl-loop while (re-search-forward "<h[23456]" nil t)
+            ;; count t)))
 
             ;; 44
             ;; Org-export doesn't replace triple-dash in all situations (like in
@@ -716,6 +700,7 @@ will not modify the source file."
 
             ;; 55
             ;; Wrap all tables for horizontal scrollability
+            ;; I sure hope I don't have HTML code snippets
             (goto-char (marker-position content-start))
             (while (search-forward "<table" nil t)
               (goto-char (match-beginning 0))
