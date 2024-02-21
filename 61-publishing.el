@@ -33,12 +33,15 @@
   (switch-to-buffer "*Messages*") ;; for watching it work
   ;; (split-window) ;; in case the Warnings buffer appears
   (cd "/home/kept/roam") ;; for me to quick-search when an id fails to resolve
+  (mkdir "/tmp/atom-entries" t)
   (org-publish "my-slipbox-blog" t)
   (org-publish "my-slipbox-blog-attachments" t)
   ;; ensure it's gone from recentf so I don't accidentally edit these instead
   ;; of the originals
   (shell-command "rm -rf /tmp/roam")
   (my-check-id-collisions)
+  (my-make-atom-feed "/home/kept/pub/atom.xml"
+                     "/tmp/atom-entries/")
   (f-write (json-encode-alist my-id-old-new-alist)
            'utf-8 "/home/kept/pub/idMappings.json")
   (f-write (json-encode-alist my-heading-locations)
@@ -194,7 +197,7 @@ want in my main Emacs."
             "\n:CREATED:  " (format-time-string "[%F]")
             "\n:END:"
             "\n#+title: Completed tasks"
-            "\n#+filetags: :eyes_friend:"
+            "\n#+filetags: :fren:"
             "\n#+date: " (format-time-string "[%F]")
             "\n#+begin_export html"
             "\n")
@@ -268,42 +271,50 @@ want in my main Emacs."
 (defun my-add-backlinks (&rest _)
   "Add a \"What links here\" subtree at the end.
 Meant to run on `org-export-before-parsing-functions', where it
-will not modify the source file."
+will not modify the source file.
+
+Can probably be tested in a real org buffer... it never occurred
+to me to do that."
   (let ((this-node (ignore-errors (org-roam-node-at-point)))
-        (backlinks nil)
-        (reflinks nil))
+        (linked-nodes nil))
     (when this-node
       (dolist (obj (org-roam-backlinks-get this-node :unique t))
         (let ((node (org-roam-backlink-source-node obj)))
-          (cl-pushnew (cons (org-roam-node-id node)
-                            (org-roam-node-title node))
-                      backlinks)))
+          (unless (member node linked-nodes)
+            (push node linked-nodes))))
       (dolist (obj (org-roam-reflinks-get this-node))
         (let ((node (org-roam-reflink-source-node obj)))
           (unless (equal node this-node)
-            (cl-pushnew (cons (org-roam-node-id node)
-                              (org-roam-node-title node))
-                        reflinks))))
-      (when (or backlinks reflinks)
+            (unless (member node linked-nodes)
+              (push node linked-nodes)))))
+      (when linked-nodes
         (save-excursion 
           (if (bobp)
               (progn
                 (goto-char (point-max))
                 (insert "\n* What links here  :backlinks:")
-                ;; If it's a tag-page, make it clear that it can be used by
-                ;; link aggregators e.g.  IDK what something like Planet
-                ;; Emacslife is looking for, I'll get around to it later.
+                ;; If this page is a pseudo-tag such as #emacs, make it clear
+                ;; that the backlinks can be used by link aggregators.  IDK
+                ;; if something like Planet Emacslife is looking for a
+                ;; programmatic marker or if they just do things manually.
                 (when (string-prefix-p "#" (org-roam-node-title this-node))
                   (insert "\n (Sorted by recent first)")))
             (org-insert-subheading nil)
             (insert "What links here"))
-          ;; reverse alphabetic sort (z-a) so that newest daily-pages on top
-          (dolist (link (--sort (string-lessp (cdr other) (cdr it))
-                                (append backlinks reflinks)))
-            (newline)
-            (insert "- [[id:" (car link) "]["
-                    (replace-regexp-in-string (rx (any "[]")) "" (cdr link))
-                    "]]")))))))
+          ;; sort by creation: newest on top
+          (let ((sorted-nodes
+                 (--sort (string-lessp
+                          (map-elt (org-roam-node-properties other) "CREATED")
+                          (map-elt (org-roam-node-properties it) "CREATED"))
+                         linked-nodes)))
+            (dolist (node sorted-nodes)
+              (newline)
+              (insert
+               "- [[id:"
+               (org-roam-node-id node)
+               "]["
+               (replace-regexp-in-string "[][]" "" (org-roam-node-title node))
+               "]]"))))))))
 
 (defun my-replace-web-links-with-ref-note-links (&rest _)
   "For every URL found in this page, if there exists an Org-roam
@@ -447,12 +458,14 @@ will not modify the source file."
                                    (sort #'string-lessp))
                    '("")))
 
-      ;; Links inside headings not allowed now that I use
-      ;; `org-html-self-link-headlines'.
+      ;; Bc of `org-html-self-link-headlines', disallow links in headings.
       (goto-char (point-min))
-      (while (re-search-forward "^\\*" nil t)
+      (while (re-search-forward "^[[:space:]]*?\\*" nil t)
         (when (search-forward "[[" (line-end-position) t)
-          (setq link-in-heading t))))
+          ;; Some exceptions where it's OK
+          (unless (or (member "logseq" tags)
+                      (re-search-backward "TODO\\|DONE" (line-beginning-position) t)
+                      (warn "LINK INSIDE A HEADING: %s" filename))))))
 
     (cond
      ;; Skip exporting if we won't use the result
@@ -464,16 +477,14 @@ will not modify the source file."
       (warn "ID MISSING: %s" filename))
      ((-intersection tags my-deprecated-tags)
       (warn "OUTDATED TAG FOUND: %s" filename))
-     ((not (-intersection tags (cons "pub" my-tags-for-hiding)))
-      (message "Not selected for publishing"))
      ((-intersection tags my-tags-to-avoid-uploading)
       (message "Found exclude-tag, excluding: %s" filename))
+     ((not (-intersection tags (cons "pub" my-tags-for-hiding)))
+      (message "Not selected for publishing"))
      ;; ensure lowercase everywhere so `-intersection' works
      ((let ((case-fold-search nil))
         (string-match-p "[[:upper:]]" (string-join tags)))
       (warn "UPPERCASE IN TAG FOUND: %s" filename))
-     (link-in-heading
-      (warn "LINK INSIDE A HEADING: %s" filename))
 
      ;; OK, export
      (t
@@ -534,6 +545,7 @@ will not modify the source file."
                (links 0)
                (m1 (make-marker))
                (content-start (make-marker))
+               (content nil)
                (data-for-json nil))
           (with-temp-buffer
 
@@ -643,7 +655,7 @@ will not modify the source file."
                     (goto-char (1+ beg)))))
               ;; Now turn all remaining <div> into <section>
               (goto-char (point-min))
-              (while (re-search-forward "<div +?class=\"outline-\\([123456]\\).*?>" nil t)
+              (while (re-search-forward "<div .*?class=\"outline-\\([123456]\\).*?>" nil t)
                 (if (evenp (string-to-number (match-string 1)))
                     (replace-match "<section class=\"even\">")
                   (replace-match "<section class=\"odd\">")))
@@ -675,7 +687,7 @@ will not modify the source file."
             (goto-char (point-min))
             (while (search-forward "---" nil t)
               (unless (looking-at-p "-")
-                (replace-match "&mdash;")))
+                (replace-match "—")))
             ;; A little more risky but I'm hoping it's fine.  Situations where we
             ;; might not want to transform a double-dash:
             ;; - css variables in code blocks (i have none)
@@ -684,7 +696,9 @@ will not modify the source file."
             (goto-char (point-min))
             (while (search-forward "--" nil t)
               (unless (looking-at-p "-")
-                (replace-match "&ndash;")))
+                ;; NOTE can't use &ndash; for the atom feed since it is not
+                ;; defined in xml, so use unicode...
+                (replace-match "–")))
 
             ;; 45 While we're at it, the title needs the same fix
             (setq title (->> title
@@ -729,6 +743,8 @@ will not modify the source file."
             (when (member "daily" tags)
               (setq title created-fancy))
 
+            (setq content (buffer-string))
+
             (setq data-for-json
                   `((slug . ,slug)
                     (permalink . ,permalink)
@@ -742,10 +758,31 @@ will not modify the source file."
                     (tags . ,tags)
                     (hidden . ,hidden)
                     (description . ,description)
-                    (content . ,(buffer-string)))))
+                    (content . ,content))))
 
           (when-let ((output-buf (find-buffer-visiting output-path)))
             (kill-buffer output-buf))
           (with-temp-file output-path
-            (insert (json-encode data-for-json))))
+            (insert (json-encode data-for-json)))
+          (when (and
+                 (not hidden)
+                 (not (-intersection tags '("tag" "daily" "stub")))
+                 (or (and updated (version< "2023-01-01" updated))
+                     (version< "2023-01-01" created)))
+            (with-temp-file (concat "/tmp/atom-entries/" permalink)
+              (insert "\n<entry>"
+                      "\n<title>" title "</title>"
+                      "\n<link href=\"" (concat "https://edstrom.dev/" permalink "/" slug) "\" />"
+                      "\n<id>urn:uuid:" id "</id>"
+                      "\n<published>" created "T12:00:00Z</published>"
+                      (if updated 
+                          (concat "\n<updated>" updated "T12:00:00Z</updated>")
+                        "")
+                      ;; Must use type="xhtml", not html, to dodge
+                      ;; entity-escaping everything
+                      ;; https://validator.w3.org/feed/docs/atom.html#text
+                      "\n<content type=\"xhtml\"><div xmlns=\"http://www.w3.org/1999/xhtml\">\n"
+                      content
+                      "\n</div></content>"
+                      "\n</entry>"))))
         (kill-buffer (current-buffer)))))))

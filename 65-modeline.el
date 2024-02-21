@@ -30,7 +30,9 @@
   ;;         (awesome-tray-disable))))
 
   ;; (setq awesome-tray-active-modules '("location" "belong" "file-path" "battery"))
-  (setq awesome-tray-active-modules '("battery" "location" "belong" "file-path"))
+  (setq awesome-tray-active-modules '("location" "belong" "file-path"))
+  ;; "battery" module makes dbus errors sometimes
+  ;; (setq awesome-tray-active-modules '("battery" "location" "belong" "file-path"))
   (setq awesome-tray-essential-modules nil)
 
   ;; (setq awesome-tray-refresh-idle-delay nil)

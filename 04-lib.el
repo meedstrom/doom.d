@@ -29,6 +29,26 @@
 (autoload #'objed-ipipe "objed")
 (autoload #'piper "piper")
 
+(defun my-make-atom-feed (path entries-dir)
+  (when (file-exists-p path)
+    (move-file-to-trash path))
+  (with-temp-file path
+    (insert "<?xml version=\"1.0\" encoding=\"utf-8\"?>
+<feed xmlns=\"http://www.w3.org/2005/Atom\">
+  <title>Martin Edström</title>
+  <link href=\"https://edstrom.dev\"/>
+  <updated>" (format-time-string "%FT%TZ") "</updated>
+  <author>
+    <name>Martin Edström</name>
+  </author>
+  <rights> © 2023-" (format-time-string "%Y") " Martin Edström </rights>
+  <id>https://edstrom.dev</id>")
+    (dolist (entry (directory-files entries-dir t "[[:alpha:]]"))
+      (insert-file-contents entry))
+    (goto-char (point-max))
+    (insert "
+</feed>")))
+
 (defun my-remove-pub-tag-if-noexport ()
   (cl-loop
    for file in (directory-files-recursively "/home/kept/roam/" "\\.org$" t)

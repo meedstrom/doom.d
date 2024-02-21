@@ -245,6 +245,7 @@
 
 (setopt auth-sources '("~/.authinfo")) ;; https://magit.vc/manual/ghub/Storing-a-Token.html
 (setopt shr-max-image-proportion 0.5)
+(setopt gnus-select-method '(nntp "news.eternal-september.org"))
 (setopt mouse-yank-at-point t)
 (setopt save-interprogram-paste-before-kill t)
 (setopt select-enable-primary t)

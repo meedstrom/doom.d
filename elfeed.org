@@ -32,6 +32,7 @@ deprecated
 - http :: I favour https feeds, so I flagged the sites serving http only. As of [2021-03-02], I had 68 https and 4 http feeds. 
 
 * Feeds I follow                                                     :elfeed:
+*** https://edstrom.dev/feed
 ** People living relatively close to me!  :geo:
 *** https://two-wrongs.com/feed.xml                       :rss:1p:tech:
 *** [[https://lars.ingebrigtsen.no/atom][Lars Ingebrigtsen]]                                                  :1p:
