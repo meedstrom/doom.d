@@ -33,6 +33,7 @@ deprecated
 
 * Feeds I follow                                                     :elfeed:
 *** https://edstrom.dev/feed
+*** https://bahnhof.se/feed  :rss:
 ** People living relatively close to me!  :geo:
 *** https://two-wrongs.com/feed.xml                       :rss:1p:tech:
 *** [[https://lars.ingebrigtsen.no/atom][Lars Ingebrigtsen]]                                                  :1p:

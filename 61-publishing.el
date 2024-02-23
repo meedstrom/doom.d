@@ -773,22 +773,24 @@ will not modify the source file."
                      (string-lessp "2023" (or updated created)))
             (with-temp-file (concat
                              "/tmp/entries/" (or updated created) permalink)
-              (insert "\n<entry>"
-                      "\n<title>" title "</title>"
-                      "\n<link href=\""
+              (insert "\n\t<entry>"
+                      "\n\t<title>" title "</title>"
+                      "\n\t<link href=\""
                       (concat "https://edstrom.dev/" permalink "/" slug)
                       "\" />"
-                      "\n<id>urn:uuid:" id "</id>"
-                      "\n<published>" created "T12:00:00Z</published>"
+                      "\n\t<id>urn:uuid:" id "</id>"
+                      "\n\t<published>" created "T12:00:00Z</published>"
                       (if updated
-                          (concat "\n<updated>" updated "T12:00:00Z</updated>")
+                          (concat "\n\t<updated>" updated "T12:00:00Z</updated>")
                         "")
                       ;; Thru type="xhtml", we skip entity-escaping everything
                       ;; https://validator.w3.org/feed/docs/atom.html#text
-                      "\n<content type=\"xhtml\">"
-                      "\n<div xmlns=\"http://www.w3.org/1999/xhtml\">\n"
-                      (string-replace "\n" "\n\t" content)
-                      "\n</div>"
-                      "\n</content>"
-                      "\n</entry>"))))
+                      "\n\t<content type=\"xhtml\">"
+                      "\n\t\t<div xmlns=\"http://www.w3.org/1999/xhtml\">\n"
+                      ;; NOTE: don't add spaces/tabs to content.  it
+                      ;; messes with any <pre> tags inside content!
+                      content
+                      "\n\t\t</div>"
+                      "\n\t</content>"
+                      "\n\t</entry>"))))
         (kill-buffer (current-buffer)))))))

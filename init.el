@@ -34,6 +34,7 @@
        :app
        irc
        emms
+       rss
 
        :email mu4e
        :config (default +bindings +smartparens))
