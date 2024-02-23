@@ -33,20 +33,21 @@
   (switch-to-buffer "*Messages*") ;; for watching it work
   ;; (split-window) ;; in case the Warnings buffer appears
   (cd "/home/kept/roam") ;; for me to quick-search when an id fails to resolve
-  (mkdir "/tmp/atom-entries" t)
+  ;; (shell-command "rm -r /tmp/roam/")
+  (shell-command "rm -r /tmp/entries/")
+  ;; (mkdir "/tmp/roam")
+  (mkdir "/tmp/entries" t)
   (org-publish "my-slipbox-blog" t)
   (org-publish "my-slipbox-blog-attachments" t)
   ;; ensure it's gone from recentf so I don't accidentally edit these instead
   ;; of the originals
-  (shell-command "rm -rf /tmp/roam")
+  (shell-command "rm -r /tmp/roam")
   (my-check-id-collisions)
-  (my-make-atom-feed "/home/kept/pub/atom.xml"
-                     "/tmp/atom-entries/")
+  (my-make-atom-feed "/home/kept/pub/posts.atom" "/tmp/entries/")
   (f-write (json-encode-alist my-id-old-new-alist)
            'utf-8 "/home/kept/pub/idMappings.json")
   (f-write (json-encode-alist my-heading-locations)
-           'utf-8 "/home/kept/pub/idsInPages.json")
-  )
+           'utf-8 "/home/kept/pub/idsInPages.json"))
 
 (setopt org-publish-project-alist
         `(("my-slipbox-blog"
@@ -168,8 +169,9 @@ want in my main Emacs."
   (shell-command "rm -r /tmp/roam/")
   (shell-command "cp -a /home/kept/roam /tmp/")
   (shell-command "cp -a /home/sync-phone/beorg/* /tmp/roam/")
-  (shell-command "rm -r /tmp/roam/*/logseq/") ;; no logseq backups
+  (shell-command "rm -r /tmp/roam/*/logseq/") ;; logseq auto-backups
   (shell-command "rm -r /tmp/roam/lesswrong-org/")
+  (shell-command "rm /tmp/roam/*sync-conflict*") ;; syncthing
   (shell-command "shopt -s globstar && rm /tmp/roam/**/*.gpg") ;; no crypts
 
   ;; Flatten the directory tree (no more subdirs)
@@ -178,35 +180,8 @@ want in my main Emacs."
    unless (equal "/tmp/roam/" (file-name-directory file))
    do (rename-file file "/tmp/roam/"))
 
-  ;; Generate a log of completed tasks my partner can peruse <3
-  (setopt org-agenda-files '("/tmp/roam/archive.org"))
-  (setopt org-agenda-span 'fortnight)
-  (setopt org-agenda-prefix-format '((agenda . " %i %?-12t") (todo . "") (tags . "") (search . "")))
-  (setopt org-agenda-show-inherited-tags nil)
-  (org-agenda-list)
-  (org-agenda-log-mode)
-  (org-agenda-archives-mode)
-  (org-agenda-earlier 1)
-  (shell-command "rm /tmp/todo-log.html")
-  (org-agenda-write "/tmp/todo-log.html")
-  (delete-other-windows)
-  (view-echo-area-messages)
-  (with-temp-file "/tmp/roam/todo-log.org"
-    (insert ":PROPERTIES:"
-            "\n:ID: e4c5ea8b-5b06-43c4-8948-3bfe84e8d5e8"
-            "\n:CREATED:  " (format-time-string "[%F]")
-            "\n:END:"
-            "\n#+title: Completed tasks"
-            "\n#+filetags: :fren:"
-            "\n#+date: " (format-time-string "[%F]")
-            "\n#+begin_export html"
-            "\n")
-    (insert-file-contents "/tmp/todo-log.html")
-    (delete-region (point) (search-forward "<pre>"))
-    (insert "<pre class=\"agenda\"")
-    (delete-region (search-forward "</body>") (point-max))
-    (insert "</pre>")
-    (insert "\n#+end_export"))
+  ;; ;; Generate a log of completed tasks my partner can peruse <3
+  (my-generate-todo-log "/tmp/roam/todo-log.org")
 
   ;; Ensure each post will get a unique ID in the URL
   (cl-loop
@@ -220,20 +195,7 @@ want in my main Emacs."
      ;; record old ID
      (unless (assoc old-id my-id-old-new-alist)
        (push (cons old-id pageid) my-id-old-new-alist))
-     ;; (setf (alist-get (my-uuid-to-pageid-old2 uuid)
-     ;;                  nil nil #'equal)
-     ;;       pageid)
      (when (file-exists-p pageid)
-       ;; So far, I've had 0 collisions.  How many can I expect?  Taking into
-       ;; account the birthday paradox, and assuming a perfect RNG:
-       ;; - At 7 chars, would need to generate ~1,000,000 IDs for a 50%
-       ;;   chance to see one or more collisions
-       ;; - At 5 chars, would need to generate ~30,000 IDs
-       ;; - At 4 chars, would need to generate ~3,000 IDs
-       ;; So 4 chars is ideal, since I'll rarely have to renew an ID.  Thinking
-       ;; about 3...
-       ;; Reduced it to 3, got only 6 collisions per 1,000 IDs.
-       ;; Tried reducing to 2, got 360 collisions per 1,000 IDs
        (error "Probable page ID collision, suggest renewing UUID %s" uuid))
      (mkdir pageid t)
      (rename-file path (concat pageid "/"))))
@@ -378,35 +340,6 @@ will not modify the source file."
                               (date-to-time datestamp))))
                   (insert (concat "[[id:" (caar daily-id) "][<" fancy ">]]")))))))))))
 
-;; TODO: In dailies, insert links to any pages created on that same day, under a
-;; "Created pages" heading.  I guess this has to happen after exporting, so I
-;; can query the final JSON of all posts.  Therefore it has to happen in the
-;; frontend code.  Or, I suppose there could be an org-roam-db-query that looks
-;; up the #+DATE property.
-;; Something like this
-;; (org-roam-db-query [:select *
-;;                     :from nodes
-;;                     :where (equal "2020-03-15" (plist-get :date properties))])
-;; Unfortunately, #+DATE is not a property.  So I may have to reformat all my
-;; files so it becomes :DATE:, or more likely :CREATED:.
-;; (org-roam-db-query [:select [title] :from nodes :where (like title '"%How%")])
-;; (org-roam-db-query [:select * :from nodes
-;; :where (in properties (= CREATED "2023-02-15"))])
-;; :where (= properties:id "be3674fa-870b-4198-9688-a351eba83270")])
-;; :where (in properties (= ID "be3674fa-870b-4198-9688-a351eba83270"))])
-;; :where (in "be3674fa-870b-4198-9688-a351eba83270" properties)])
-;; :where (= (in properties [:select "ID"]) "be3674fa-870b-4198-9688-a351eba83270")])
-;; :where (= (in properties [:select ID]) "be3674fa-870b-4198-9688-a351eba83270")])
-;; :where (like (in properties [:select ["CREATED"]]) '"2023-02-15")])
-;; :where (like [:select ["CREATED"] from properties] '"2023-02-15")])
-;; (org-roam-db-query (concat
-;; "SELECT * FROM nodes n, table(n.properties) p"
-;; ;; " WHERE 'be3674fa-870b-4198-9688-a351eba83270' IN (SELECT id FROM properties)"
-;; ))
-
-;; test: (my-strip-hashlink-if-same-as-permalink "0vwRV27mRVLFd6yoyUM0PI/some-slug#ID-10b59a2a-bf95-4f20-9b4f-f27e23e51f46")
-;; test: (my-strip-hashlink-if-same-as-permalink "../0vwRV27mRVLFd6yoyUM0PI/some-slug#ID-10b59a2a-bf95-4f20-9b4f-f27e23e51f46")
-;; test: (my-strip-hashlink-if-same-as-permalink "../0vwRV27mRVLFd6yoyUM0PI/some-slug#0vwRV27mRVLFd6yoyUM0PI")
 (defun my-strip-hashlink-if-same-as-permalink (link)
   (if-let* ((hash-pos (string-search "#" link))
             (hash-part (substring link (1+ hash-pos)))
@@ -549,23 +482,31 @@ will not modify the source file."
                (data-for-json nil))
           (with-temp-buffer
 
-            ;; 03 Insert roam_refs before the post body
-            (when refs
-              (insert "<p>Ref. "  )
-              (dolist (ref (split-string refs))
-                (setq ref (string-replace "\"" "" ref)) ;; in case I wrapped it in quotes
-                (insert " <a href=\"" ref "f\">" (replace-regexp-in-string "http.?://" "" ref) "</a>, "))
-              (delete-char -2)
-              (insert "</p>"))
+            ;; 04
+            ;; Insert title
+            ;; Would have given the href a normal hash-link, but the Note
+            ;; component is sometimes rendered elsewhere (the /recent page),
+            ;; where it's useful to get a full link.
+            ;; (insert "\n<h1 id=\"" permalink "\">"
+            ;; "<a href=\"/" permalink "/" slug "\">" title
+            ;; "</a></h1>")
 
             ;; 05 Insert the post body: the HTML produced by Org-export
+            ;; (insert "\n<div class=\"e-content "
+            ;;         (if (member "logseq" tags)
+            ;;             "logseq"
+            ;;           "notlogseq")
+            ;;         "\">")
             (insert-file-contents output-path)
+            ;; (goto-char (point-max))
+            ;; (insert "\n</div>")
 
-            ;; 08 Set `content-start' after ToC, if there is one
-            (set-marker content-start (point-min))
+            ;; 06
+            ;; Set `content-start' after ToC, if there is one
+            (goto-char (point-min))
             (when (search-forward "<div id=\"table-of-contents\" " nil t)
-              (search-forward "</div>\n</div>")
-              (set-marker content-start (point)))
+              (search-forward "</div>\n</div>"))
+            (set-marker content-start (point))
 
             ;; 09
             ;; MUST BEFORE 10
@@ -573,22 +514,23 @@ will not modify the source file."
             (goto-char (marker-position content-start))
             (while (re-search-forward "<a [^>]*?href=.[^\"]*?#ID-" nil t)
               (set-marker m1 (point))
-              (when-let* ((uuid (buffer-substring (point)
-                                                  (1- (search-forward "\""))))
-                          (target-tags (-flatten
-                                        (org-roam-db-query
-                                         `[:select [tag]
-                                           :from tags
-                                           :where (= node-id ,uuid)])))
-                          (classes
-                           (-non-nil
-                            (cons (when (-intersection target-tags
-                                                       my-tags-to-avoid-uploading)
-                                    "private")
-                                  (-difference target-tags my-tags-to-avoid-uploading)))))
-                (search-backward "<a ")
-                (forward-char 3)
-                (insert "class=\"" (string-join classes " ") "\" "))
+              (let ((is-heading (save-excursion
+                                  (search-backward "<a ")
+                                  (search-backward "<")
+                                  (looking-at-p "h")))
+                    (uuid (buffer-substring (point)
+                                            (1- (search-forward "\"")))))
+                ;; do not give heading self-links a class since I don't want to
+                ;; style them
+                (unless is-heading
+                  (when-let ((target-tags (-flatten
+                                           (org-roam-db-query
+                                            `[:select [tag]
+                                              :from tags
+                                              :where (= node-id ,uuid)]))))
+                    (search-backward "<a ")
+                    (forward-char 3)
+                    (insert "class=\"" (string-join target-tags " ") "\" "))))
               (goto-char (marker-position m1)))
 
             ;; 10
@@ -630,38 +572,100 @@ will not modify the source file."
                 (insert (my-strip-hashlink-if-same-as-permalink link))))
 
             ;; 16
-            (unless (member "logseq" tags)
-              (goto-char (point-min))
-              ;; Give the ToC div a class, and remove its pointless inner div
-              (when (re-search-forward "<div id=\"table-of-contents\".*?>" nil t)
-                (replace-match "<nav class=\"toc\">")
-                (re-search-forward "<div id=\"text-table-of-contents\".*?>")
-                (replace-match "")
-                (search-forward "</div>\n</div>")
-                (replace-match "</nav>"))
-              ;; First strip all non-"outline" div tags and their
-              ;; hard-to-identify anonymous closing tags.  That way we'll know
-              ;; the only closing tags that remain will be the correct ones to
-              ;; turn into </section> tags.
-              (while (search-forward "<div" nil t)
-                (let ((beg (match-beginning 0)))
-                  (unless (re-search-forward " id=\".*?\" class=\"outline-[123456]\"" (line-end-position) t)
-                    (delete-region beg (search-forward ">"))
-                    ;; Note that this may not be the corresponding closing tag.
-                    ;; That's why we goto-char (1+ beg) below, to make sure the
-                    ;; loop catches them all.
-                    (search-forward "</div>")
-                    (replace-match "")
-                    (goto-char (1+ beg)))))
-              ;; Now turn all remaining <div> into <section>
-              (goto-char (point-min))
-              (while (re-search-forward "<div .*?class=\"outline-\\([123456]\\).*?>" nil t)
-                (if (evenp (string-to-number (match-string 1)))
-                    (replace-match "<section class=\"even\">")
-                  (replace-match "<section class=\"odd\">")))
-              (goto-char (point-min))
-              (while (search-forward "</div>" nil t)
-                (replace-match "</section>")))
+            ;; Give the ToC div a class, and remove its pointless inner div
+            (goto-char (point-min))
+            (when (re-search-forward "<div id=\"table-of-contents\".*?>" nil t)
+              (replace-match "<nav class=\"toc\">")
+              (re-search-forward "<div id=\"text-table-of-contents\".*?>")
+              (replace-match "")
+              (search-forward "</div>\n</div>")
+              (replace-match "</nav>"))
+
+            ;; 20
+            ;; Edit the .outline-2, .outline-text-2... divs that Org generated
+            ;;
+            ;; First strip all divs that aren't .outline-N.  That way we'll
+            ;; know the only closing tags that remain will be the correct ones
+            ;; to turn into </section> tags.
+            (goto-char (marker-position content-start))
+            (while (search-forward "<div" nil t)
+              (let ((beg (match-beginning 0)))
+                (unless (re-search-forward " id=\".*?\" class=\"outline-[123456]\"" (line-end-position) t)
+                  (delete-region beg (search-forward ">"))
+                  ;; Note that this may not be the corresponding closing tag.
+                  ;; That's why we goto-char (1+ beg) below, to make sure the
+                  ;; loop catches them all.
+                  (search-forward "</div>")
+                  (replace-match "")
+                  (goto-char (1+ beg)))))
+            ;; Now turn all remaining <div> into <section>
+            (goto-char (marker-position content-start))
+            (while (re-search-forward "<div .*?class=\"outline-\\([123456]\\).*?>" nil t)
+              (if (evenp (string-to-number (match-string 1)))
+                  (replace-match "<section class=\"even\">")
+                (replace-match "<section class=\"odd\">")))
+            (goto-char (marker-position content-start))
+            (while (search-forward "</div>" nil t)
+              (replace-match "</section>"))
+            ;; Now add something like the .outline-text-N divs again.  By
+            ;; default, Org didn't always generate them, if there was no body
+            ;; text under a heading, but I need it always for my CSS padding
+            ;; rules.  Also unlike Org, I'll let headings sit inside so they
+            ;; line up with the body text.
+            (goto-char (marker-position content-start))
+            (while (re-search-forward "<section .*?>" nil t)
+              (insert "<div class=\"text-in-section\">")
+              (re-search-forward "</?section")
+              (goto-char (match-beginning 0))
+              (insert "</div>"))
+
+            ;; 07
+            ;; MUST AFTER 06
+            ;; Since Org didn't add an "outline-text-1" div in the beginning
+            (goto-char (marker-position content-start))
+            (insert "\n<div class=\"text-in-section\">")
+            (if (search-forward "<section" nil t)
+                (goto-char (match-beginning 0))
+              ;; No subsections in this file
+              (goto-char (point-max)))
+            (insert "\n</div>")
+
+            ;; 08
+            ;; MUST AFTER 07
+            ;; Insert roam_refs before the post body
+            (when refs
+              (goto-char (marker-position content-start))
+              (re-search-forward "<div.*?>")
+              (insert "\n<p>Referring to ")
+              (dolist (ref (split-string refs))
+                (setq ref (string-replace "\"" "" ref)) ;; in case I wrapped it in quotes
+                (insert " <a href=\"" ref "\">" (replace-regexp-in-string "http.?://" "" ref) "</a>, "))
+              (delete-char -2)
+              (insert "</p>"))
+
+            ;; (goto-char (marker-position content-start))
+            ;; (while (re-search-forward "id=\".*?\" class=\"outline-\\([123456]\\)\".*?>" nil t)
+            ;;   (if (evenp (string-to-number (match-string 1)))
+            ;;       (replace-match "class=\"section-even\">")
+            ;;     (replace-match "class=\"section-odd\">")))
+            ;; (goto-char (marker-position content-start))
+            ;; (while (re-search-forward "<div .*?class=\"outline-text-[123456]\".*?>" nil t)
+            ;;   (replace-match "<div class=\"text-in-section\">")
+            ;;   ;; Move heading inside of the div so my CSS can get it to line up
+            ;;   ;; FIXME: actually org wont even generate such a div if there is
+            ;;   ;; just a heading without body text on the same level.
+            ;;   ;; So two options
+            ;;   ;; 1. Create these divs entirely manually
+            ;;   ;; 2. Make the headings align via css, using rem units.
+            ;;   ;; need to do it manually bc need the div's padding so it must always be there
+            ;;   ;; or...
+            ;;   (goto-char (line-end-position))
+            ;;   (set-marker m1 (point))
+            ;;   (search-backward "<h")
+            ;;   (kill-region (point) (re-search-forward "</h.>"))
+            ;;   (goto-char (marker-position m1))
+            ;;   (newline)
+            ;;   (yank))
 
             ;; 26
             ;; Count # of total links
@@ -729,9 +733,9 @@ will not modify the source file."
               (replace-match ""))
 
             ;; 65
-            ;; Remove tags from headlines (each one re-appears in ToC also).  It
-            ;; was a bad default to put the nbsp entities outside the span so
-            ;; they couldn't be hidden with css...
+            ;; Remove org-tags from headlines (each one re-appears in ToC
+            ;; also).  It was a bad default to put the nbsp entities outside
+            ;; the span so they couldn't be hidden with css...
             (goto-char (point-min))
             (while (search-forward "&#xa0;&#xa0;&#xa0;<span class=\"tag\">" nil t)
               (let ((beg (match-beginning 0)))
@@ -764,25 +768,27 @@ will not modify the source file."
             (kill-buffer output-buf))
           (with-temp-file output-path
             (insert (json-encode data-for-json)))
-          (when (and
-                 (not hidden)
-                 (not (-intersection tags '("tag" "daily" "stub")))
-                 (or (and updated (version< "2023-01-01" updated))
-                     (version< "2023-01-01" created)))
-            (with-temp-file (concat "/tmp/atom-entries/" permalink)
+          (when (and (not hidden)
+                     (not (-intersection tags '("tag" "daily" "stub")))
+                     (string-lessp "2023" (or updated created)))
+            (with-temp-file (concat
+                             "/tmp/entries/" (or updated created) permalink)
               (insert "\n<entry>"
                       "\n<title>" title "</title>"
-                      "\n<link href=\"" (concat "https://edstrom.dev/" permalink "/" slug) "\" />"
+                      "\n<link href=\""
+                      (concat "https://edstrom.dev/" permalink "/" slug)
+                      "\" />"
                       "\n<id>urn:uuid:" id "</id>"
                       "\n<published>" created "T12:00:00Z</published>"
-                      (if updated 
+                      (if updated
                           (concat "\n<updated>" updated "T12:00:00Z</updated>")
                         "")
-                      ;; Must use type="xhtml", not html, to dodge
-                      ;; entity-escaping everything
+                      ;; Thru type="xhtml", we skip entity-escaping everything
                       ;; https://validator.w3.org/feed/docs/atom.html#text
-                      "\n<content type=\"xhtml\"><div xmlns=\"http://www.w3.org/1999/xhtml\">\n"
-                      content
-                      "\n</div></content>"
+                      "\n<content type=\"xhtml\">"
+                      "\n<div xmlns=\"http://www.w3.org/1999/xhtml\">\n"
+                      (string-replace "\n" "\n\t" content)
+                      "\n</div>"
+                      "\n</content>"
                       "\n</entry>"))))
         (kill-buffer (current-buffer)))))))

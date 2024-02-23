@@ -300,7 +300,7 @@
 ;; Swedish holidays
 (setopt holiday-general-holidays
         '((holiday-fixed 1 1 "New Year's Day")
-          (holiday-fixed 2 14 "Valentine's Day")
+          ;; (holiday-fixed 2 14 "Valentine's Day")
           (holiday-fixed 3 8 "International Women's Day")
           (holiday-easter-etc) ;; surprisingly hard to calculate
           (holiday-fixed 4 1 "April Fools' Day")

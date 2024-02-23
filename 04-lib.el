@@ -29,6 +29,53 @@
 (autoload #'objed-ipipe "objed")
 (autoload #'piper "piper")
 
+(defun my-generate-todo-log (path)
+  "Generate a log of completed tasks using `org-agenda-write'.
+Wrap the output in an Org file, omitting the CSS."
+  (interactive)
+  ;; (cl-letf )
+  (setopt org-agenda-files '("/tmp/roam/archive.org"))
+  (setopt org-agenda-span 'fortnight)
+  (setopt org-agenda-prefix-format '((agenda . " %i %?-12t") (todo . "") (tags . "") (search . "")))
+  (setopt org-agenda-show-inherited-tags nil)
+  (org-agenda-list)
+  (org-agenda-log-mode)
+  (org-agenda-archives-mode)
+  (shell-command "rm /tmp/todo-log-now.html")
+  (org-agenda-write "/tmp/todo-log-now.html")
+  (org-agenda-earlier 1)
+  (shell-command "rm /tmp/todo-log-last-week.html")
+  (org-agenda-write "/tmp/todo-log-last-week.html")
+  (org-agenda-quit)
+  ;; (delete-other-windows)
+  ;; (view-echo-area-messages)
+  (with-current-buffer (or (find-buffer-visiting path)
+                           (find-file path))
+    (delete-region (point-min) (point-max))
+    (insert ":PROPERTIES:"
+            "\n:ID: e4c5ea8b-5b06-43c4-8948-3bfe84e8d5e8"
+            "\n:CREATED:  " (format-time-string "[%F]")
+            "\n:END:"
+            "\n#+title: Completed tasks"
+            "\n#+filetags: :fren:"
+            "\n#+date: "
+            "\n#+begin_export html"
+            "\n")
+    (insert-file-contents "/tmp/todo-log-last-week.html")
+    (delete-region (point) (search-forward "<pre>"))
+    (insert "<pre class=\"agenda\">")
+    (forward-line)
+    (delete-region (1- (line-beginning-position)) (line-end-position))
+    (search-forward "</pre>")
+    (delete-region (1- (line-beginning-position)) (point-max))
+    (insert-file-contents "/tmp/todo-log-now.html")
+    (delete-region (point) (search-forward "<pre>"))
+    (forward-line)
+    (delete-region (1- (line-beginning-position)) (line-end-position))
+    (delete-region (search-forward "</pre>") (point-max))
+    (insert "\n#+end_export")
+    (save-buffer)))
+
 (defun my-make-atom-feed (path entries-dir)
   (when (file-exists-p path)
     (move-file-to-trash path))
