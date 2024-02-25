@@ -70,7 +70,7 @@
 (package! hacker-typer)
 (package! helm-firefox)
 (package! help-find)
-(package! copilot)
+;; (package! copilot)
 (package! hyperbole)
 (package! iedit)
 (package! iflipb) ;; vs cycle-buffer?

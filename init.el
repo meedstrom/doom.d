@@ -18,7 +18,7 @@
        :lang
        emacs-lisp
        data
-       (ess +tree-sitter +stan)
+       (ess +tree-sitter +stan +lsp)
        (go +tree-sitter)
        (web +tree-sitter)
        (javascript +tree-sitter)
@@ -28,6 +28,7 @@
 
        :tools
        tree-sitter
+       (lsp )
        (magit +forge)
        pdf
 

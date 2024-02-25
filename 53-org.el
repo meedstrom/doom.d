@@ -351,6 +351,12 @@ to the new note in the \"timeline\" note."
 (after! org-roam
   (add-hook 'doom-load-theme-hook
             (defun my-theme-mod-org ()
+              ;; instead of red todo, i use green IDEA, less mental pressure
+              (let ((green (face-foreground 'success))
+                    (grey (face-foreground 'org-drawer)))
+                (set-face-foreground 'org-todo green)
+                (set-face-foreground 'org-done grey))
+              ;; for backlinks buffer
               (set-face-attribute 'org-roam-title nil :height 1.5)))
   (my-theme-mod-org)
   (setopt org-roam-extract-new-file-path "${slug}.org")

@@ -72,7 +72,7 @@
 (fset 'bury-buffer #'ignore)
 (fset 'bury-buffer-internal #'ignore)
 
-(setopt backtrace-on-redisplay-error t)
+;; (setopt backtrace-on-redisplay-error t)
 (setopt helpful-max-buffers nil) ;; what's the point of killing buffers
 (setopt iflipb-wrap-around t)
 (setopt ranger-map-style 'emacs)
@@ -156,6 +156,7 @@
   )
 
 (use-package! copilot
+  :disabled
   :defer
   ;; :hook (prog-mode . copilot-mode)
   :bind (:map copilot-completion-map
