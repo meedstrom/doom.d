@@ -17,6 +17,7 @@
 
 (defvar my-auto-commit-dirs
   '("/home/kept/roam/"
+    "/home/kept/roam/organice/"
     "/home/me/.doom.d/")
   "Which directories do you want to auto-commit?")
 

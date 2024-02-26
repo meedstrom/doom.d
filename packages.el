@@ -72,6 +72,7 @@
 (package! help-find)
 ;; (package! copilot)
 (package! hyperbole)
+(package! format-all)
 (package! iedit)
 (package! iflipb) ;; vs cycle-buffer?
 (package! iscroll)

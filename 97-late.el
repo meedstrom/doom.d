@@ -82,6 +82,8 @@
 (setopt calibredb-db-dir (expand-file-name "metadata.db" calibredb-root-dir))
 (setopt calibredb-format-width 8)
 
+
+
 (setopt +doom-dashboard-functions
         '(doom-dashboard-widget-shortmenu
           doom-dashboard-widget-loaded))
@@ -167,6 +169,9 @@
 
 (leaf apheleia
   :config
+  ;; TODO: submit PR https://github.com/radian-software/apheleia?tab=readme-ov-file#adding-a-formatter
+  (add-to-list 'apheleia-formatters '(ess-r "R" "-s" "--no-save" "--no-restore" "-e" "styler::style_text(readLines(file('stdin')))"))
+  (add-to-list 'apheleia-mode-alist '(ess-r-mode . ess-r))
   (setopt apheleia-log-debug-info t)
   (apheleia-global-mode))
 
