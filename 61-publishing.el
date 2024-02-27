@@ -689,25 +689,24 @@ will not modify the source file."
             ;; a heading or when it butts up against a link on a newline), so
             ;; force it.  I'm pretty sure it won't break anything...
             (goto-char (point-min))
-            (while (search-forward "---" nil t)
-              (unless (looking-at-p "-")
-                (replace-match "—")))
             ;; A little more risky but I'm hoping it's fine.  Situations where we
             ;; might not want to transform a double-dash:
             ;; - css variables in code blocks (i have none)
             ;; - a code block showing this very code (i have none)
             ;; - FIXME a code block of elisp with private--vars
             (goto-char (point-min))
-            (while (search-forward "--" nil t)
-              (unless (looking-at-p "-")
-                ;; NOTE can't use &ndash; for the atom feed since it is not
-                ;; defined in xml, so use unicode...
-                (replace-match "–")))
+            (let ((beg (point))
+                  (end (re-search-forward "<\\(?:code\\|kbd\\|pre\\|samp\\)" nil t)))
+              (my-multi-hyphens-to-en-em-dashes beg end))
+            (while (re-search-forward "</\\(?:code\\|kbd\\|pre\\|samp\\)>" nil t)
+              (let ((beg (point))
+                    (end (re-search-forward "<\\(?:code\\|kbd\\|pre\\|samp\\)" nil t)))
+                (my-multi-hyphens-to-en-em-dashes beg end)))
+
 
             ;; 45 While we're at it, the title needs the same fix
-            (setq title (->> title
-                             (replace-regexp-in-string "---" "—")
-                             (replace-regexp-in-string "--" "–")))
+            (setq title
+                  (string-replace "--" "–" (string-replace "---" "—" title)))
 
             ;; 50
             ;; Correct image paths
@@ -718,7 +717,7 @@ will not modify the source file."
 
             ;; 55
             ;; Wrap all tables for horizontal scrollability
-            ;; I sure hope I don't have HTML code snippets
+            ;; I sure hope I don't have code snippets displaying HTML
             (goto-char (marker-position content-start))
             (while (search-forward "<table" nil t)
               (goto-char (match-beginning 0))

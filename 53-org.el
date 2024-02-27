@@ -17,12 +17,14 @@
 
 (require 'my-lib-external)
 
+
 (define-key global-map [remap org-open-at-point] #'my-org-open-at-point-as-maybe-roam-ref)
 
 (setopt org-element-use-cache nil) ;; heavily bugged, no idea how to debug
 (after! org
   (require 'org-element) ;; org-element-at-point not found
   (require 'org-archive) ;; `org-add-archive-files'
+  (require 'org-macs) ;; invalid-function org-element-with-disabled-cache
   ;;   ;; (require 'ox-html)  ;; htmlize not found , maybe this helps
   ;;   ;; (org-require-package 'htmlize) ;; cannot be found!!! have to install it in packages.el
   )
@@ -32,7 +34,7 @@
 ;; Don't search for "roam:" links (slows saving)
 (setopt org-roam-link-auto-replace nil)
 
-;; Speed up `org-roam-db-sync'
+;; Speed up `org-roam-db-sync' when we have to use it
 (setq org-roam-db-gc-threshold most-positive-fixnum)
 
 ;; Make the commands `org-roam-node-find' & `org-roam-node-insert' instant.
@@ -41,20 +43,20 @@
 
 (use-package! memoize)
 
-(defun my-roam-memo-refresh (&rest _)
-  (memoize-restore #'org-roam-node-read--completions)
-  (memoize         #'org-roam-node-read--completions)
-  (let ((gcmh-high-cons-theshold most-positive-fixnum)
-        (gc-cons-threshold       most-positive-fixnum))
-    (funcall #'org-roam-node-read--completions)
-    nil))
+;; (defun my-roam-memo-refresh (&rest _)
+;;   (memoize-restore #'org-roam-node-read--completions)
+;;   (memoize         #'org-roam-node-read--completions)
+;;   (let ((gcmh-high-cons-theshold most-positive-fixnum)
+;;         (gc-cons-threshold       most-positive-fixnum))
+;;     (funcall #'org-roam-node-read--completions)
+;;     nil))
 
-(defvar my-roam-memo-timer (timer-create))
-(defun my-roam-memo-schedule-refresh (&rest _)
-  "Schedule a re-caching as soon as the user is idle."
-  (cancel-timer my-roam-memo-timer)
-  (setq my-roam-memo-timer
-        (run-with-idle-timer 30 nil #'my-roam-memo-refresh)))
+;; (defvar my-roam-memo-timer (timer-create))
+;; (defun my-roam-memo-schedule-refresh (&rest _)
+;;   "Schedule a re-caching as soon as the user is idle."
+;;   (cancel-timer my-roam-memo-timer)
+;;   (setq my-roam-memo-timer
+;;         (run-with-idle-timer 30 nil #'my-roam-memo-refresh)))
 
 ;; (after! org-roam
 ;;   (ignore-errors (memoize #'org-roam-node-read--completions))
@@ -93,7 +95,7 @@
 ;; That's so nonintuitive, because I didn't think SQLite was slow or that
 ;; anyone would bother to make a SQL DB if they were gonna use it
 ;; inefficiently, and yet `org-roam-node-list' takes ages just to cough up the
-;; dataset.
+;; dataset (without even filtering it in any way).
 ;;
 ;; Here vulpea.el helps, it maintains a table in-memory that's optimized for
 ;; reading, although it's still not instant, so ultimately I'd like to to
@@ -107,11 +109,12 @@
 (use-package! vulpea
   :hook ((org-roam-db-autosync-mode . vulpea-db-autosync-enable))
   :config
+  (define-key global-map [remap org-roam-node-find] #'vulpea-find)
+  (define-key global-map [remap org-roam-node-insert] #'vulpea-insert)
   (memoize #'vulpea-db-query)
-  (after! org-roam-db
-    ;; Triggered when `org-roam-db-autosync-mode' syncs on save
-    (advice-add 'org-roam-db-update-file :after
-                'my-vulpea-memo-refresh)))
+  ;; (after! org-roam-db
+  ;; Triggered when `org-roam-db-autosync-mode' syncs on save
+  (advice-add 'org-roam-db-update-file :after 'my-vulpea-memo-refresh))
 
 
 ;; (defun vulpea-db-query (&optional filter-fn)

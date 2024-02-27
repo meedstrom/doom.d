@@ -170,8 +170,9 @@
 (leaf apheleia
   :config
   ;; TODO: submit PR https://github.com/radian-software/apheleia?tab=readme-ov-file#adding-a-formatter
-  (add-to-list 'apheleia-formatters '(ess-r "R" "-s" "--no-save" "--no-restore" "-e" "styler::style_text(readLines(file('stdin')))"))
-  (add-to-list 'apheleia-mode-alist '(ess-r-mode . ess-r))
+  (after! apheleia-formatters
+    (add-to-list 'apheleia-formatters '(ess-r "R" "-s" "--no-save" "--no-restore" "-e" "styler::style_text(readLines(file('stdin')))"))
+    (add-to-list 'apheleia-mode-alist '(ess-r-mode . ess-r)))
   (setopt apheleia-log-debug-info t)
   (apheleia-global-mode))
 

@@ -1818,6 +1818,25 @@ function to `aggressive-indent-mode-hook'."
   (interactive)
   (switch-to-buffer (other-buffer)))
 
+(defun my-multi-hyphens-to-en-em-dashes (beg end*)
+  ;; idk if needed in elisp but just in case. dont modify input variable
+  ;; (a golang lesson)
+  (let ((end end*))
+    (goto-char beg)
+    (while (search-forward "---" end t)
+      (unless (looking-at-p "-")
+        (replace-match "—")
+        (when end
+          (cl-decf end 2))))
+    (goto-char beg)
+    (while (search-forward "--" end t)
+      (unless (looking-at-p "-")
+        ;; NOTE can't use &ndash; for the atom feed since it is not
+        ;; defined in xml, so use unicode...
+        (replace-match "–")
+        (when end
+          (cl-decf end 1))))))
+
 (defun my-theme-mods ()
   (interactive)
   (with-eval-after-load 'org
