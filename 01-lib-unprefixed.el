@@ -7,6 +7,37 @@
 (require 'cl-lib)
 (require 'subr-x)
 
+(defmacro no (&rest _input)
+  `(ignore))
+
+(defmacro prep (pkg &rest input)
+  (when-let (kw (seq-intersection '(:config :init :custom :commands) input))
+    (error "Deprecated keywords used, find a different way: %s" kw))
+  `(use-package ,pkg :defer t
+     ,@input))
+
+(defmacro demand (pkg &rest input)
+  (when-let (kw (seq-intersection '(:config :init :custom :commands) input))
+    (error "Deprecated keywords used, find a different way: %s" kw))
+  `(use-package ,pkg :demand t
+     ,@input))
+
+;; so you can type (after org (set-face-attribute...) ...)
+(defalias 'after #'after!)
+
+;; so you can type (once 'org-mode-hook (set-face-attribute...) ...)
+(defalias 'once #'my-hook-once)
+
+;; so you can type (my org-mode-hook (set-face-attribute...) ...)
+(defmacro my (hook &rest body)
+  (let ((fname (intern (concat "my-" (symbol-name hook)))))
+    `(add-hook ',hook (defun ,fname () ,@body))))
+
+;; so you can type (add org-mode-hook (set-face-attribute...) ...)
+(defmacro add (hook &rest body)
+  (let ((fname (cl-gensym)))
+    `(add-hook ',hook (defun ,fname () ,@body))))
+
 ;; Backports for when I'm on an old Emacs
 (unless (version<= "29" emacs-version)
   (require 'compat)

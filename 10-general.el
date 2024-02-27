@@ -262,6 +262,13 @@
 (setopt vc-msg-copy-id-to-kill-ring nil)
 ;; (setopt display-line-numbers-type nil)
 (setopt shift-select-mode nil)
+(setopt mouse-drag-and-drop-region-cross-program t) ;; no effect on wayland?
+(setopt show-paren-context-when-offscreen t)
+(setopt help-enable-variable-value-editing t)
+(setopt proced-enable-color-flag t)
+(setopt abbrev-suggest t)
+(setopt use-short-answers t)
+;; (setopt backtrace-on-redisplay-error t)
 
 ;; don't clear my echo area
 (setopt garbage-collection-messages nil)

@@ -38,21 +38,15 @@
 (auto-save-visited-mode)
 (display-battery-mode)
 
-;; From reading Emacs 29 news
-;; https://edstrom.dev/tsdt/notable-emacs-news/
 (when (version<= "29" emacs-version)
   (pixel-scroll-precision-mode)
   ;; (add-to-list 'default-frame-alist '(alpha-background . 90))
-  ;; (setopt mouse-drag-and-drop-region-cross-program t)
   ;; (add-hook 'org-cycle-hook #'org-cycle-display-inline-images)
-  (setopt show-paren-context-when-offscreen t)
-  (setopt help-enable-variable-value-editing t)
-  (setopt proced-enable-color-flag t))
+  )
+
 (when (version<= "28" emacs-version)
   (context-menu-mode)
-  (repeat-mode)
-  ;; (setq use-short-answers t) ;; doom sets
-  (setq abbrev-suggest t))
+  (repeat-mode))
 
 ;; Don't filter the buffer list when cycling.  How do these people actually find
 ;; the filtered buffers when they want them?
@@ -72,7 +66,6 @@
 (fset 'bury-buffer #'ignore)
 (fset 'bury-buffer-internal #'ignore)
 
-;; (setopt backtrace-on-redisplay-error t)
 (setopt helpful-max-buffers nil) ;; what's the point of killing buffers
 (setopt iflipb-wrap-around t)
 (setopt ranger-map-style 'emacs)
@@ -81,8 +74,6 @@
 (setopt calibredb-root-dir "~/Calibre Library/")
 (setopt calibredb-db-dir (expand-file-name "metadata.db" calibredb-root-dir))
 (setopt calibredb-format-width 8)
-
-
 
 (setopt +doom-dashboard-functions
         '(doom-dashboard-widget-shortmenu
@@ -95,20 +86,37 @@
 
 (setopt mediawiki-site-default "WikEmacs")
 
-(use-package! inline-anki
-  :config
-  (setq inline-anki-send-tags '(not
+;; (use inline-anki)
+
+(after inline-anki
+  (add-to-list 'inline-anki-fields '("Online mirror" . my-anki-field-for-webpage))
+  (add-to-list 'inline-anki-ignore-file-regexps "/daily/")
+  (add-to-list 'inline-anki-ignore-file-regexps "/lesswrong/")
+  (after org
+    (add-to-list 'org-structure-template-alist '("f" . "flashcard"))))
+
+(setopt inline-anki-send-tags '(not
                                 "noexport"
                                 "ARCHIVE"
                                 "stub"
                                 "eyes_partner"
                                 "eyes_friend"
                                 "eyes_therapist"))
-  (add-to-list 'inline-anki-fields '("Online mirror" . my-anki-webpage-field))
-  (add-to-list 'inline-anki-ignore-file-regexps "/daily/")
-  (add-to-list 'inline-anki-ignore-file-regexps "/lesswrong/")
-  (after! org 
-    (add-to-list 'org-structure-template-alist '("f" . "flashcard"))))
+
+;; (use-package! inline-anki
+;;   :config
+;;   (setq inline-anki-send-tags '(not
+;;                                 "noexport"
+;;                                 "ARCHIVE"
+;;                                 "stub"
+;;                                 "eyes_partner"
+;;                                 "eyes_friend"
+;;                                 "eyes_therapist"))
+;;   (add-to-list 'inline-anki-fields '("Online mirror" . my-anki-webpage-field))
+;;   (add-to-list 'inline-anki-ignore-file-regexps "/daily/")
+;;   (add-to-list 'inline-anki-ignore-file-regexps "/lesswrong/")
+;;   (after! org
+;;     (add-to-list 'org-structure-template-alist '("f" . "flashcard"))))
 
 (after! ws-butler
   ;; Fix guix.el
@@ -135,8 +143,6 @@
 
 (use-package! objed
   :commands objed-ipipe)
-
-(use-package! crux)
 
 (use-package! nov
   :mode ("\\.epub\\'" . nov-mode))

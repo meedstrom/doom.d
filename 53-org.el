@@ -39,109 +39,30 @@
 
 ;; Make the commands `org-roam-node-find' & `org-roam-node-insert' instant.
 ;; Drawback: new notes won't be visible until it auto-refreshes the cached
-;; value after 30s of idle, or you call `org-roam-db-sync'.
+;; value after 10s of idle.
 
 (use-package! memoize)
 
-;; (defun my-roam-memo-refresh (&rest _)
-;;   (memoize-restore #'org-roam-node-read--completions)
-;;   (memoize         #'org-roam-node-read--completions)
-;;   (let ((gcmh-high-cons-theshold most-positive-fixnum)
-;;         (gc-cons-threshold       most-positive-fixnum))
-;;     (funcall #'org-roam-node-read--completions)
-;;     nil))
-
-;; (defvar my-roam-memo-timer (timer-create))
-;; (defun my-roam-memo-schedule-refresh (&rest _)
-;;   "Schedule a re-caching as soon as the user is idle."
-;;   (cancel-timer my-roam-memo-timer)
-;;   (setq my-roam-memo-timer
-;;         (run-with-idle-timer 30 nil #'my-roam-memo-refresh)))
-
-;; (after! org-roam
-;;   (ignore-errors (memoize #'org-roam-node-read--completions))
-;;   (advice-add 'org-roam-db-sync :after
-;;               'my-roam-memo-refresh)
-;;   ;; Triggered when `org-roam-db-autosync-mode' syncs on save
-;;   (advice-add 'org-roam-db-update-file :after
-;;               'my-roam-memo-schedule-refresh))
-
-;; OK so I considered making an async `consult--read'.  But the problem is that
-;; consult--read can be async-capable all it wants---it handles a callback like
-;; a button it can press many times for output, but the callback needs itself
-;; to be async, i.e. it's likely a process sentinel.  This works for ripgrep
-;; because the external program ripgrep returns its output incrementally. Does
-;; sqlite do that? I doubt it.  If sqlite MUST return all results at once,
-;; then we cannot use org-roam's SQL database in this way.
-;;
-;; That is, we cannot filter via SQL. It can only send us the whole list (which
-;; we could save in an Emacs variable in case the sql connection is laggy, but
-;; whatever, I don't know about that) and then we "fetch incrementally" from
-;; the variable.  More specifically, we pass the variable to a filterer
-;; algorithm that outputs incrementally.
-;;
-;; How to do that in an Emacs function?  We may have benefit of async.el, but
-;; that isn't even necessary, it can use `while-no-input'.  And I guess that
-;; might be built-in to `consult--read'.  But.. ugh, where do I---
-;;
-;; Scratch that.
-;;
-;; It was illuminating to think about, but I've been barking up the wrong tree.
-;; Async completion is for when, AFTER having a giant table of data in hand,
-;; and your minibuffer loaded and ready, you try to filter the results, and
-;; find that it's laggy.  We don't have that problem: `completing-read' works
-;; basically instant for ~1000 nodes (of course).  Our problem is in a
-;; different domain: it takes time to open up the prompt in the first place.
-;; That's so nonintuitive, because I didn't think SQLite was slow or that
-;; anyone would bother to make a SQL DB if they were gonna use it
-;; inefficiently, and yet `org-roam-node-list' takes ages just to cough up the
-;; dataset (without even filtering it in any way).
-;;
-;; Here vulpea.el helps, it maintains a table in-memory that's optimized for
-;; reading, although it's still not instant, so ultimately I'd like to to
-;; memoize `vulpea-db-query' for a perfect UX.  Let's see.
-
-(defun my-vulpea-memo-refresh (&rest _)
+(defun my-vulpea-memo-refresh ()
   (memoize-restore #'vulpea-db-query)
-  (memoize         #'vulpea-db-query))
+  (memoize         #'vulpea-db-query)
+  (vulpea-db-query nil))
+
+(defvar my-vulpea-memo-timer (timer-create))
+(defun my-vulpea-memo-schedule-refresh (&rest _)
+  "Schedule a re-caching when the user is idle."
+  (cancel-timer my-vulpea-memo-timer)
+  (setq my-vulpea-memo-timer
+        (run-with-idle-timer 10 nil #'my-vulpea-memo-refresh)))
 
 ;; Love this lib. Thank you
 (use-package! vulpea
   :hook ((org-roam-db-autosync-mode . vulpea-db-autosync-enable))
+  :bind (([remap org-roam-node-find] . vulpea-find)
+         ([remap org-roam-node-insert] . vulpea-insert))
   :config
-  (define-key global-map [remap org-roam-node-find] #'vulpea-find)
-  (define-key global-map [remap org-roam-node-insert] #'vulpea-insert)
   (memoize #'vulpea-db-query)
-  ;; (after! org-roam-db
-  ;; Triggered when `org-roam-db-autosync-mode' syncs on save
-  (advice-add 'org-roam-db-update-file :after 'my-vulpea-memo-refresh))
-
-
-;; (defun vulpea-db-query (&optional filter-fn)
-;;   "Query list of `vulpea-note' from database.
-
-;; When FILTER-FN is non-nil, only notes that satisfy it are
-;; returned."
-;;   (let* ((rows
-;;           (org-roam-db-query
-;;            "select
-;;   id,
-;;   path,
-;;   \"level\",
-;;   title,
-;;   properties,
-;;   aliases,
-;;   tags,
-;;   meta,
-;;   links,
-;;   attach
-;; from notes")))
-;;     (seq-filter
-;;      (or filter-fn #'identity)
-;;      (seq-mapcat
-;;       #'vulpea-db--notes-from-row
-;;       rows))))
-
+  (advice-add 'org-roam-db-update-file :after 'my-vulpea-memo-schedule-refresh))
 
 ;; ---------------------------------
 

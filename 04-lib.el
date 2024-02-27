@@ -120,15 +120,16 @@ Wrap the output in an Org file, omitting the CSS."
           (when (org-roam-node-at-point)
             (org-roam-tag-add '("pub")))))))
 
-(defun my-anki-webpage-field ()
+(defun my-anki-field-for-webpage ()
   (cl-letf ((org-mode-hook nil))
     (org-mode))
-  (when-let* ((uuid (progn (goto-char (point-min)) (org-id-get)))
-              (pageid (substring (my-uuid-to-base62 uuid) -4))
-              (url (concat "https://edstrom.dev/" pageid)))
-    (concat "<a href=\"" url "\">" url "</a>")))
+  (save-excursion
+    (when-let* ((uuid (progn (goto-char (point-min)) (org-id-get)))
+                (pageid (substring (my-uuid-to-base62 uuid) -4))
+                (url (concat "https://edstrom.dev/" pageid)))
+      (concat "<a href=\"" url "\">" url "</a>"))))
 
-(defun my-anki-webpage-field-fast ()
+(defun my-anki-field-for-webpage-fast ()
   (save-excursion
     (goto-char (point-min))
     (re-search-forward ":ID: +")
