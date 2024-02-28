@@ -115,7 +115,7 @@ If it's an Emacs frame, kill it."
 
 ;; (--find (eq 43 (map-elt it "id")) (sway-list-windows))
 
-(defvar my-tmpfs (if guix
+(defvar my-tmpfs (if os-guix
                      "/run/user/1000/"
                    "/tmp/"))
 

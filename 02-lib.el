@@ -11,6 +11,25 @@
 (autoload #'objed-ipipe "objed")
 (autoload #'piper "piper")
 
+(defun my-multi-hyphens-to-en-em-dashes (beg end*)
+  ;; idk if needed in elisp but just in case. dont modify input variable
+  ;; (a golang lesson)
+  (let ((end end*))
+    (goto-char beg)
+    (while (search-forward "---" end t)
+      (unless (looking-at-p "-")
+        (replace-match "—")
+        (when end
+          (cl-decf end 2))))
+    (goto-char beg)
+    (while (search-forward "--" end t)
+      (unless (looking-at-p "-")
+        ;; NOTE can't use &ndash; for the atom feed since it is not
+        ;; defined in xml, so use unicode...
+        (replace-match "–")
+        (when end
+          (cl-decf end 1))))))
+
 (defun my-generate-todo-log (path)
   "Generate a log of completed tasks using `org-agenda-write'.
 Wrap the output in an Org file, omitting the CSS."
@@ -1306,6 +1325,7 @@ split into three balanced windows."
 
 ;; To further refine, see https://www.emacswiki.org/emacs/HippieExpand
 (defun my-hippie-config ()
+  "Use different hippie-expand settings depending on the buffer."
   (setq-local
    hippie-expand-try-functions-list
    (cond ((memq major-mode '(ess-mode
@@ -1749,7 +1769,7 @@ See `my-normie-toggle' for explanation."
         ;; Turn on each mode.
         (funcall mode))))
 
-  ;; Known working single-buffer solution
+  ;; Known-working single-buffer solution
   ;; (dolist (f my-normie:modes-to-toggle)
   ;;   (funcall f))
   )
@@ -1798,25 +1818,6 @@ function to `aggressive-indent-mode-hook'."
 (defun my-switch-to-other-buffer ()
   (interactive)
   (switch-to-buffer (other-buffer)))
-
-(defun my-multi-hyphens-to-en-em-dashes (beg end*)
-  ;; idk if needed in elisp but just in case. dont modify input variable
-  ;; (a golang lesson)
-  (let ((end end*))
-    (goto-char beg)
-    (while (search-forward "---" end t)
-      (unless (looking-at-p "-")
-        (replace-match "—")
-        (when end
-          (cl-decf end 2))))
-    (goto-char beg)
-    (while (search-forward "--" end t)
-      (unless (looking-at-p "-")
-        ;; NOTE can't use &ndash; for the atom feed since it is not
-        ;; defined in xml, so use unicode...
-        (replace-match "–")
-        (when end
-          (cl-decf end 1))))))
 
 (defun my-theme-mods ()
   (interactive)

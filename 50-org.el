@@ -1,19 +1,6 @@
 ;; -*- lexical-binding: t; -*-
 
-(require 'my-lib-external)
-
-
-(define-key global-map [remap org-open-at-point] #'my-org-open-at-point-as-maybe-roam-ref)
-
-(setopt org-element-use-cache nil) ;; heavily bugged, no idea how to debug
-(after! org
-  (require 'org-element) ;; org-element-at-point not found
-  (require 'org-archive) ;; `org-add-archive-files'
-  (require 'org-macs) ;; invalid-function org-element-with-disabled-cache
-  ;;   ;; (require 'ox-html)  ;; htmlize not found , maybe this helps
-  ;;   ;; (org-require-package 'htmlize) ;; cannot be found!!! have to install it in packages.el
-  )
-
+
 ;; PERFORMANCE (Org-roam is slow)
 
 ;; Don't search for "roam:" links (slows saving)
@@ -50,6 +37,25 @@
   (advice-add 'org-roam-db-update-file :after #'my-vulpea-memo-schedule))
 
 ;; ---------------------------------
+
+
+;; Workaround a startup bug that appeared on update 2024-01-15 (did doom change
+;; default tab-width? i don't think so, but something strange's going on with
+;; the org element parser)
+(setq-default tab-width 8)
+;; (add-hook 'org-mode-hook (defun my-org-setup () (setq tab-width 8)))
+
+(define-key global-map [remap org-open-at-point] #'my-org-open-at-point-as-maybe-roam-ref)
+
+(setopt org-element-use-cache nil) ;; heavily bugged, no idea how to debug
+(after! org
+  (require 'org-element) ;; org-element-at-point not found
+  (require 'org-archive) ;; `org-add-archive-files'
+  (require 'org-macs) ;; invalid-function org-element-with-disabled-cache
+  ;;   ;; (require 'ox-html)  ;; htmlize not found , maybe this helps
+  ;;   ;; (org-require-package 'htmlize) ;; cannot be found!!! have to install it in packages.el
+  )
+
 
 ;; For inline-anki: override underlines to represent cloze deletions, as I
 ;; never use underlines anyway
@@ -125,7 +131,7 @@
 ;; I don't use Chromium for anything else.
 (setopt browse-url-chromium-arguments '("--app=http://localhost:35901"))
 (setopt org-roam-ui-browser-function #'browse-url-chromium)
-(when guix
+(when os-guix
   (add-to-list 'browse-url-chromium-arguments "--no-sandbox"))
 
 ;; (setopt org-agenda-prefix-format '((agenda . " %i %-12:c%?-12t% s")

@@ -1,19 +1,75 @@
-;; -*- lexical-binding: t; -*-
+;; Configure lazy external packages -*- lexical-binding: t; -*-
 
-;; flash effect on deletion, paste etc
+(setopt helpful-max-buffers nil) ;; what's the point of killing buffers
+(setopt iflipb-wrap-around t)
+(setopt ranger-map-style 'emacs)
+(setopt which-key-idle-delay 0.2)
+(setopt rainbow-x-colors nil) ;; only colorize hex strings
+(setopt calibredb-root-dir "~/Calibre Library/")
+(setopt calibredb-db-dir (expand-file-name "metadata.db" calibredb-root-dir))
+(setopt calibredb-format-width 8)
+
+(setopt +doom-dashboard-functions
+        '(doom-dashboard-widget-shortmenu
+          doom-dashboard-widget-loaded))
+
+;; NOTE: you can use ~/.authinfo instead of putting your user name and password here
+(setopt mediawiki-site-default "WikEmacs")
+(setopt mediawiki-site-alist
+        '(("Wikipedia" "http://en.wikipedia.org/w/" "username" "password" nil "Main Page")
+          ("WikEmacs" "http://wikemacs.org/" "username" "password" nil "Main Page")))
+
+(after! multiple-cursors
+  ;; auto-save every 5 seconds, destroys what youre doing!
+  (add-to-list 'mc/unsupported-minor-modes 'auto-save-visited-mode)
+  (add-to-list 'mc/unsupported-minor-modes 'nameless-mode))
+
+(after! inline-anki
+  (setopt inline-anki-send-tags '(not
+                                  "noexport"
+                                  "ARCHIVE"
+                                  "stub"
+                                  "eyes_partner"
+                                  "eyes_friend"
+                                  "eyes_therapist"))
+  (add-to-list 'inline-anki-fields '("Online mirror" . my-anki-field-for-webpage))
+  (add-to-list 'inline-anki-ignore-file-regexps "/daily/")
+  (add-to-list 'inline-anki-ignore-file-regexps "/lesswrong/")
+  (after! org
+    (add-to-list 'org-structure-template-alist '("f" . "flashcard"))))
+
+(after! ws-butler
+  ;; Fix problem with guix.el
+  (add-to-list 'ws-butler-global-exempt-modes #'minibuffer-inactive-mode)
+  ;; Fix for org because the org-element parser throws hella warnings since 9.5
+  (add-to-list 'ws-butler-global-exempt-modes #'org-mode))
+
+(after! deianira
+  ;; (fset 'which-key-mode #'ignore)
+  (after! hydra
+    (define-key hydra-base-map (kbd "<f5>") #'hydra-repeat))
+  (setq dei-ignore "C-")
+  (setq dei-invisible-leafs
+        (seq-difference dei-invisible-leafs '("<menu>" "SPC"))))
+
+;; visual flash on deletion, paste etc
 (use-package goggles
   :hook ((prog-mode text-mode) . goggles-mode))
 
+;; better image scroll
 (use-package iscroll
   :hook ((text-mode elfeed-show-mode eww-mode shr-mode) . iscroll-mode))
 
-(use-package iedit
-  ;; default is C-;
-  :init (setq iedit-toggle-key-default nil)
-  :commands iedit-mode)
+;; (use-package iedit
+;;   ;; default is C-;
+;;   :init (setq iedit-toggle-key-default nil)
+;;   :commands iedit-mode)
 
 (use-package objed
   :commands objed-ipipe)
+
+(use-package hyperbole
+  :commands hkey-either)
 
 (use-package nov
   :mode ("\\.epub\\'" . nov-mode))
@@ -24,53 +80,16 @@
   :hook (prog-mode . copilot-mode)
   :bind (:map copilot-completion-map
               ("<tab>" . 'copilot-accept-completion)
-              ("TAB" . 'copilot-accept-completion)
-              ("C-TAB" . 'copilot-accept-completion-by-word)
               ("C-<tab>" . 'copilot-accept-completion-by-word)))
 
 (use-package nameless
   :hook (emacs-lisp-mode . nameless-mode)
   :init
-  ;; swung dash ⁓ tilde op ∼ sine ∿ almost eq ≈
-  ;; four dot mark ⁛ lock 🔒 ⊝ ◯ ⁐ ○ ⚞⁖ ⋐⚟⤳〜
   (setopt nameless-prefix "⁓")
-  ;; (setopt nameless-prefix "⚟")
   (setopt nameless-private-prefix t)
   (setopt nameless-affect-indentation-and-filling nil)
-  ;; (add-hook 'nameless-mode-hook #'my-adjust-scale-2)
   :config
   (set-face-attribute 'nameless-face nil :inherit 'unspecified))
-
-;; try to fix JS/TS buffers freezing.  Seems the issue is that prism-mode collides badly with RJSX mode.
-;; (setq tide-server-max-response-length )
-;; (after! rjsx-mode
-;; (remove-hook 'rjsx-mode-hook #'rainbow-delimiters-mode))
-
-;; (after! typescript-mode
-;;   ;; NOTE: typescript-tsx-mode is actually defined in ~/doomemacs/modules/lang/javascript/config.el
-;;   (remove-hook 'typescript-tsx-mode-hook #'rainbow-delimiters-mode))
-
-(use-package prism
-  :disabled
-  :init
-  (setopt prism-comments nil)
-  ;; The default (40 50 60) is disorienting when turning prism on and off.
-  (setopt prism-desaturations '(0 20 60))
-  ;; (setopt prism-desaturations '(0))
-  ;; note, another odd default is that (in lisp) the parens enclosing a sexp
-  ;; are a diff color from the symbols inside -- people arent used to this
-  ;; either, it makes em stand out too much imo
-  :config
-  ;; Replace rainbow-delimiters (it's on a dozen hooks in Doom, so this method is easiest).
-  (fset 'rainbow-delimiters-mode #'prism-mode)
-  ;; (require 'prism)
-  ;; (add-hook 'doom-load-theme-hook #'prism-set-colors)
-
-  (add-hook 'typescript-mode-hook #'prism-mode)
-  (add-hook 'typescript-tsx-mode-hook #'prism-mode)
-  (add-hook 'js-base-mode-hook #'prism-mode)
-  ;; (add-hook 'web-mode-hook #'prism-mode) ;; infinite loop in .svelte files
-  )
 
 (use-package elfeed
   :disabled
@@ -78,6 +97,7 @@
   :config
   (setopt rmh-elfeed-org-files
           (list (expand-file-name "elfeed.org" doom-private-dir)))
+  ;; filter into junk
   (add-hook 'elfeed-new-entry-hook
             (elfeed-make-tagger :entry-title (rx (or "MCMXXX"
                                                      "A&R"))
@@ -86,6 +106,3 @@
   (setopt elfeed-search-filter "@2-months-ago -junk +unread +fav")
   ;; (ignore-errors (elfeed-org)) ;; does not work
   )
-
-(use-package hyperbole
-  :commands hkey-either)

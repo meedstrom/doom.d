@@ -93,6 +93,9 @@
   (keymap-unset elisp-slime-nav-mode-map "M-." t)
   (keymap-unset evil-emacs-state-map "C-z" t))
 
+;; default is C-;
+(setopt iedit-toggle-key-default nil)
+
 
 ;;; Fix prefix arguments
 ;; Don't waste good keys (C-123456890) on digit-argument.  But make it more

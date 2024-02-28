@@ -2,6 +2,4 @@
 
 In development since 2015.  Requires Emacs 29+.
 
-Since May 2020, this is a Doom Emacs config, although in the file [[08-undoom.el][08-undoom.el]] I undo some Doom features.
-
-# Most of the interesting code is in the files starting with a number, like =98-late.el= and =10-general.el=.
+Since May 2020, this is a Doom Emacs config, although in the file [[05-undoom.el][05-undoom.el]] I undo some Doom features.

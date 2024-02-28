@@ -1,6 +1,6 @@
 ;; Reverse some Doom Emacs defaults -*- lexical-binding: t; -*-
 
-;; Yep... slower init please!
+;; Yep... long slow init please!
 (add-hook 'emacs-startup-hook
           (defun my-eager-startup ()
             (run-hooks 'doom-first-input-hook)
@@ -35,14 +35,16 @@
   ;; Having exactly two states makes for comfy toggling.
   (setopt org-todo-keywords '((sequence "TODO" "DONE"))))
 
-;; org-crypt really slows saving on large Org buffers
-;; NOTE: Doesn't work, so just disabled org-crypt in packages.el.
+;; org-crypt adds several seconds to saving large Org buffers, even without any
+;; crypted trees.
+;; NOTE: This snippet didn't do the trick, so I disabled org-crypt in
+;; packages.el instead.
 ;; (add-hook 'org-mode-hook
 ;;           (defun my-remove-crypt-hook ()
 ;;             (remove-hook 'before-save-hook 'org-encrypt-entries))
 ;;           98)
 
-;; I find this doom-docs-mode mainly gets in my way.  Nice idea tho.
+;; This doom-docs-mode was a nice idea, but I find it mainly gets in my way.
 (fset 'doom-docs-org-mode #'ignore)
 (fset 'doom-docs--toggle-read-only-h #'ignore)
 
@@ -59,9 +61,17 @@
   (keymap-set eshell-mode-map "C-l" #'recenter-top-bottom))
 
 (after! ws-butler
-  ;; Having nil jibes badly with auto-save-visited-mode.
+  ;; Having nil jibes badly with `auto-save-visited-mode'.
   ;; Bug report: https://github.com/doomemacs/doomemacs/issues/7516
   (setopt ws-butler-keep-whitespace-before-point t))
 
-;; Don't hide dotfiles or any file
-(remove-hook 'dired-mode-hook #'dired-omit-mode)
+(remove-hook 'dired-mode-hook #'dired-omit-mode) ;; Don't hide any files
+(remove-hook 'term-mode-hook #'hide-mode-line-mode)
+(remove-hook 'doom-first-buffer-hook #'global-hl-line-mode)
+
+;; FIXME: The setting still isn't t DURING init. Guess I'll just have to make a
+;; habit of launching emacs every time with "doom sync && emacs" while I'm
+;; developing a package.
+(setopt load-prefer-newer t) ;; don't spend another minute confused by this
+(general-after-init
+  (setopt load-prefer-newer t))
