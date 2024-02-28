@@ -15,6 +15,11 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+;; TODO: submit PR https://github.com/radian-software/apheleia?tab=readme-ov-file#adding-a-formatter
+(after apheleia-formatters
+  (add-to-list 'apheleia-formatters '(ess-r "R" "-s" "--no-save" "--no-restore" "-e" "styler::style_text(readLines(file('stdin')))"))
+  (add-to-list 'apheleia-mode-alist '(ess-r-mode . ess-r)))
+
 ;; Make previous-buffer not skip the R console
 (el-patch-defun doom-buffer-frame-predicate (buf)
   "To be used as the default frame buffer-predicate parameter. Returns nil if

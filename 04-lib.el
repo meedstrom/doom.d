@@ -705,6 +705,7 @@ It gets a DEPTH of 95, see `add-hook'."
                                          do (kill-buffer-if-not-modified buf))))
     map))
 
+(defvar my-stim-collection nil)
 (defun my-stim-collection-generate ()
   (let ((documented-commands nil)
         (roam-files
@@ -727,9 +728,6 @@ It gets a DEPTH of 95, see `add-hook'."
     (list
      (cons #'find-file roam-files)
      (cons #'describe-function documented-commands))))
-
-(my-hook-once 'doom-after-init-hook
-  (setq my-stim-collection (my-stim-collection-generate)))
 
 (defun my-stim (&optional collection)
   "Show something random.

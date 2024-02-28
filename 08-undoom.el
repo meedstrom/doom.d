@@ -24,10 +24,10 @@
             (run-hooks 'doom-first-buffer-hook)
             (run-hooks 'doom-first-file-hook)))
 
-;; I want readable backup names since I rename files and dirs all the time.
+;; I want readable backup names because I rename files and dirs all the time.
 (advice-remove #'make-backup-file-name-1 #'doom-make-hashed-backup-file-name-a)
 
-;; I find customize a handy exploration tool
+;; I find customize a handy tool for exploring and experimenting
 (put 'customize-themes 'disabled nil)
 (put 'customize-group 'disabled nil)
 (put 'customize-changed 'disabled nil)
@@ -35,8 +35,9 @@
 (put 'customize-variable 'disabled nil)
 
 ;; Doom puts eww-bookmarks in doomemacs/.local/cache, which I find dangerous
-;; since I may unthinkingly wipe it.  Put it where I won't delete it: my own
-;; .doom.d.  Do same for abbrev.
+;; since I may unthinkingly wipe that entire folder.  Put it where I won't
+;; delete it: my own .doom.d.  Do same for abbrev.
+;; Bookmarks are NOT simply cache.
 (setopt eww-bookmarks-directory doom-user-dir)
 (setopt abbrev-file-name (expand-file-name "abbrevs" doom-user-dir))
 
@@ -58,7 +59,7 @@
 ;;             (remove-hook 'before-save-hook 'org-encrypt-entries))
 ;;           98)
 
-;; I find this doom-docs-mode just gets in my way.  But nice idea.
+;; I find this doom-docs-mode mainly gets in my way.  Nice idea tho.
 (fset 'doom-docs-org-mode #'ignore)
 (fset 'doom-docs--toggle-read-only-h #'ignore)
 
@@ -79,4 +80,5 @@
   ;; Bug report: https://github.com/doomemacs/doomemacs/issues/7516
   (setopt ws-butler-keep-whitespace-before-point t))
 
+;; Don't hide dotfiles or any file
 (remove-hook 'dired-mode-hook #'dired-omit-mode)

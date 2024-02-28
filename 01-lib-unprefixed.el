@@ -33,10 +33,10 @@
   (let ((fname (intern (concat "my-" (symbol-name hook)))))
     `(add-hook ',hook (defun ,fname () ,@body))))
 
-;; so you can type (add org-mode-hook (set-face-attribute...) ...)
-(defmacro add (hook &rest body)
+;; so you can type (on-hook 'org-mode-hook (set-face-attribute...) ...)
+(defmacro hook-do (hook &rest body)
   (let ((fname (cl-gensym)))
-    `(add-hook ',hook (defun ,fname () ,@body))))
+    `(add-hook ,hook (defun ,fname () ,@body))))
 
 ;; Backports for when I'm on an old Emacs
 (unless (version<= "29" emacs-version)

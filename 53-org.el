@@ -34,35 +34,35 @@
 ;; Don't search for "roam:" links (slows saving)
 (setopt org-roam-link-auto-replace nil)
 
-;; Speed up `org-roam-db-sync' when we have to use it
+;; Speed up `org-roam-db-sync'
+;; NOTE: Counterproductive on Windows
+;; NOTE: `setopt' breaks it, use `setq'
 (setq org-roam-db-gc-threshold most-positive-fixnum)
 
 ;; Make the commands `org-roam-node-find' & `org-roam-node-insert' instant.
 ;; Drawback: new notes won't be visible until it auto-refreshes the cached
 ;; value after 10s of idle.
 
-(use-package! memoize)
-
 (defun my-vulpea-memo-refresh ()
   (memoize-restore #'vulpea-db-query)
   (memoize         #'vulpea-db-query)
   (vulpea-db-query nil))
 
-(defvar my-vulpea-memo-timer (timer-create))
-(defun my-vulpea-memo-schedule-refresh (&rest _)
-  "Schedule a re-caching when the user is idle."
-  (cancel-timer my-vulpea-memo-timer)
-  (setq my-vulpea-memo-timer
-        (run-with-idle-timer 10 nil #'my-vulpea-memo-refresh)))
+(let ((timer (timer-create)))
+  (defun my-vulpea-memo-schedule (&rest _)
+    "Schedule a re-caching for when the user is idle."
+    (cancel-timer timer)
+    (setq timer (run-with-idle-timer 10 nil #'my-vulpea-memo-refresh))))
 
 ;; Love this lib. Thank you
-(use-package! vulpea
+(use-package vulpea
   :hook ((org-roam-db-autosync-mode . vulpea-db-autosync-enable))
   :bind (([remap org-roam-node-find] . vulpea-find)
          ([remap org-roam-node-insert] . vulpea-insert))
   :config
+  (use-package memoize :demand)
   (memoize #'vulpea-db-query)
-  (advice-add 'org-roam-db-update-file :after 'my-vulpea-memo-schedule-refresh))
+  (advice-add 'org-roam-db-update-file :after #'my-vulpea-memo-schedule))
 
 ;; ---------------------------------
 
