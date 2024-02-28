@@ -3,13 +3,20 @@
 (require 'cl-lib)
 (require 'seq)
 (require 'subr-x)
-
-;; external
 (require 'dash)
 (require 'crux)
 
-(autoload #'server-running-p "server")
-(autoload #'tramp-time-diff  "tramp")
+(defun my-insert-heading-with-id ()
+  (interactive)
+  (org-insert-heading)
+  (org-id-get-create)
+  (org-set-property "CREATED" (format-time-string "[%F]")))
+
+(defun my-org-add-:CREATED: ()
+  "Add CREATED property to entry at point."
+  (interactive)
+  (unless (org-entry-get nil "CREATED")
+    (org-set-property "CREATED" (format-time-string "[%F]"))))
 
 ;; so you can type (my-hook org-mode-hook (set-face-attribute ...) ...)
 (defmacro my-hook (hook &rest body)
@@ -161,6 +168,7 @@ also add a CREATED property with the current date."
     nil))
 
 (defun my-replace-in-file (file text replacement)
+  "Dangerous"
   (with-temp-file file
     (insert-file-contents file)
     (while (search-forward text nil t)
@@ -1082,6 +1090,7 @@ until the program finishes."
   (start-process-shell-command command nil command))
 
 (defun my-server-start-maybe ()
+  (require 'server)
   (unless (server-running-p)
     (server-start nil t)
     (my-things-for-primogenitor-emacs)))

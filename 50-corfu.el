@@ -1,5 +1,9 @@
 ;; Completion-at-point (company/corfu) -*- lexical-binding: t; -*-
 
+;; Because CAPFs don't do what I want in Roam
+;;(add-hook 'org-mode-hook #'my-corfu-turn-off 99)
+(setq global-corfu-modes '((not org-mode) t))
+
 ;; https://github.com/minad/corfu/wiki#same-key-used-for-both-the-separator-and-the-insertion
 (defun my-complete-on-double-space ()
   "Makes sense only with `corfu-separator' 32 (space)."

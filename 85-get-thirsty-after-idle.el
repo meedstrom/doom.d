@@ -7,7 +7,7 @@
 
 ;;; Code:
 
-(run-with-idle-timer 10 nil #'require 'org-mode)
+(run-with-idle-timer 10 nil #'require 'org)
 (run-with-idle-timer 12 nil #'require 'org-roam)
 (run-with-idle-timer 14 nil #'require 'dired)
 (run-with-idle-timer 16 nil #'require 'eshell)

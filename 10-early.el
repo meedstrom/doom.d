@@ -8,9 +8,9 @@
 
 ;; Backups saved my skin in 2015, 2016, 2018, and 2020.
 ;; So I should not stop using them until 2030 or so, given no more incidents.
-;; And I'll probably keep them forever.  The fundamental issue with "GiT cAn
-;; RePlAcE bAcKuPs!" is I don't commit regularly in every project nor do I even
-;; have a git project everywhere.
+;; And I'll probably keep them forever.  The root issue with "GiT cAn RePlAcE
+;; bAcKuPs!" is I don't commit regularly in every project nor do I even have a
+;; git project everywhere.
 (setopt
  ;; Put them in the unusual path /home/backups/ to avoid cluttering rg output.
  backup-directory-alist `(("." . "/home/backups"))
