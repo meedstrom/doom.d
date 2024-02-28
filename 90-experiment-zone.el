@@ -20,9 +20,8 @@
 
 
 
-(hook-do 'doom-after-init-hook
-         (setq my-stim-collection (my-stim-collection-generate)))
-
+(hookgen doom-after-init-hook
+  (setq my-stim-collection (my-stim-collection-generate)))
 
 ;; (setq counsel-ffdata-database-path "/home/me/.mozilla/firefox/wrki7yvc.dev-edition-default/places.sqlite")
 ;; (setq helm-firefox-bookmark-user-directory "/home/me/.mozilla/firefox/wrki7yvc.dev-edition-default/")

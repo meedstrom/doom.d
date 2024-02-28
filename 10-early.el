@@ -1,16 +1,15 @@
 ;; -*- lexical-binding: t; -*-
 
 (add-load-path! "/home/kept/emacs/key-seqs-finder/"
-                ;; "/home/kept/emacs/inline-anki/"
                 "/home/kept/emacs/twee-mode/")
 
 
 ;;; Backups
 
-;; Backups have saved my skin in 2015, 2016, 2018, and 2020.
+;; Backups saved my skin in 2015, 2016, 2018, and 2020.
 ;; So I should not stop using them until 2030 or so, given no more incidents.
-;; And I'll probably keep them forever.  The fundamental issue with "git can
-;; replace backups!" is I don't commit regularly in every project nor do I even
+;; And I'll probably keep them forever.  The fundamental issue with "GiT cAn
+;; RePlAcE bAcKuPs!" is I don't commit regularly in every project nor do I even
 ;; have a git project everywhere.
 (setopt
  ;; Put them in the unusual path /home/backups/ to avoid cluttering rg output.
@@ -40,8 +39,7 @@
 (add-hook 'prog-mode-hook #'my-hippie-config)
 (add-hook 'text-mode-hook #'my-hippie-config)
 
-;; Let the compiler tell me if an elisp file is broken, even if I don't
-;; normally compile it (helpful when working on initfiles)
+;; Catch mistakes in my elisp on save, handy when hacking initfiles
 (add-hook 'after-save-hook #'my-compile-and-drop)
 
 ;; Prevent accidental edits (easy to miss on files like this)
@@ -74,7 +72,7 @@
 (add-to-list 'initial-frame-alist '(fullscreen . maximized))
 
 
-;;; Font and theme
+;;; Font
 
 ;; (setq doom-font (font-spec :family "Cozette" :size 10))
 ;; (setq doom-font (font-spec :family "Tamzen" :size 10))
@@ -112,7 +110,8 @@
 ;; (setq doom-unicode-font (font-spec :family "Noto Sans Mono"))
 (setq doom-unicode-font doom-font) ;; if it has good unicode coverage alrdy
 
-
+
+;;; Theme
 
 ;; (setq doom-theme 'doom-pine)
 ;; (setq doom-theme 'doom-one)
@@ -121,7 +120,8 @@
 ;; (setq doom-theme 'doom-manegarm)
 ;; (setq doom-theme 'doom-storage-tube-amber-2)
 ;; (setq doom-theme 'doom-Iosvkem)
-(setq doom-theme 'ef-bio)
+;; (setq doom-theme 'ef-bio)
+(setq doom-theme 'ef-rosa)
 ;; (setq doom-theme 'doom-zenburn)
 ;; (setq doom-theme 'doom-outrun-electric)
 ;; (setq doom-theme 'doom-badger)
@@ -129,7 +129,7 @@
 ;; (setq doom-theme 'doom-dracula)
 
 ;; Some quick rules of thumb to select a theme
-;; - if you have a high-DPI monitor, no need to be allergic to italics
+;; - if you have a high-DPI monitor, realize that italics are ok now
 ;;   - but I prefer italics on comments ONLY
 ;;     - counterintuitively, if I see a theme with italic comments, I should
 ;;       avoid it bc it's likely this theme designer also saw fit to italicize
@@ -137,11 +137,11 @@
 ;; - with prism-mode, none of the faces should be grey !!!
 ;; - with prism-mode, none of the faces should be much darker than the rest
 
-;; Good WITH prism-desaturations
+;; Good WITH prism-desaturations nonzero
 ;; (load-theme 'monokai-pro)
 ;; (load-theme 'doom-storage-tube)
 
-;; Good WITHOUT prism-desaturations
+;; Good WITHOUT prism-desaturations (i.e. set to (0))
 ;; (load-theme 'doom-Iosvkem)
 ;; (load-theme 'doom-solarized-dark-high-contrast)
 ;; (load-theme 'doom-rouge)
@@ -170,41 +170,17 @@
 ;;                     green-cooler
 ;;                     yellow-faint))))
 
-
-;; (unless (modulep! :ui doom)
-;;   ;; copy-pasted
-;;   (defadvice! doom--load-theme-a (fn theme &optional no-confirm no-enable)
-;;     "Disable old themes."
-;;     :around #'load-theme
-;;     ;; Run `load-theme' from an estranged buffer, where we can ensure that
-;;     ;; buffer-local face remaps (by `mixed-pitch-mode', for instance) won't
-;;     ;; interfere with recalculating faces in new themes.
-;;     (with-temp-buffer
-;;       (let ((last-themes (copy-sequence custom-enabled-themes)))
-;;         (mapc #'disable-theme custom-enabled-themes)
-;;         (funcall fn theme no-confirm no-enable))))
-;;   (setq custom-safe-themes t)
-;;   (use-package! doom-themes
-;;     :config
-;;     (load-theme 'doom-Iosvkem))
-;;   ;; (custom-set-faces '(default (:family "Iosevka Nerd Font" :size 33)))
-;;   )
-
 
 ;;; Debugging
 
-;; (defun my-log-process-name (&optional process _group)
-;;   "See `interrupt-process-functions'."
-;;   (when process
-;;     (message (process-name process)))
-;;   nil)
+(defun my-log-process-name (&optional process _group)
+  "See `interrupt-process-functions'."
+  (when process
+    (message (process-name process)))
+  nil)
 
 ;; (add-to-list 'interrupt-process-functions #'my-log-process-name)
-
 ;; (setq-default debug-on-signal 'quit debug-on-quit t)
-
-;; DEPRECATED: use the variable init-file-debug
-;; (setq my-debug-p doom-debug-p)
 
 ;; (debug-watch 'org-mode)
 

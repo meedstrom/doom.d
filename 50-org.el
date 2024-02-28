@@ -14,6 +14,7 @@
 ;; Make the commands `org-roam-node-find' & `org-roam-node-insert' instant.
 ;; Drawback: new notes won't be visible until it auto-refreshes the cached
 ;; value after 10s of idle.
+;; TODO: integrate with consult-org-roam
 
 (defun my-vulpea-memo-refresh ()
   (memoize-restore #'vulpea-db-query)

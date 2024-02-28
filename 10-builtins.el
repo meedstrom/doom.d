@@ -40,6 +40,7 @@
           ("." . eww-browse-url)))
 
 ;; No limit on recentf
+;; I wonder if that slows it down?  (length recentf-list) is 2482
 (after! recentf
   (setopt recentf-max-saved-items nil))
 

@@ -7,10 +7,10 @@
             (run-hooks 'doom-first-buffer-hook)
             (run-hooks 'doom-first-file-hook)))
 
-;; I want readable backup names because I rename files and dirs all the time.
+;; Gimme readable backup names, because I rename files and dirs all the time.
 (advice-remove #'make-backup-file-name-1 #'doom-make-hashed-backup-file-name-a)
 
-;; I find customize a handy tool for exploring and experimenting
+;; I find customize a handy exploration tool, so gimme access
 (put 'customize-themes 'disabled nil)
 (put 'customize-group 'disabled nil)
 (put 'customize-changed 'disabled nil)
@@ -19,8 +19,8 @@
 
 ;; Doom puts eww-bookmarks in doomemacs/.local/cache, which I find dangerous
 ;; since I may unthinkingly wipe that entire folder.  Put it where I won't
-;; delete it: my own .doom.d.  Do same for abbrev.
-;; Bookmarks are NOT simply cache.
+;; delete it: my own .doom.d.  Do same for abbrev.  This stuff is NOT mere
+;; "cache".
 (setopt eww-bookmarks-directory doom-user-dir)
 (setopt abbrev-file-name (expand-file-name "abbrevs" doom-user-dir))
 
@@ -35,16 +35,7 @@
   ;; Having exactly two states makes for comfy toggling.
   (setopt org-todo-keywords '((sequence "TODO" "DONE"))))
 
-;; org-crypt adds several seconds to saving large Org buffers, even without any
-;; crypted trees.
-;; NOTE: This snippet didn't do the trick, so I disabled org-crypt in
-;; packages.el instead.
-;; (add-hook 'org-mode-hook
-;;           (defun my-remove-crypt-hook ()
-;;             (remove-hook 'before-save-hook 'org-encrypt-entries))
-;;           98)
-
-;; This doom-docs-mode was a nice idea, but I find it mainly gets in my way.
+;; This "doom-docs-mode" was a nice idea, but I find it mainly gets in my way.
 (fset 'doom-docs-org-mode #'ignore)
 (fset 'doom-docs--toggle-read-only-h #'ignore)
 
@@ -60,16 +51,20 @@
 (after! esh-mode
   (keymap-set eshell-mode-map "C-l" #'recenter-top-bottom))
 
+(after! dired
+  (keymap-set dired-mode-map "q" #'kill-current-buffer))
+
 (after! ws-butler
-  ;; Having nil jibes badly with `auto-save-visited-mode'.
-  ;; Bug report: https://github.com/doomemacs/doomemacs/issues/7516
+  ;; Having nil jibes badly with `auto-save-visited-mode'. Bug report:
+  ;; https://github.com/doomemacs/doomemacs/issues/7516
   (setopt ws-butler-keep-whitespace-before-point t))
 
 (remove-hook 'dired-mode-hook #'dired-omit-mode) ;; Don't hide any files
 (remove-hook 'term-mode-hook #'hide-mode-line-mode)
 (remove-hook 'doom-first-buffer-hook #'global-hl-line-mode)
 
-;; FIXME: The setting still isn't t DURING init. Guess I'll just have to make a
+;; FIXME: This snippet makes the setting t before and after init but not during
+;; init, which is where I want it to be t.  Guess I'll just have to make a
 ;; habit of launching emacs every time with "doom sync && emacs" while I'm
 ;; developing a package.
 (setopt load-prefer-newer t) ;; don't spend another minute confused by this

@@ -43,11 +43,10 @@
 (after! async
   (dired-async-mode))
 
-;; Show true folder sizes, but only if we have duc, which is fast.  Orthodox
-;; file managers solve this with laziness and async, also valid but this
-;; approach seems it'll invite less bugs.
+;; Show true folder sizes, but only if computer has duc, which is fast.
 (after! dired-du
   (when (and (executable-find "duc")
              (not (string-match-p "Error" (my-process-output-to-string "duc" "info"))))
     (setopt dired-du-used-space-program '("duc" "ls -bD"))
+    (run-with-timer 10 3600 #'my-index-duc) ;; index every hour
     (add-hook 'dired-mode-hook #'dired-du-mode)))

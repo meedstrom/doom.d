@@ -1,46 +1,31 @@
 ;; Functions without "my-" prefix -*- lexical-binding: t; -*-
 
+;; These are largely unused, but some are really neat in the right context.
+
 (require 'cl-lib)
 (require 'subr-x)
 
-(defmacro no (&rest _input)
-  `(ignore))
-
-(defmacro prep (pkg &rest input)
-  (when-let (kw (seq-intersection '(:config :init :custom :commands) input))
-    (error "Deprecated keywords used, find a different way: %s" kw))
-  `(use-package ,pkg :defer t
-     ,@input))
-
-(defmacro demand (pkg &rest input)
-  (when-let (kw (seq-intersection '(:config :init :custom :commands) input))
-    (error "Deprecated keywords used, find a different way: %s" kw))
-  `(use-package ,pkg :demand t
-     ,@input))
-
-;; so you can type (after org (set-face-attribute...) ...)
-(defalias 'after #'after!)
-
-;; so you can type (once 'org-mode-hook (set-face-attribute...) ...)
-(defalias 'once #'my-hook-once)
-
-;; so you can type (my org-mode-hook (set-face-attribute...) ...)
-(defmacro my (hook &rest body)
-  (let ((fname (intern (concat "my-" (symbol-name hook)))))
-    `(add-hook ',hook (defun ,fname () ,@body))))
-
-;; so you can type (on-hook 'org-mode-hook (set-face-attribute...) ...)
-(defmacro hook-do (hook &rest body)
-  (let ((fname (cl-gensym)))
-    `(add-hook ,hook (defun ,fname () ,@body))))
-
 ;; Backports for when I'm on an old Emacs
-(unless (version<= "29" emacs-version)
+(when (> 29 emacs-major-version)
   (require 'compat)
   (require 'general)
-  (defalias #'setopt #'general-setq)
   (require 'crux)
+  (defalias #'setopt #'general-setq)
   (defalias #'duplicate-dwim #'crux-duplicate-current-line-or-region))
+
+;; ... what's a good name...?
+(defalias 'genhook 'my-hook)
+(defalias 'hook-gensym 'my-hook)
+(defalias 'hookgen 'my-hook)
+(defalias 'add-gensym-hook 'my-hook)
+(defalias 'captain-hook 'my-hook)
+
+(defmacro time (&rest body)
+  "Evaluate BODY and print time elapsed."
+  (let ((T (cl-gensym)))
+    `(let ((,T (current-time)))
+       ,@body
+       (message "Elapsed: %fs" (float-time (time-since ,T))))))
 
 (defmacro time-return (&rest body)
   "Evaluate BODY and print time elapsed.
@@ -50,23 +35,11 @@ Then return the last value of BODY."
        (prog1 (progn ,@body)
          (message "Elapsed: %fs" (float-time (time-since ,T)))))))
 
-(defmacro time (&rest body)
-  "Evaluate BODY and print time elapsed."
-  (let ((T (cl-gensym)))
-    `(let ((,T (current-time)))
-       ,@body
-       (message "Elapsed: %fs" (float-time (time-since ,T))))))
-
-(defmacro when-car-fbound (form)
-  `(when (fboundp (car #',form)) ,form))
-
-(defmacro call-if-fbound (func &rest args)
-  `(when (fboundp #',func) (,func ,@args)))
-
 (defmacro c (fn &rest body)
-  "Interactive version of `l'.
-FN and BODY as in `l'.  The typical use case is with `keymap-set'
-to make a simple command on the fly."
+  "Interactive version of `l' (short anonymous lambda).
+FN and BODY as in `l'.  A typical use-case is with `keymap-set'
+to make a simple command on the fly without the expression
+flowing across two lines."
   (require 'l)
   `(lambda ,(l--arguments body)
      (interactive)

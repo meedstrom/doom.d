@@ -11,10 +11,11 @@
 (run-with-idle-timer 12 nil #'require 'org-roam)
 (run-with-idle-timer 14 nil #'require 'dired)
 (run-with-idle-timer 16 nil #'require 'eshell)
+(run-with-idle-timer 18 nil #'require 'ess)
 (run-with-idle-timer 20 nil #'require 'ess-r-mode)
 
-;; I don't know a systematic way to find the sequence of files to load,
-;; so it's a PITA to figure out and it could change in future updates...
+;; I don't know a systematic way to find the correct sequence of files to load,
+;; and as you can see it's a PITA to figure out by hand.
 (use-package! ess-r-mode
   :disabled
   :defer-incrementally

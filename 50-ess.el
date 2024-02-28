@@ -1,7 +1,7 @@
 ;; ESS (Emacs Speaks Statistics) config -*- lexical-binding: t; -*-
 
 ;; TODO: submit PR https://github.com/radian-software/apheleia?tab=readme-ov-file#adding-a-formatter
-(after apheleia-formatters
+(after! apheleia-formatters
   (add-to-list 'apheleia-formatters '(ess-r "R" "-s" "--no-save" "--no-restore" "-e" "styler::style_text(readLines(file('stdin')))"))
   (add-to-list 'apheleia-mode-alist '(ess-r-mode . ess-r)))
 
@@ -31,7 +31,7 @@ BUF should be skipped over by functions like `next-buffer' and `other-buffer'."
 (setopt ess-history-file nil)
 (setopt ess-ask-for-ess-directory nil)
 (setopt ess-eval-visibly 'nowait)
-(hook-do 'ess-r-mode-hook (ess-set-style 'RStudio))
+(my-hook ess-r-mode-hook (ess-set-style 'RStudio))
 
 ;; http://chainsawriot.com/mannheim/2020/07/19/elisp.html
 

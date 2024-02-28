@@ -3,13 +3,19 @@
 (require 'cl-lib)
 (require 'seq)
 (require 'subr-x)
+
+;; external
 (require 'dash)
 (require 'crux)
 
 (autoload #'server-running-p "server")
 (autoload #'tramp-time-diff  "tramp")
-(autoload #'objed-ipipe "objed")
-(autoload #'piper "piper")
+
+;; so you can type (my-hook org-mode-hook (set-face-attribute ...) ...)
+(defmacro my-hook (hook &rest body)
+  (declare (indent defun))
+  (let ((fname (cl-gensym)))
+    `(add-hook ',hook (defun ,fname () ,@body))))
 
 (defun my-multi-hyphens-to-en-em-dashes (beg end*)
   ;; idk if needed in elisp but just in case. dont modify input variable
@@ -818,6 +824,8 @@ To start using it, evaluate the following.
 
 (defun my-pipe ()
   (interactive)
+  (require 'objed)
+  (require 'piper)
   (if (region-active-p)
       (objed-ipipe)
     (piper)))

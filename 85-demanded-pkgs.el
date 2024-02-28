@@ -1,7 +1,5 @@
 ;; -*- lexical-binding: t; -*-
 
-(require 'crux)
-
 (require 'beginend)
 (beginend-global-mode)
 
@@ -13,8 +11,8 @@
 (apheleia-global-mode)
 (setopt apheleia-log-debug-info t)
 
-;; note that "javascript" actually just applies to js2-mode. generally this
-;; package needs some updates
+;; note that "javascript" actually just applies to js2-mode. this
+;; package needs more love
 (require 'smart-tabs-mode)
 (smart-tabs-insinuate 'c 'c++ 'java 'javascript 'cperl 'python 'ruby 'nxml)
 
@@ -32,16 +30,15 @@
   ;; theme already uses muted colors, the effect is...well...
   (setopt prism-desaturations '(0 20 60))
   ;; (setopt prism-desaturations '(0))
-  ;; Btw, another odd default for lisp is that the parens enclosing a sexp
-  ;; are a diff color from the symbols inside -- people arent used to this
-  ;; either, it makes em stand out too much imo
+  ;; Btw, another odd default for Lisp is that the parens enclosing a sexp
+  ;; differ in color from the symbols inside -- people arent used to this
+  ;; (unless they already used rainbow-delimiters)
   :config
   ;; Replace rainbow-delimiters (it's on a dozen hooks in Doom, so this method
   ;; is easiest).
   (fset 'rainbow-delimiters-mode #'prism-mode)
   (add-hook 'doom-load-theme-hook #'prism-set-colors)
+  ;; (add-hook 'web-mode-hook #'prism-mode) ;; infinite loop in .svelte files
   (add-hook 'typescript-mode-hook #'prism-mode)
   (add-hook 'typescript-tsx-mode-hook #'prism-mode)
-  (add-hook 'js-base-mode-hook #'prism-mode)
-  ;; (add-hook 'web-mode-hook #'prism-mode) ;; infinite loop in .svelte files
-  )
+  (add-hook 'js-base-mode-hook #'prism-mode))
