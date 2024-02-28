@@ -1,3 +1,5 @@
+;; -*- lexical-binding: t; -*-
+
 (require 'crux)
 
 (require 'beginend)

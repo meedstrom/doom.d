@@ -1,19 +1,4 @@
-;; General settings -*- lexical-binding: t; -*-
-
-;; Copyright (C) 2020-2024 Martin Edström
-;;
-;; This program is free software: you can redistribute it and/or modify
-;; it under the terms of the GNU General Public License as published by
-;; the Free Software Foundation, either version 3 of the License, or
-;; (at your option) any later version.
-;;
-;; This program is distributed in the hope that it will be useful,
-;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-;; GNU General Public License for more details.
-;;
-;; You should have received a copy of the GNU General Public License
-;; along with this program. If not, see <http://www.gnu.org/licenses/>.
+;; -*- lexical-binding: t; -*-
 
 (add-load-path! "/home/kept/emacs/key-seqs-finder/"
                 ;; "/home/kept/emacs/inline-anki/"
@@ -176,22 +161,6 @@
 
 ;; (debug-watch 'org-mode)
 
-(use-package! snitch :disabled
-              :config
-              (require 'snitch)
-              (setq snitch-network-policy 'deny)
-              (setq snitch-network-whitelist
-                    (list (cons #'snitch-filter-src-pkg '(eww))
-                          (cons #'snitch-filter-src-pkg '(magit))
-                          (cons #'snitch-filter-src-pkg '(forge))))
-              (setq snitch-log-policy '(blocked blacklisted))
-              ;; (setq snitch-log-policy '(allowed blocked whitelisted blacklisted))
-              ;; (setq snitch-log-verbose nil)
-              ;; (setq snitch-log-buffer-max-lines)
-              ;; (setq snitch-enable-notifications t)
-              (setq snitch-trace-timers nil)
-              (snitch-mode))
-
 
 ;;; Stuff
 
@@ -220,7 +189,7 @@
 
 (my-fix-pdf-midnight-colors)
 
-(after! recentf
+(after recentf
   (setopt recentf-max-saved-items nil))
 
 ;; "Because an 80 char wide Emacs window starts wrapping at 79."
@@ -233,7 +202,7 @@
 ;; Shrinking the font one notch is not an option since that would take it all
 ;; the way down to 2x110 or so.  I want the text as big as possible because I
 ;; want to sit far from the screen.
-(after! doom-editor
+(after doom-editor
   (setq-default fill-column 79))
 
 ;; FIXME: the setting isn't t during init, which i'd like. guess i'll just have

@@ -1,8 +1,4 @@
-;;; my-lib-unprefixed.el -*- lexical-binding: t; -*-
-
-;;; Commentary:
-
-;;; Code:
+;; Functions without "my-" prefix -*- lexical-binding: t; -*-
 
 (require 'cl-lib)
 (require 'subr-x)

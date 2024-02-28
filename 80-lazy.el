@@ -1,3 +1,5 @@
+;; -*- lexical-binding: t; -*-
+
 ;; flash effect on deletion, paste etc
 (use-package goggles
   :hook ((prog-mode text-mode) . goggles-mode))

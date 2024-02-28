@@ -1,54 +1,42 @@
 ;; Eagerly cache recentf and other data -*- lexical-binding: t -*-
 
-;; Copyright (C) 2023-2024 Martin Edström
-;;
-;; This program is free software: you can redistribute it and/or modify
-;; it under the terms of the GNU General Public License as published by
-;; the Free Software Foundation, either version 3 of the License, or
-;; (at your option) any later version.
-;;
-;; This program is distributed in the hope that it will be useful,
-;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-;; GNU General Public License for more details.
-;;
-;; You should have received a copy of the GNU General Public License
-;; along with this program. If not, see <http://www.gnu.org/licenses/>.
-
 ;;; Commentary:
 
-;; Ensure survival of data such as recentf.
-
-;; It's insane to put data-syncs on kill-emacs-hook.  Most of the time my emacs
-;; goes down, it happens in a non-clean way -- why would I intentionally shut
-;; off Emacs if everything is fine?  As a result, I'm missing some data
-;; every time I start Emacs: I can't find org notes by org-id, recentf
-;; suffers partial amnesia, and so on.  This code fixes it.
+;; Ensure survival of data such as recentf, that normally rely on
+;; `kill-emacs-hook'.
+;;
+;; It's sloppy design to put data-syncs on `kill-emacs-hook'.  Most of the time
+;; my Emacs goes down, it's a crash.  I'm not quite sure who is the mythical
+;; user who regularly types C-x C-c to bring down a fully functional Emacs,
+;; even though nothing is broken (why are they bringing it down? I don't get
+;; it).  Anyway, I'm missing some data every time I start Emacs: I can't find
+;; org notes by org-id, recentf suffers partial amnesia, and so on.  This code
+;; fixes all that.
 
 ;;; Code:
 
 (defvar my-state-sync-hooks nil
-  "Dynamic variable.
+  "Dynamic (global) variable.
 For some reason, lexical binding does not permit `my-state-sync'
-to just let-bind a temp variable, so it uses this.")
+to treat a let-bound variable as a hook, so we use this.")
 
 (defun my-state-sync ()
   "Write histories and caches to disk.
 This runs many members of `kill-emacs-hook' so we don't have to
-rely on that hook.  You may put this on a repeating idle timer."
+rely on that hook.  Suggested to run from a repeating idle timer."
   (setq my-state-sync-hooks
         (seq-intersection
          ;; NOTE: Check your `kill-emacs-hook' in case there's more
          ;; functions you want to add here.
-         #'(bookmark-exit-hook-internal
-            savehist-autosave
-            transient-maybe-save-history
-            org-id-locations-save
-            save-place-kill-emacs-hook
-            recentf-save-list
-            recentf-cleanup
-            doom-cleanup-project-cache-h
-            doom-persist-scratch-buffers-h)
+         '(bookmark-exit-hook-internal
+           savehist-autosave
+           transient-maybe-save-history
+           org-id-locations-save
+           save-place-kill-emacs-hook
+           recentf-save-list
+           recentf-cleanup
+           doom-cleanup-project-cache-h
+           doom-persist-scratch-buffers-h)
          kill-emacs-hook))
   (run-hooks 'my-state-sync-hooks))
 
