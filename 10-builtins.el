@@ -22,8 +22,10 @@
 (setopt proced-enable-color-flag t)
 (setopt abbrev-suggest t)
 (setopt use-short-answers t)
-;; (setopt byte-compile-warnings '(not free-vars))
-;; (setopt backtrace-on-redisplay-error t)
+(setopt backtrace-on-redisplay-error t)
+(setq byte-compile-warnings '(not free-vars))
+(setopt eval-expression-print-length 64)
+(setopt eval-expression-print-level 16)
 
 ;; Don't clear my echo area
 (setopt garbage-collection-messages nil)

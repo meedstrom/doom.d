@@ -31,7 +31,7 @@ BUF should be skipped over by functions like `next-buffer' and `other-buffer'."
 (setopt ess-history-file nil)
 (setopt ess-ask-for-ess-directory nil)
 (setopt ess-eval-visibly 'nowait)
-(my-hook ess-r-mode-hook (ess-set-style 'RStudio))
+(anon-hook ess-r-mode-hook (ess-set-style 'RStudio))
 
 ;; http://chainsawriot.com/mannheim/2020/07/19/elisp.html
 

@@ -7,10 +7,7 @@
 ;; - Let C--, M--, s-- be negative argument
 ;; - Let - and = be neg. and univ. argument when any hydra is open
 ;; - Let - and = be neg. and univ. argument when any prefix argument has been called and awaiting next input
-;; - Allow typing M-= M-9 M-d, much better than M-= 9 M-t
-
-;; FIXME: univ-arg and then typing 6 means digit-arg, no way to call a command
-;;        bound to s-6
+;; - Allow typing M-= M-9 M-d, much better than M-= 9 M-d
 
 (keymap-unset global-map "C-u" t)
 (keymap-unset universal-argument-map "C-u" t)

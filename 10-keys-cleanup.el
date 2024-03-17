@@ -74,7 +74,7 @@
   (keymap-unset evil-emacs-state-map "C-z" t))
 
 ;; default is C-;
-(setopt iedit-toggle-key-default nil)
+(setq iedit-toggle-key-default nil)
 
 (after! geiser-mode
   (keymap-unset geiser-mode-map "M-," t)

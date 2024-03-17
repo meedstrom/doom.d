@@ -7,5 +7,7 @@
 (setopt comint-buffer-maximum-size (^ 2 10))
 (add-hook 'comint-output-filter-functions #'my-truncate-buffer-and-move-excess)
 
-;; This shouldn't affect eshell, but does...  Maybe it's been fixed since.
-;; (add-hook 'comint-output-filter-functions #'comint-strip-ctrl-m)
+;; for ess it would be useful to autoscroll the R console when sending
+;; expressions from an R file. Maybe not great while I'm inside a shell buffer
+;; or other comint buffer directly
+(setopt comint-scroll-to-bottom-on-input t)

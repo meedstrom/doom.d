@@ -69,7 +69,7 @@
 (keymap-set global-map "<f5>" #'repeat)
 (keymap-set global-map "C-0" #'hippie-expand)
 (keymap-set global-map "C-1" #'switch-to-buffer)
-(keymap-set global-map "C-2" #'my-other-window-any-frame-hyprland)
+(keymap-set global-map "C-2" #'other-window)
 (keymap-set global-map "C-3" #'unexpand-abbrev)
 (keymap-set global-map "C-4" #'my-stim)
 (keymap-set global-map "C-5" #'my-prev-file-in-dir)
@@ -88,6 +88,7 @@
 (keymap-set global-map "C-h s" #'find-function)
 (keymap-set global-map "C-h t" #'doom/toggle-profiler)
 (keymap-set global-map "C-q" #'my-dired-shell-cycle)
+(keymap-set global-map "C-x C-c" #'restart-emacs)
 (keymap-set global-map "C-x C-\;" (defrepeater #'comment-line))
 (keymap-set global-map "C-x k c" #'consult-kmacro)
 (keymap-set global-map "M-/" #'dabbrev-completion)
@@ -190,13 +191,17 @@
 (after! doom-keybinds
   (keymap-set doom-leader-map "f d" (keymap-lookup doom-leader-map "f D")))
 
-(after! mu4e-main
-  ;; .. thinking that I should let massmapper.el translate all capital bindings
-  ;; to lowercase letters when the lowercase is unbound anyway
-  ;; (keymap-unset mu4e-main-mode-map "C" t)
-  ;; (keymap-unset mu4e-main-mode-map "U" t)
+(after! mu4e
+  ;; Uppercase key bindings for common actions, really?  Die.
+  ;; .. thinking that I should automate this, prior art in massmapper.el
+  (keymap-unset mu4e-main-mode-map "C" t)
+  (keymap-unset mu4e-main-mode-map "U" t)
+  (keymap-unset mu4e-main-mode-map "R" t)
+  (keymap-unset mu4e-compose-mode-map "C-U" t)
   (keymap-set mu4e-main-mode-map "c" #'mu4e-compose-new)
-  (keymap-set mu4e-main-mode-map "u" #'mu4e-update-mail-and-index))
+  (keymap-set mu4e-main-mode-map "r" #'mu4e-compose-reply)
+  (keymap-set mu4e-main-mode-map "u" #'mu4e-update-mail-and-index)
+  (keymap-set mu4e-compose-mode-map "C-u" #'mu4e-update-mail-and-index))
 
 (after! dired-hist
   (keymap-set dired-mode-map "l" #'dired-hist-go-back)
@@ -256,6 +261,9 @@
   (keymap-set org-mode-map "C-c u" #'my-insert-heading-with-id)
   (keymap-set org-mode-map "C-c f" #'org-roam-node-find)
   (keymap-set org-mode-map "C-c i" #'org-roam-node-insert))
+
+(after! timer-list
+  (keymap-set timer-list-mode-map "a" #'my-timer-list-autorefresh))
 
 ;; Override some Doom Org keys
 (my-hook-once 'org-load-hook
@@ -402,21 +410,20 @@
 (keymap-set global-map "<menu>" #'execute-extended-command)
 ;; (keymap-set global-map "M-<menu>" #'embark-act)
 (after! general
-  ;; dafuq is this set for? maybe i want to get rid of M-x, bro?
+  ;; dafuq is this set for? maybe i want bind sth else on M-x?
   (general-unbind general-override-mode-map "M-x")
   (general-unbind general-override-mode-map "A-x")
   ;; guess I should take a page from their book
   (general-def general-override-mode-map "<menu>" #'execute-extended-command))
 
 
-;; The indispensable Massmapper (screw using emacs without it. it's like emacs
-;; had a supermassive scab its own bodyweight and now it's all gone, so nice)
+;; The indispensable Massmapper
 (use-package! massmapper
   :hook (after-init . massmapper-mode))
 (add-hook 'massmapper-keymap-found-hook #'massmapper-define-super-like-ctl)
 (add-hook 'massmapper-keymap-found-hook #'massmapper-homogenize -50)
 ;; (add-hook 'massmapper-keymap-found-hook #'massmapper-protect-ret-and-tab -75)
-(setopt massmapper-debug-level 2)
+(setopt massmapper-debug-level 0)
 (setopt massmapper-homogenizing-winners
         '(("C-x C-s" . global-map)
           ("C-x C-f" . global-map)

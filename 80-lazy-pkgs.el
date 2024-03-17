@@ -1,4 +1,15 @@
-;; Configure lazy external packages -*- lexical-binding: t; -*-
+;; Configure small lazy packages -*- lexical-binding: t; -*-
+
+(use-package objed
+  :commands objed-ipipe)
+(use-package hyperbole
+  :commands hkey-either)
+(use-package goggles
+  :hook ((prog-mode text-mode) . goggles-mode))
+(use-package iscroll
+  :hook ((text-mode elfeed-show-mode eww-mode shr-mode) . iscroll-mode))
+(use-package! nov
+  :mode ("\\.epub\\'" . nov-mode))
 
 (setopt helpful-max-buffers nil) ;; what's the point of killing buffers
 (setopt iflipb-wrap-around t)
@@ -9,18 +20,9 @@
 (setopt calibredb-db-dir (expand-file-name "metadata.db" calibredb-root-dir))
 (setopt calibredb-format-width 8)
 
-(setopt +doom-dashboard-functions
-        '(doom-dashboard-widget-shortmenu
-          doom-dashboard-widget-loaded))
-
-;; NOTE: you can use ~/.authinfo instead of putting your user name and password here
-(setopt mediawiki-site-default "WikEmacs")
-(setopt mediawiki-site-alist
-        '(("Wikipedia" "http://en.wikipedia.org/w/" "username" "password" nil "Main Page")
-          ("WikEmacs" "http://wikemacs.org/" "username" "password" nil "Main Page")))
-
 (after! multiple-cursors
-  ;; auto-save every 5 seconds, destroys what youre doing!
+  ;; auto-save every 5 seconds destroys what youre doing!
+  ;; should make a PR
   (add-to-list 'mc/unsupported-minor-modes 'auto-save-visited-mode)
   (add-to-list 'mc/unsupported-minor-modes 'nameless-mode))
 
@@ -38,6 +40,23 @@
   (after! org
     (add-to-list 'org-structure-template-alist '("f" . "flashcard"))))
 
+(after! elfeed
+  (setq elfeed-db-directory (concat doom-private-dir "elfeed/db/")
+        elfeed-enclosure-default-dir (concat doom-private-dir "elfeed/enclosures/"))
+  (make-directory elfeed-db-directory t)
+  ;; filter into junk
+  (add-hook 'elfeed-new-entry-hook
+            (elfeed-make-tagger :entry-title (rx (or "MCMXXX"
+                                                     "A&R"))
+                                :add 'junk))
+  (setopt elfeed-curl-max-connections 1)
+  (setopt elfeed-search-filter "@2-months-ago -junk +unread")
+  (use-package elfeed-org
+    :config
+    (setopt rmh-elfeed-org-files
+            '("/home/kept/roam/contemporaries.org"))
+    (elfeed-org)))
+
 (after! ws-butler
   ;; Fix problem with guix.el
   (add-to-list 'ws-butler-global-exempt-modes #'minibuffer-inactive-mode)
@@ -45,34 +64,13 @@
   (add-to-list 'ws-butler-global-exempt-modes #'org-mode))
 
 (after! deianira
-  ;; (fset 'which-key-mode #'ignore)
+  (which-key-mode 0)
+  (fset 'which-key-mode #'ignore)
   (after! hydra
     (define-key hydra-base-map (kbd "<f5>") #'hydra-repeat))
   (setq dei-ignore "C-")
   (setq dei-invisible-leafs
         (seq-difference dei-invisible-leafs '("<menu>" "SPC"))))
-
-;; visual flash on deletion, paste etc
-(use-package goggles
-  :hook ((prog-mode text-mode) . goggles-mode))
-
-;; better image scroll
-(use-package iscroll
-  :hook ((text-mode elfeed-show-mode eww-mode shr-mode) . iscroll-mode))
-
-;; (use-package iedit
-;;   ;; default is C-;
-;;   :init (setq iedit-toggle-key-default nil)
-;;   :commands iedit-mode)
-
-(use-package objed
-  :commands objed-ipipe)
-
-(use-package hyperbole
-  :commands hkey-either)
-
-(use-package nov
-  :mode ("\\.epub\\'" . nov-mode))
 
 (use-package copilot
   :disabled
@@ -90,19 +88,3 @@
   (setopt nameless-affect-indentation-and-filling nil)
   :config
   (set-face-attribute 'nameless-face nil :inherit 'unspecified))
-
-(use-package elfeed
-  :disabled
-  :defer
-  :config
-  (setopt rmh-elfeed-org-files
-          (list (expand-file-name "elfeed.org" doom-private-dir)))
-  ;; filter into junk
-  (add-hook 'elfeed-new-entry-hook
-            (elfeed-make-tagger :entry-title (rx (or "MCMXXX"
-                                                     "A&R"))
-                                :add 'junk))
-  (setopt elfeed-curl-max-connections 1)
-  (setopt elfeed-search-filter "@2-months-ago -junk +unread +fav")
-  ;; (ignore-errors (elfeed-org)) ;; does not work
-  )

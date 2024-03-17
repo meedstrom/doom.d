@@ -41,6 +41,7 @@
 (package! circadian)
 (package! consult)
 (package! consult-ffdata :recipe (:host github :repo "chen-chao/consult-ffdata"))
+(package! math-delimiters :recipe (:host github :repo "oantolin/math-delimiters"))
 (package! copy-as-format)
 (package! corfu)
 (package! crux)
@@ -72,6 +73,7 @@
 (package! help-find)
 ;; (package! copilot)
 (package! consult-org-roam)
+(package! pocket-reader)
 (package! hyperbole)
 (package! format-all)
 (package! iedit)
@@ -94,14 +96,13 @@
 (package! prism)
 (package! screencast)
 (package! shelldon)
-(package! sicp)
-(package! smart-tabs-mode)
 (package! ef-themes)
-(package! lem)
 (package! ement)
 (package! snitch)
 (package! snow)
 (package! tempel)
+(package! elfeed)
+(package! elfeed-org)
 (package! tempel-collection)
 (package! ts)
 (package! unpackaged :recipe (:host github :repo "alphapapa/unpackaged.el"))
@@ -110,26 +111,49 @@
 (package! visual-regexp)
 (package! wgrep)
 (package! xr)
+(package! awesome-tray :recipe (:host github :repo "manateelazycat/awesome-tray"))
 
 ;; Org
 (package! vulpea)
 (package! org-anki)
-(package! org-roam)
 (package! org-transclusion)
+(package! org-roam)
 (package! htmlize)
 (package! delve :recipe (:host github :repo "publicimageltd/delve"))
 ;; (package! org-recent-headings)
 ;; (package! org-roam-bibtex) ;; yes still relevant for org 9.5
-;; (package! org-roam-ui)
+(package! org-roam-ui)
 ;; (package! org-tanglesync)
 ;; (package! ox-rss)
 
-;; Minimalist modelines that merge with echo area
-(package! awesome-tray :recipe (:host github :repo "manateelazycat/awesome-tray"))
-;; (package! maple-minibuffer :recipe (:host github :repo "honmaple/emacs-maple-minibuffer"))
-;; (package! mini-modeline)
-;; (package! feebleline)
+;; Much copypasta from Doom module (the complexity is to permit downloading a
+;; shallow clone, normally you can't build Org from a shallow clone).
+(package! org
+  :recipe (:host github
+           :repo "emacs-straight/org-mode"
+           :files (:defaults "etc")
+           :depth 1
+           :build t
+           :pre-build
+           (progn
+             (with-temp-file "org-loaddefs.el")
+             (with-temp-file "org-version.el"
+               (let ((version
+                      (with-temp-buffer
+                        (insert-file-contents (doom-path "lisp/org.el") nil 0 1024)
+                        (if (re-search-forward "^;; Version: \\([^\n-]+\\)" nil t)
+                            (match-string-no-properties 1)
+                          "Unknown"))))
+                 (insert (format "(defun org-release () %S)\n" version)
+                         (format "(defun org-git-version (&rest _) \"%s-??-%s\")\n"
+                                 version (cdr (doom-call-process "git" "rev-parse" "--short" "HEAD")))
+                         "(provide 'org-version)\n"))))))
+(package! org-contrib
+  :recipe (:host github
+           :repo "emacsmirror/org-contrib"))
 
+
+;; (package! maple-minibuffer :recipe (:host github :repo "honmaple/emacs-maple-minibuffer"))
 ;; (package! sway)
 ;; (package! eot :recipe (:host github :repo ""))
 ;; (package! affe)

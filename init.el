@@ -1,19 +1,17 @@
 ;;; init.el -*- lexical-binding: t; -*-
 
-(doom! :completion
-       (vertico +icons)
-       company
+(doom! :completion (vertico +icons)
+       :emacs dired
+       :term shell
+       :checkers spell
+       :app irc
+       :email mu4e
+       :config (default +bindings +smartparens)
 
        :ui
        (vc-gutter +diff-hl +pretty)
        hl-todo
        ligatures
-
-       :emacs
-       dired
-
-       :term
-       shell
 
        :lang
        emacs-lisp
@@ -23,19 +21,12 @@
        (web +tree-sitter)
        (javascript +tree-sitter)
        json
-       (org +dragndrop +roam2)
+       ;; (org +dragndrop +roam2)
        (sh +fish)
 
        :tools
        tree-sitter
-       (lsp )
+       editorconfig
+       lsp
        (magit +forge)
-       pdf
-
-       :app
-       irc
-       emms
-       rss
-
-       :email mu4e
-       :config (default +bindings +smartparens))
+       pdf)

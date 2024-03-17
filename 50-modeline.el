@@ -1,7 +1,8 @@
 ;; -*- lexical-binding: t; -*-
 
 
-;; best one so far
+;; not perfect, but best so far
+;; note: interferes with elfeed-goodies
 (use-package! awesome-tray
   :config
   ;; (setq awesome-tray-date-format "%H:%M")
@@ -23,7 +24,7 @@
   ;; (setq awesome-tray-refresh-idle-delay nil)
   ;; (setq awesome-tray-update-interval nil)
   ;; Patch to always show the percentage, even if plugged in.  No decimal.
-  (el-patch-defun awesome-tray-module-battery-info ()
+  (defun awesome-tray-module-battery-info ()
     (let ((current-seconds (awesome-tray-current-seconds)))
       (if (> (- current-seconds awesome-tray-battery-status-last-time) awesome-tray-battery-update-duration)
           (let* ((battery-info (funcall battery-status-function))
@@ -57,17 +58,10 @@
 ;; (setq-default mode-line-format nil)
 ;; (global-hide-mode-line-mode)
 
-(use-package! mini-modeline :disabled
-              :hook  (after-init . mini-modeline-mode))
+;;(use-package! mini-modeline :disabled
+;;              :hook (after-init . mini-modeline-mode))
 
 ;; (use-package! feebleline :config (feebleline-mode))
-
-;; (use-package! smarttabs
-;;               :config
-;;               (smart-tabs-add-language-support ess-r ess-r-mode-hook
-;;                 ())
-;;               (smart-tabs-insinuate 'ess))
-
 
 ;; (setopt mini-modeline-display-gui-line nil)
 ;; (setopt mini-modeline-face-attr '(:background "#001100" :foreground "pale green"))
@@ -97,7 +91,7 @@
 ;;             ((lambda () org-pomodoro-mode-line) :face font-lock-warning-face)
 ;;             )))
 
-(after! doom-modeline
-  (setopt doom-modeline-buffer-encoding nil)
-  (remove-hook 'doom-modeline-mode-hook #'size-indication-mode)
-  (size-indication-mode 0))
+;; (after! doom-modeline
+;;   (setopt doom-modeline-buffer-encoding nil)
+;;   (remove-hook 'doom-modeline-mode-hook #'size-indication-mode)
+;;   (size-indication-mode 0))

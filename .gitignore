@@ -4,12 +4,10 @@
 *#
 *.bak
 
-/*-lib-external.el
-/*-private.el
-/*-org-roam-logseq.el
+/*-priv*.el
 
-wip.el
 mothball/
 wip/
 subed/
 mail/
+elfeed/

@@ -13,12 +13,18 @@
   (defalias #'setopt #'general-setq)
   (defalias #'duplicate-dwim #'crux-duplicate-current-line-or-region))
 
-;; ... what's a good name...?
-(defalias 'genhook 'my-hook)
-(defalias 'hook-gensym 'my-hook)
-(defalias 'hookgen 'my-hook)
-(defalias 'add-gensym-hook 'my-hook)
-(defalias 'captain-hook 'my-hook)
+;; So you can type (hookgen org-mode-hook (set-face-attribute ...) ...).
+;; I'm split between this method and llama.el, leaning towards llama.el.
+(defmacro hookgen (hook &rest body)
+  (declare (indent defun))
+  (let ((fname (cl-gensym)))
+    `(add-hook ',hook (defun ,fname () ,@body))))
+
+;; what's a good name?
+(defalias 'my-hook #'hookgen)
+(defalias 'make-hook #'hookgen)
+(defalias 'anon-hook #'hookgen)
+(defalias 'captain-hook #'hookgen)
 
 (defmacro time (&rest body)
   "Evaluate BODY and print time elapsed."

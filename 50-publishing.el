@@ -3,36 +3,14 @@
 (require 'dash)
 (require 'f)
 
-;; Keep in mind that case-fold-search doesn't affect `equal', and therefore
+;; Keep in mind that `case-fold-search' doesn't affect `equal', and therefore
 ;; doesn't affect list-comparisons such as `cl-intersection'!
 (defvar my-deprecated-tags '("drill"  "fc" "anki" "partner" "friends-eyes" "therapist" "eyes-partner" "eyes-therapist" "eyes-diana" "eyes-friend" "eyes_therapist" "eyes_partner" "eyes_friend"))
 (defvar my-tags-to-avoid-uploading (append my-deprecated-tags '("noexport" "archive" "private" "censor")))
 (defvar my-tags-for-hiding '("gri" "shrink" "privy" "lover" "fren"))
-
 (defvar my-refs-cache nil)
-
-(defun my-publish ()
-  "A single command I can use in a child emacs."
-  (interactive)
-  (require 'ox-publish)
-  (switch-to-buffer "*Messages*") ;; for watching it work
-  ;; (split-window) ;; in case the Warnings buffer appears
-  (cd "/home/kept/roam") ;; for me to quick-search when an id fails to resolve
-  ;; (shell-command "rm -r /tmp/roam/")
-  (shell-command "rm -r /tmp/entries/")
-  ;; (mkdir "/tmp/roam")
-  (mkdir "/tmp/entries" t)
-  (org-publish "my-slipbox-blog" t)
-  (org-publish "my-slipbox-blog-attachments" t)
-  ;; ensure it's gone from recentf so I don't accidentally edit these instead
-  ;; of the originals
-  (shell-command "rm -r /tmp/roam")
-  (my-check-id-collisions)
-  (my-make-atom-feed "/home/kept/pub/posts.atom" "/tmp/entries/")
-  (f-write (json-encode-alist my-id-old-new-alist)
-           'utf-8 "/home/kept/pub/idMappings.json")
-  (f-write (json-encode-alist my-heading-locations)
-           'utf-8 "/home/kept/pub/idsInPages.json"))
+(defvar my-heading-locations nil)
+(defvar my-id-old-new-alist nil)
 
 (setopt org-publish-project-alist
         `(("my-slipbox-blog"
@@ -54,81 +32,69 @@
            :publishing-directory "/home/kept/pub/attachments/"
            :publishing-function org-publish-attachment)))
 
-;; Override so the special link type info: won't get exported to an empty
-;; <a href>.  I may need more overrides like this for each special link type,
-;; see `org-link-parameters'.
-(require 'ol-info)
-(el-patch-defun org-info-export (path desc _format)
-  (or desc path))
-
-(defvar my-heading-locations nil)
-
-(defvar my-ids nil
-  "Database for checking ID collisions.
-This is not as important as it sounds.  I am using 4-char IDs,
-which haven't had a collision yet.  But maybe in the future I
-move to 3-char IDs, and that's what I like to check.  By
-futureproofing in this way, I won't have to set up redirects
-beyond a general one that cuts one char off the ID.")
-
-(defun my-check-id-collisions ()
-  (interactive)
-  (cl-loop for id-uuids in my-ids
-           as uuids = (-distinct (cdr id-uuids))
-           when (> (length uuids) 1)
-           do (message "These uuids make same page-id: %s"
-                       uuids)))
+(defun my-publish (&optional rescan)
+  "A single command I can use in a child emacs."
+  (interactive "P")
+  (require 'ox-publish)
+  (cd "/home/kept/roam") ;; for me to quick-search when an id fails to resolve
+  (shell-command "rm -r /tmp/feed-entries/")
+  (mkdir "/tmp/feed-entries/" t)
+  (switch-to-buffer "*Messages*") ;; for watching it work
+  ;; (split-window) ;; in case the Warnings buffer appears
+  (when rescan
+    (shell-command "rm /tmp/org-roam.db"))
+  (sleep-for .05)
+  (org-publish "my-slipbox-blog" t)
+  (org-publish "my-slipbox-blog-attachments" t)
+  ;; ensure it's gone from recentf so I don't accidentally edit these instead
+  ;; of the originals
+  (shell-command "rm -r /tmp/roam")
+  (my-check-id-collisions)
+  (my-make-atom-feed "/home/kept/pub/posts.atom" "/tmp/feed-entries/")
+  (f-write (json-encode-alist my-id-old-new-alist)
+           'utf-8 "/home/kept/pub/idMappings.json")
+  (f-write (json-encode-alist my-heading-locations)
+           'utf-8 "/home/kept/pub/idsInPages.json"))
 
 ;; (defconst my-date-regexp (rx (= 4 digit) "-" (= 2 digit) "-" (= 2 digit)))
-(defvar my-publish-ran-already nil)
+(defvar my-publish-scanned-already nil)
 (defun my-prep-fn (_)
   "Prepare Emacs and temp files for publishing my website.
 Since I intend to run `org-publish' in a subordinate Emacs, this
 function is where I can make destructive env changes that I don't
 want in my main Emacs."
+  (require 'org-roam)
+
   ;; Speed up publishing
-  (setopt org-mode-hook nil)
+  (setq org-mode-hook nil)
   (gcmh-mode 0)
-  (setopt gc-cons-threshold most-positive-fixnum)
-  (fset 'org-publish-write-cache-file #'ignore)
+  (setq gc-cons-threshold most-positive-fixnum)
+  (fset 'org-publish-write-cache-file #'ignore) ;; huge effect!
   (advice-remove 'after-find-file #'doom--shut-up-autosave-a)
   ;; (undefadvice! '+org--fix-async-export-a :around '(org-export-to-file org-export-as))
   ;; (undefadvice! +org-babel-disable-async-maybe-a :around #'ob-async-org-babel-execute-src-block)
 
   ;; Not sure it helps speed at all
-  (global-emojify-mode 0)
-  (apheleia-global-mode 0)
-  ;; (solaire-global-mode 0)
-  (ws-butler-global-mode 0)
-  (smartparens-global-mode 0)
+  (my-disable-modes-if-present
+   '(global-emojify-mode
+     apheleia-global-mode
+     solaire-global-mode
+     ws-butler-global-mode
+     smartparens-global-mode
+     projectile-mode
+     global-diff-hl-mode
+     beginend-global-mode
+     better-jumper-mode
+     global-prettify-symbols-mode
+     global-ligature-mode
+     global-eldoc-mode))
   (setq whitespace-global-modes nil)
-  (projectile-global-mode 0)
-  ;; (remove-hook  'git-gutter-mode)
 
-  (setopt org-export-use-babel nil)
-  (setopt org-export-with-drawers '(not "logbook" "noexport")) ;; case-insensitive
-  (setopt org-export-exclude-tags my-tags-to-avoid-uploading)
-  (setopt org-export-with-broken-links nil) ;; links would disappear quietly
-  (setopt org-export-with-smart-quotes nil)
-  (setopt org-export-with-todo-keywords nil)
-  (setopt org-export-headline-levels 5) ;; go all the way to <h6> before making <li>
-  ;; If we don't set this to "", there will be .html inside some links even
-  ;; though I also set "" in the `org-publish-org-to' call.
-  (setopt org-html-extension "")
-  (setopt org-html-checkbox-type 'unicode) ;; how will it look in eww? test it.
-  (setopt org-html-self-link-headlines t)
-  (setopt org-html-html5-fancy t)
-  ;; why does it skip environments like \begin{align}?
-  ;; (setopt org-html-with-latex 'verbatim)
-  (setopt org-html-with-latex 'html) ;; use `org-latex-to-html-convert-command'
-  (setopt org-latex-to-html-convert-command "node /home/kept/pub/texToMathML.js '%i'")
-  (setopt case-fold-search t) ;; for all the searches in `my-publish-to-blog'
-  (setopt org-inhibit-startup t) ;; from org-publish-org-to
-  (toggle-debug-on-error)
-  (toggle-debug-on-quit)
+  (setq debug-on-error t)
+  (setq debug-on-quit t)
 
   ;; Switch theme for 2 reasons
-  ;; 1. Show me that this is not a normal Emacs
+  ;; 1. Show me that this is not my normal Emacs
   ;; 2. Syntax-highlight source blocks in a way that looks OK on the web
   ;; (load-theme 'doom-rouge)
   ;; (load-theme 'doom-zenburn)
@@ -146,17 +112,12 @@ want in my main Emacs."
   ;; For hygiene, ensure that this subordinate emacs syncs nothing to disk
   (cancel-timer my-state-sync-timer)
   (setopt kill-emacs-hook nil)
-  (fset 'org-id-locations-save #'ignore)
-  (setopt org-roam-db-location "/tmp/org-roam.db")
-  (org-roam-db-autosync-mode 0)
 
   ;; Copy the files to /tmp to work from there
   (shell-command "rm -r /tmp/roam/")
   (shell-command "cp -a /home/kept/roam /tmp/")
   (shell-command "cp -a /home/sync-phone/beorg/* /tmp/roam/")
   (shell-command "rm -r /tmp/roam/*/logseq/") ;; logseq auto-backups
-  (shell-command "rm -r /tmp/roam/lesswrong-org/")
-  (shell-command "rm /tmp/roam/*sync-conflict*") ;; syncthing
   (shell-command "shopt -s globstar && rm /tmp/roam/**/*.gpg") ;; no crypts
 
   ;; Flatten the directory tree (no more subdirs)
@@ -165,8 +126,10 @@ want in my main Emacs."
    unless (equal "/tmp/roam/" (file-name-directory file))
    do (rename-file file "/tmp/roam/"))
 
-  ;; ;; Generate a log of completed tasks my partner can peruse <3
-  (my-generate-todo-log "/tmp/roam/todo-log.org")
+  (shell-command "rm /tmp/roam/*sync-conflict*") ;; syncthing
+
+  ;; Generate a log of completed tasks
+  ;; (my-generate-todo-log "/tmp/roam/todo-log.org")
 
   ;; Ensure each post will get a unique ID in the URL
   (cl-loop
@@ -185,14 +148,39 @@ want in my main Emacs."
      (mkdir pageid t)
      (rename-file path (concat pageid "/"))))
 
+  (my-remove-all-advice 'org-roam-db-update-file) ;; remove vulpea, no need here
+
   ;; Tell `org-id-locations' and the org-roam DB about the new directory.
   (setopt org-roam-directory "/tmp/roam/")
+  (setopt org-roam-db-location "/tmp/org-roam.db")
   (setopt org-agenda-files '("/tmp/roam/"))
-  (unless my-publish-ran-already
+  (setopt org-id-locations-file "/tmp/org-id-locations")
+  (unless (file-exists-p org-roam-db-location)
+    (org-id-update-id-locations) ;; find files with ROAM_EXCLUDE too
     (org-roam-update-org-id-locations)
-    (org-roam-db-sync)
-    (setq my-publish-ran-already t))
+    (org-roam-db-sync 'force))
+  ;; (fset 'org-id-locations-save #'ignore)
+  ;; (org-roam-db-autosync-mode 0)
   (fset 'org-id-update-id-locations #'ignore) ;; stop triggering during publish
+
+  (setopt org-export-use-babel nil)
+  (setopt org-export-with-drawers '(not "logbook" "noexport")) ;; case-insensitive
+  (setopt org-export-exclude-tags my-tags-to-avoid-uploading)
+  (setopt org-export-with-broken-links nil) ;; links would disappear quietly
+  (setopt org-export-with-smart-quotes nil)
+  (setopt org-export-with-todo-keywords nil)
+  (setopt org-export-headline-levels 5) ;; go all the way to <h6> before making <li>
+  ;; If we don't set this to "", there will be .html inside some links even
+  ;; though I also set "" in the `org-publish-org-to' call.
+  (setopt org-html-extension "")
+  (setopt org-html-checkbox-type 'unicode) ;; how will it look in eww? test it.
+  (setopt org-html-self-link-headlines t)
+  (setopt org-html-html5-fancy t)
+  ;; why does it skip environments like \begin{align}?
+  ;; (setopt org-html-with-latex 'verbatim)
+  (setopt org-html-with-latex 'html) ;; use `org-latex-to-html-convert-command'
+  (setopt org-latex-to-html-convert-command "node /home/kept/pub/texToMathML.js '%i'")
+  (setopt org-inhibit-startup t) ;; from org-publish-org-to
 
   ;; Lookup table used by `my-replace-web-links-with-ref-note-links'
   (setq my-refs-cache (org-roam-db-query
@@ -201,139 +189,10 @@ want in my main Emacs."
                         :left-join nodes
                         :on (= refs:node-id nodes:id)])))
 
-;; Give each h2...h6 heading an ID attribute that matches its source org-id, if
-;; it has one, instead of e.g. "org953031".  That way, hash-links such as
-;; #ID-e10bbdfe-1ffb-4c54-9228-2818afdfc5ba will make the web browser jump to
-;; that heading.  Thank org-roam for this convenience!  Note that I convert
-;; these IDs to base62 later in this file.
-(after! ox (require 'org-roam-export))
-
-(defvar my-id-old-new-alist nil)
-
 ;; Change some things about the Org files, before org-export does its thing.
 (add-hook 'org-export-before-parsing-functions #'my-add-backlinks)
 (add-hook 'org-export-before-parsing-functions #'my-replace-web-links-with-ref-note-links)
 (add-hook 'org-export-before-parsing-functions #'my-replace-datestamps-with-links)
-
-(defun my-add-backlinks (&rest _)
-  "Add a \"What links here\" subtree at the end.
-Meant to run on `org-export-before-parsing-functions', where it
-will not modify the source file.
-
-Can probably be tested in a real org buffer... it never occurred
-to me to do that."
-  (let ((this-node (ignore-errors (org-roam-node-at-point)))
-        (linked-nodes nil))
-    (when this-node
-      (dolist (obj (org-roam-backlinks-get this-node :unique t))
-        (let ((node (org-roam-backlink-source-node obj)))
-          (unless (member node linked-nodes)
-            (push node linked-nodes))))
-      (dolist (obj (org-roam-reflinks-get this-node))
-        (let ((node (org-roam-reflink-source-node obj)))
-          (unless (equal node this-node)
-            (unless (member node linked-nodes)
-              (push node linked-nodes)))))
-      (when linked-nodes
-        (save-excursion 
-          (if (bobp)
-              (progn
-                (goto-char (point-max))
-                (insert "\n* What links here  :backlinks:")
-                ;; If this page is a pseudo-tag such as #emacs, make it clear
-                ;; that the backlinks can be used by link aggregators.  IDK
-                ;; if something like Planet Emacslife is looking for a
-                ;; programmatic marker or if they just do things manually.
-                (when (string-prefix-p "#" (org-roam-node-title this-node))
-                  (insert "\n (Sorted by recent first)")))
-            (org-insert-subheading nil)
-            (insert "What links here"))
-          ;; sort by creation: newest on top
-          (let ((sorted-nodes
-                 (--sort (string-lessp
-                          (map-elt (org-roam-node-properties other) "CREATED")
-                          (map-elt (org-roam-node-properties it) "CREATED"))
-                         linked-nodes)))
-            (dolist (node sorted-nodes)
-              (newline)
-              (insert
-               "- [[id:"
-               (org-roam-node-id node)
-               "]["
-               (replace-regexp-in-string "[][]" "" (org-roam-node-title node))
-               "]]"))))))))
-
-(defun my-replace-web-links-with-ref-note-links (&rest _)
-  "For every URL found in this page, if there exists an Org-roam
-note elsewhere with the same exact URL in its :ROAM_REFS:
-property, then replace that URL in this page with an id-link to
-that Org-roam note.
-
-This visitor can still go find the original web link because I
-will expose it inside that note.  This just makes the visitor see
-my note first.
-
-Meant to run on `org-export-before-parsing-functions', where it
-will not modify the source file."
-  (when (ignore-errors (org-roam-node-at-point))
-    (save-excursion
-      ;; TODO: use org-link-any-re
-      (while (not (equal "No further link found" (quiet! (org-next-link))))
-        (let* ((elem (org-element-context))
-               (link (org-element-property :path elem))
-               (ref (assoc link my-refs-cache))
-               (end (org-element-property :end elem)))
-          (when (and ref
-                     ;; ignore if referring to same page we're on
-                     (not (equal (caddr ref) (org-get-title))))
-            ;; REVIEW: check if the link is already an org-link with a custom
-            ;; description.  Then just modify the url part into an id link,
-            ;; don't overwrite the description also.
-            (if (search-forward "][" end t)
-                ;; has a custom description
-                (progn
-                  (delete-region (match-beginning 0) (point))
-                  (insert "[[id:" (cadr ref) "]["))
-              (delete-region (point) end)
-              (insert "[[id:" (cadr ref) "]["
-                      (replace-regexp-in-string (rx (any "[]")) "" (caddr ref))
-                      "]]"))))))))
-
-(defun my-replace-datestamps-with-links (&rest _)
-  (when (ignore-errors (org-roam-node-at-point))
-    (save-excursion
-      (goto-char (point-min))
-      (while (re-search-forward (rx "[" (group (= 4 digit) "-" (= 2 digit) "-" (= 2 digit)) "]") nil t)
-        (let ((beg (match-beginning 0))
-              (end (match-end 0))
-              (datestamp (substring-no-properties (match-string 1))))
-          ;; check that it is not already a link
-          (unless (org-element-property :path (org-element-context))
-            ;; check that it isn't a property or comment line
-            (unless (save-excursion
-                      (goto-char (line-beginning-position))
-                      (looking-at-p "[[:space:]]*?[:#]"))
-              ;; check that a daily-page exists
-              (when-let ((daily-id (org-roam-db-query
-                                    `[:select [id]
-                                      :from nodes
-                                      :where (like title ,datestamp)])))
-                (delete-region beg end)
-                (goto-char beg)
-                (let ((fancy (format-time-string
-                              (car org-timestamp-custom-formats)
-                              (date-to-time datestamp))))
-                  (insert (concat "[[id:" (caar daily-id) "][<" fancy ">]]")))))))))))
-
-(defun my-strip-hashlink-if-same-as-permalink (link)
-  (if-let* ((hash-pos (string-search "#" link))
-            (hash-part (substring link (1+ hash-pos)))
-            (base-part (substring link 0 hash-pos))
-            (same (string-search hash-part base-part)))
-      ;; Cut off the hash
-      base-part
-    ;; Keep the whole link
-    link))
 
 ;; Struggled so long looking for a hook that would work like the old
 ;; before-export-hook.  Let this be a lesson: the Emacs hook system exists to
@@ -344,8 +203,10 @@ will not modify the source file."
 
 (defun my-publish-to-blog (plist filename pub-dir)
   (redisplay) ;; I like watching programs work    
+  ;; (sleep-for .01)
   ;; Fast early check that avoids loading org-mode
-  (let (title id created tags link-in-heading)
+  (let ((case-fold-search t)
+        title id created tags link-in-heading)
     (with-temp-buffer
       (insert-file-contents filename)
       (forward-line 10)  ;; should be enough to grab the metadata
@@ -399,7 +260,7 @@ will not modify the source file."
       (message "Found exclude-tag, excluding: %s" filename))
      ((not (-intersection tags (cons "pub" my-tags-for-hiding)))
       (message "Not selected for publishing"))
-     ;; ensure lowercase everywhere so `-intersection' works
+     ;; ensure all tags are lowercase so `-intersection' works
      ((let ((case-fold-search nil))
         (string-match-p "[[:upper:]]" (string-join tags)))
       (warn "UPPERCASE IN TAG FOUND: %s" filename))
@@ -412,7 +273,7 @@ will not modify the source file."
           ;; The original export-function.  By thy might, Bastien/Carsten/&c.
           (org-publish-org-to 'html filename "" plist pub-dir))
 
-        ;; Customize the resulting HTML file and pack it into a JSON object
+        ;; Customize the resulting HTML file and pack it into a JSON object.
         (let* ((output-path (org-export-output-file-name "" nil pub-dir))
                (slug (string-replace pub-dir "" output-path))
                ;; NOTE: All pages get a unique permalink, even daily-pages
@@ -465,6 +326,8 @@ will not modify the source file."
                (content-start (make-marker))
                (content nil)
                (data-for-json nil))
+          ;; TODO: Use dom.el to parse the html properly, the regexp approach
+          ;;       is getting too complicated.
           (with-temp-buffer
 
             ;; 04
@@ -499,12 +362,18 @@ will not modify the source file."
             (goto-char (marker-position content-start))
             (while (re-search-forward "<a [^>]*?href=.[^\"]*?#ID-" nil t)
               (set-marker m1 (point))
-              (let ((is-heading (save-excursion
-                                  (search-backward "<a ")
-                                  (search-backward "<")
-                                  (looking-at-p "h")))
-                    (uuid (buffer-substring (point)
-                                            (1- (search-forward "\"")))))
+              (let* ((is-heading (save-excursion
+                                   (search-backward "<a ")
+                                   (search-backward "<")
+                                   (looking-at-p "h")))
+                     (uuid (buffer-substring (point)
+                                             (1- (search-forward "\""))))
+                     ;; HACK now links have #ID-id:f4oirm34ofkmr3o23pm
+                     ;; which is a bug, or just a change that org-roam-export
+                     ;; hasn't caught up with
+                     (uuid (if (string-prefix-p "id:" uuid)
+                               (substring uuid 3)
+                             uuid)))
                 ;; do not give heading self-links a class since I don't want to
                 ;; style them
                 (unless is-heading
@@ -525,6 +394,10 @@ will not modify the source file."
               (let* ((beg (point))
                      (end (1- (save-excursion (search-forward "\""))))
                      (uuid (buffer-substring beg end))
+                     ;; HACK same as the other hack
+                     (uuid (if (string-prefix-p "id:" uuid)
+                               (substring uuid 3)
+                             uuid))
                      (old-id (my-uuid-to-pageid-old2 uuid))
                      (new-id (my-uuid-to-pageid uuid)))
                 (delete-region (- beg 3) end)
@@ -586,7 +459,7 @@ will not modify the source file."
             ;; Now turn all remaining <div> into <section>
             (goto-char (marker-position content-start))
             (while (re-search-forward "<div .*?class=\"outline-\\([123456]\\).*?>" nil t)
-              (if (evenp (string-to-number (match-string 1)))
+              (if (cl-evenp (string-to-number (match-string 1)))
                   (replace-match "<section class=\"even\">")
                 (replace-match "<section class=\"odd\">")))
             (goto-char (marker-position content-start))
@@ -669,27 +542,79 @@ will not modify the source file."
             ;; (- links (cl-loop while (re-search-forward "<h[23456]" nil t)
             ;; count t)))
 
-            ;; 44
-            ;; Org-export doesn't replace triple-dash in all situations (like in
-            ;; a heading or when it butts up against a link on a newline), so
-            ;; force it.  I'm pretty sure it won't break anything...
-            (goto-char (point-min))
-            ;; A little more risky but I'm hoping it's fine.  Situations where we
-            ;; might not want to transform a double-dash:
-            ;; - css variables in code blocks (i have none)
-            ;; - a code block showing this very code (i have none)
-            ;; - FIXME a code block of elisp with private--vars
-            (goto-char (point-min))
-            (let ((beg (point))
-                  (end (re-search-forward "<\\(?:code\\|kbd\\|pre\\|samp\\)" nil t)))
-              (my-multi-hyphens-to-en-em-dashes beg end))
-            (while (re-search-forward "</\\(?:code\\|kbd\\|pre\\|samp\\)>" nil t)
-              (let ((beg (point))
-                    (end (re-search-forward "<\\(?:code\\|kbd\\|pre\\|samp\\)" nil t)))
-                (my-multi-hyphens-to-en-em-dashes beg end)))
+            ;; ;; 44
+            ;; ;; Org-export doesn't replace triple-dash in all situations (like
+            ;; ;; in a heading or when it butts up against a link on a newline),
+            ;; ;; so force it.  DO NOT do this inside code blocks tho.
+            ;; (goto-char (point-min))
+            ;; (let ((beg (point))
+            ;;       (end (re-search-forward "<\\(?:code\\|kbd\\|pre\\|samp\\)" nil t)))
+            ;;   (my-multi-hyphens-to-en-em-dashes beg end))
+            ;; (while (re-search-forward "</\\(?:code\\|kbd\\|pre\\|samp\\)>" nil t)
+            ;;   (let ((beg (point))
+            ;;         (end (re-search-forward "<\\(?:code\\|kbd\\|pre\\|samp\\)" nil t)))
+            ;;     (my-multi-hyphens-to-en-em-dashes beg end)))
+            ;; (let ((beg (point))
+            ;;       (end (point-max)))
+            ;;   (my-multi-hyphens-to-en-em-dashes beg end))
 
+            ;; equivalent to above?
+            (goto-char (point-min))
+            (while
+                (let* ((beg (point))
+                       (end (or (re-search-forward
+                                 "<\\(?:code\\|kbd\\|pre\\|samp\\)" nil t)
+                                (point-max)))
+                       (elem-type (if (equal end (point-max))
+                                      nil
+                                    (word-at-point t))))
+                  (my-multi-hyphens-to-en-em-dashes beg end)
+                  (when elem-type
+                    (search-forward (concat "</" elem-type ">") nil t))))
 
-            ;; 45 While we're at it, the title needs the same fix
+            ;; ;; equivalent to above?
+            ;; (goto-char (point-min))
+            ;; (let ((code-block-type nil)))
+            ;; (while (progn
+            ;;          (let ((beg (point))
+            ;;                (end (or (re-search-forward
+            ;;                          "<\\(?:code\\|kbd\\|pre\\|samp\\)" nil t)
+            ;;                         (point-max))))
+            ;;            (my-multi-hyphens-to-en-em-dashes beg end))
+            ;;          (re-search-forward
+            ;;           "</\\(?:code\\|kbd\\|pre\\|samp\\)>" nil t)))
+
+            ;; ;; equivalent to above?
+            ;; (goto-char (point-min))
+            ;; (let ((beg (point))
+            ;;       (end nil))
+            ;;   (while beg
+            ;;     (setq end (or (re-search-forward
+            ;;                    "<\\(?:code\\|kbd\\|pre\\|samp\\)" nil t)
+            ;;                   (point-max)))
+            ;;     ;; 44
+            ;;     ;; Org-export doesn't replace triple-dash in all situations
+            ;;     ;; (like in a heading or when it butts up against a link on a
+            ;;     ;; newline), so force it.
+            ;;     (my-multi-hyphens-to-en-em-dashes beg end)
+            ;;     ;; 50
+            ;;     ;; Correct image paths
+            ;;     (goto-char beg)
+            ;;     (while (re-search-forward "<img src=\"[^h]" end t)
+            ;;       (backward-char 1)
+            ;;       (insert "/"))
+            ;;     ;; 55
+            ;;     ;; Wrap tables in divs that can be scrolled horizontally
+            ;;     (goto-char beg)
+            ;;     (while (search-forward "<table" end t)
+            ;;       (goto-char (match-beginning 0))
+            ;;       (insert "<div class=\"table-container\">")
+            ;;       (search-forward "</table>")
+            ;;       (insert "</div>"))
+            ;;     (setq beg (re-search-forward
+            ;;                "</\\(?:code\\|kbd\\|pre\\|samp\\)>" nil t))))
+
+            ;; 45 While we're at it, fix multi-hyphens in the title too
             (setq title
                   (string-replace "--" "–" (string-replace "---" "—" title)))
 
@@ -698,11 +623,35 @@ will not modify the source file."
             (goto-char (marker-position content-start))
             (while (re-search-forward "<img src=\"[^h]" nil t)
               (forward-char -1)
-              (insert "/"))
+              (insert "/")
+              ;; (when (search-backward "<a " (line-beginning-position) t)
+              ;;   (forward-char 3)
+              ;;   (insert "rel=\"external\""))
+              )
+
+            ;; 52
+            ;;
+            ;; Correct anchor paths to assets for same reason as 50.  Usually
+            ;; it's an <a href="localfile"><img src="localfile"></img></a>
+            ;; thing, but the principle generalizes: any anchor tag linking to
+            ;; a resource that is NOT on another domain (i.e. doesn't start
+            ;; with "http") and is NOT another roam note (i.e. hasn't been
+            ;; given a class based on target tag earlier in this file), needs
+            ;; the fix.
+            ;;
+            ;; While we're at it, such links also need rel="external" in order
+            ;; to prevent SvelteKit from interpreting the URL as a route and
+            ;; executing [first]/[[second]]/+page.ts.
+            (goto-char (marker-position content-start))
+            (while (re-search-forward "<a href=\"[^h]" nil t)
+              (backward-char 1)
+              (insert "/")
+              (search-backward " ")
+              (insert " rel=\"external\""))
 
             ;; 55
-            ;; Wrap all tables for horizontal scrollability
-            ;; I sure hope I don't have code snippets displaying HTML
+            ;; Wrap all tables for horizontal scrollability.  I sure hope I
+            ;; don't have code snippets displaying HTML.  TODO merge with 44
             (goto-char (marker-position content-start))
             (while (search-forward "<table" nil t)
               (goto-char (match-beginning 0))
@@ -756,7 +705,7 @@ will not modify the source file."
                      (not (-intersection tags '("tag" "daily" "stub")))
                      (string-lessp "2023" (or updated created)))
             (with-temp-file (concat
-                             "/tmp/entries/" (or updated created) permalink)
+                             "/tmp/feed-entries/" (or updated created) permalink)
               (insert "\n\t<entry>"
                       "\n\t<title>" title "</title>"
                       "\n\t<link href=\""
@@ -772,9 +721,24 @@ will not modify the source file."
                       "\n\t<content type=\"xhtml\">"
                       "\n\t\t<div xmlns=\"http://www.w3.org/1999/xhtml\">\n"
                       ;; NOTE: don't add spaces/tabs to content.  it
-                      ;; messes with any <pre> tags inside content!
+                      ;; messes with <pre> tags inside content!
                       content
                       "\n\t\t</div>"
                       "\n\t</content>"
                       "\n\t</entry>"))))
         (kill-buffer (current-buffer)))))))
+
+
+;; Override the link type info: so it won't get exported into an empty
+;; <a href>.  May need more overrides like this for each link type,
+;; see `org-link-parameters'.
+(require 'ol-info)
+(defun org-info-export (path desc _format)
+  (or desc path))
+
+;; Give each h2...h6 heading an ID attribute that matches its source org-id, if
+;; it has one, instead of e.g. "org953031".  That way, hash-links such as
+;; #ID-e10bbdfe-1ffb-4c54-9228-2818afdfc5ba will make the web browser jump to
+;; that heading.  Thank org-roam for this convenience!  Note that I convert
+;; these IDs later via `my-uuid-to-pageid'.
+(after! ox (require 'org-roam-export))

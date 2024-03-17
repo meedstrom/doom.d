@@ -12,7 +12,7 @@
 
 (defvar my-auto-commit-dirs
   '("/home/kept/roam/"
-    "/home/kept/roam/organice/"
+    ;; "/home/kept/roam/organice/"
     "/home/me/.doom.d/")
   "Which directories do you want to auto-commit?")
 
@@ -45,6 +45,8 @@ Suitable on `after-save-hook'."
 
         (if (magit-untracked-files)
             (message "Won't auto-commit.  Stage untracked files or edit .gitignore")
+          ;; TODO: check if you pushed this auto-commit to origin. then we need
+          ;;       a new commit
           (if (and (equal last-commit-date (format-time-string "%F"))
                    (equal last-commit-msg "Auto-commit"))
               ;; Same day, so amend today's autocommit

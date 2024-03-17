@@ -6,110 +6,102 @@
 (require 'dash)
 (require 'crux)
 
+(defun my-browse-url-chromium-kiosk (url &optional _)
+  "Open URL in Chromium, in kiosk mode (no toolbar)."
+  (let ((url (browse-url-encode-url url))
+        (process-environment (browse-url-process-environment)))
+    (apply #'start-process
+           (concat "chromium " url) nil
+           browse-url-chromium-program
+           (list (concat "--app=" url)))))
+(function-put 'my-browse-url-chromium-kiosk 'browse-url-browser-kind 'external)
+
+(defun my-disable-modes-if-present (modes)
+  (dolist (mode (seq-filter #'fboundp modes))
+    (when (bound-and-true-p mode)
+      (funcall mode 0))))
+
+;; TODO: check allll kinds of things
+(defun my-search-for-malformed-org-syntax ()
+  (interactive)
+  (cl-loop
+   for file in (directory-files-recursively org-roam-directory "\\.org$")
+   do (progn
+        (with-temp-buffer
+          (insert-file-contents file)
+          ;; Look for wrong amounts of brackets
+          (while (search-forward "[[id:" nil t)
+            (when (looking-back (rx (literal "[[[id:")))
+              (error "triple brackets at %s:%d") file (point))
+            (unless (re-search-forward (rx (*? (not (any "[]"))) "][" (*? (not (any "[]"))) "]]") nil t)
+              (message "weird brackets near position %d in %s" (point) file)))))))
+
+(defun my-read-lisp (s)
+  "Check that S is a non-blank string, then parse it as lisp.
+Otherwise signal an error, unlike `read' or `read-from-string'"
+  (if (and (stringp s)
+           (not (s-blank? s)))
+      (car (read-from-string s))
+    (error "Input should be string containing an s-expression: %s" s)))
+
+;; Was curious to see the idle timers count down, so I made this.
+;; Interestingly, the idle timers still don't visibly count down, even though
+;; idle-time is going up.  Guess the timer-list buffer never was meant for
+;; that so it takes a shortcut and just shows the max time regardless.
+(let ((this-timer (timer-create)))
+  (defun my-timer-list-autorefresh ()
+    "Start auto-refreshing the \\[list-timers] buffer.
+Stop once the buffer is no longer visible."
+    (interactive)
+    (cancel-timer this-timer)
+    ;; Confirmed: the idle value does grow over time
+    ;; (message "current idle %s" (current-idle-time))
+    (let ((buf (get-buffer "*timer-list*")))
+      (when (and buf (get-buffer-window buf 'visible))
+        (run-with-timer .2 nil #'my-timer-list-autorefresh)
+        (save-window-excursion
+          (save-excursion
+            (with-current-buffer buf
+              (revert-buffer))))))))
+
+(defun my-remove-all-advice (symbol)
+  "Remove all the advices added to SYMBOL.
+Useful when some of them are anonymous functions."
+  (advice-mapc (lambda (f _) (advice-remove symbol f)) symbol))
+
 (defun my-insert-heading-with-id ()
   (interactive)
   (org-insert-heading)
   (org-id-get-create)
   (org-set-property "CREATED" (format-time-string "[%F]")))
 
+(defun my-positive-number-p (num?)
+  (and (numberp num?)
+       (> num? 0)))
+
+(defun my-parseable-as-timestamp-p (time-string)
+  "I think this works, but I haven't verified all cases."
+  (seq-find #'my-positive-number-p (parse-time-string time-string)))
+
+(defun my-iso-datestamp-p (input)
+  (when (my-parseable-as-timestamp-p input)
+    (string-match-p (rx bol (= 4 digit) "-" (= 2 digit) "-" (= 2 digit) eol)
+                    input)))
+
 (defun my-org-add-:CREATED: ()
-  "Add CREATED property to entry at point."
+  "Add CREATED property to entry at point, if none already.
+If file-level entry, check if the #+TITLE already looks like a
+date, and use that."
   (interactive)
   (unless (org-entry-get nil "CREATED")
-    (org-set-property "CREATED" (format-time-string "[%F]"))))
+    (let ((date-string (format-time-string "[%F]")))
+      (when (org-before-first-heading-p)
+        (let ((title (org-get-title)))
+          (when (my-iso-datestamp-p title)
+            (setq date-string (concat "[" title "]")))))
+      (org-set-property "CREATED" date-string))))
 
-;; so you can type (my-hook org-mode-hook (set-face-attribute ...) ...)
-(defmacro my-hook (hook &rest body)
-  (declare (indent defun))
-  (let ((fname (cl-gensym)))
-    `(add-hook ',hook (defun ,fname () ,@body))))
-
-(defun my-multi-hyphens-to-en-em-dashes (beg end*)
-  ;; idk if needed in elisp but just in case. dont modify input variable
-  ;; (a golang lesson)
-  (let ((end end*))
-    (goto-char beg)
-    (while (search-forward "---" end t)
-      (unless (looking-at-p "-")
-        (replace-match "—")
-        (when end
-          (cl-decf end 2))))
-    (goto-char beg)
-    (while (search-forward "--" end t)
-      (unless (looking-at-p "-")
-        ;; NOTE can't use &ndash; for the atom feed since it is not
-        ;; defined in xml, so use unicode...
-        (replace-match "–")
-        (when end
-          (cl-decf end 1))))))
-
-(defun my-generate-todo-log (path)
-  "Generate a log of completed tasks using `org-agenda-write'.
-Wrap the output in an Org file, omitting the CSS."
-  (interactive)
-  ;; (cl-letf )
-  (setopt org-agenda-files '("/tmp/roam/archive.org"))
-  (setopt org-agenda-span 'fortnight)
-  (setopt org-agenda-prefix-format '((agenda . " %i %?-12t") (todo . "") (tags . "") (search . "")))
-  (setopt org-agenda-show-inherited-tags nil)
-  (org-agenda-list)
-  (org-agenda-log-mode)
-  (org-agenda-archives-mode)
-  (shell-command "rm /tmp/todo-log-now.html")
-  (org-agenda-write "/tmp/todo-log-now.html")
-  (org-agenda-earlier 1)
-  (shell-command "rm /tmp/todo-log-last-week.html")
-  (org-agenda-write "/tmp/todo-log-last-week.html")
-  (org-agenda-quit)
-  ;; (delete-other-windows)
-  ;; (view-echo-area-messages)
-  (with-current-buffer (or (find-buffer-visiting path)
-                           (find-file path))
-    (delete-region (point-min) (point-max))
-    (insert ":PROPERTIES:"
-            "\n:ID: e4c5ea8b-5b06-43c4-8948-3bfe84e8d5e8"
-            "\n:CREATED:  " (format-time-string "[%F]")
-            "\n:END:"
-            "\n#+title: Completed tasks"
-            "\n#+filetags: :fren:"
-            "\n#+date: "
-            "\n#+begin_export html"
-            "\n")
-    (insert-file-contents "/tmp/todo-log-last-week.html")
-    (delete-region (point) (search-forward "<pre>"))
-    (insert "<pre class=\"agenda\">")
-    (forward-line)
-    (delete-region (1- (line-beginning-position)) (line-end-position))
-    (search-forward "</pre>")
-    (delete-region (1- (line-beginning-position)) (point-max))
-    (insert-file-contents "/tmp/todo-log-now.html")
-    (delete-region (point) (search-forward "<pre>"))
-    (forward-line)
-    (delete-region (1- (line-beginning-position)) (line-end-position))
-    (delete-region (search-forward "</pre>") (point-max))
-    (insert "\n#+end_export")
-    (save-buffer)))
-
-(defun my-make-atom-feed (path entries-dir)
-  (when (file-exists-p path)
-    (move-file-to-trash path))
-  (with-temp-file path
-    (insert "<?xml version=\"1.0\" encoding=\"utf-8\"?>
-<feed xmlns=\"http://www.w3.org/2005/Atom\">
-	<title>Martin Edström</title>
-	<link href=\"https://edstrom.dev\"/>
-	<updated>" (format-time-string "%FT%TZ") "</updated>
-	<author>
-		<name>Martin Edström</name>
-	</author>
-	<rights> © 2023-" (format-time-string "%Y") " Martin Edström </rights>
-	<id>https://edstrom.dev</id>")
-    (dolist (entry (directory-files entries-dir t "[[:alpha:]]"))
-      (insert-file-contents entry))
-    (goto-char (point-max))
-    (insert "
-</feed>")))
-
+;; used once
 (defun my-remove-pub-tag-if-noexport ()
   (cl-loop
    for file in (directory-files-recursively "/home/kept/roam/" "\\.org$" t)
@@ -123,6 +115,7 @@ Wrap the output in an Org file, omitting the CSS."
                (org-roam-node-at-point)
                (org-roam-tag-remove '("pub")))))))
 
+;; used once
 (defun my-add-pub-tag-if-not-noexport ()
   (cl-loop
    for file in (directory-files-recursively "/home/kept/roam/" "\\.org$" t)
@@ -136,11 +129,12 @@ Wrap the output in an Org file, omitting the CSS."
 
 (defun my-anki-field-for-webpage ()
   (cl-letf ((org-mode-hook nil))
+    ;; NOTE: Use `delay-mode-hooks' instead of the `cl-letf'
     (org-mode))
   (save-excursion
-    (when-let* ((uuid (progn (goto-char (point-min)) (org-id-get)))
-                (pageid (substring (my-uuid-to-base62 uuid) -4))
-                (url (concat "https://edstrom.dev/" pageid)))
+    (when-let* ((uuid (progn (goto-char (point-min))
+                             (org-id-get)))
+                (url (concat "https://edstrom.dev/" (my-uuid-to-pageid uuid))))
       (concat "<a href=\"" url "\">" url "</a>"))))
 
 (defun my-anki-field-for-webpage-fast ()
@@ -148,8 +142,7 @@ Wrap the output in an Org file, omitting the CSS."
     (goto-char (point-min))
     (re-search-forward ":ID: +")
     (when-let* ((uuid (buffer-substring (point) (line-end-position)))
-                (pageid (substring (my-uuid-to-base62 uuid) -4))
-                (url (concat "https://edstrom.dev/" pageid)))
+                (url (concat "https://edstrom.dev/" (my-uuid-to-pageid uuid))))
       (concat "<a href=\"" url "\">" url "</a>"))))
 
 (defun my-org-id-get-create-and-copy ()
@@ -243,120 +236,6 @@ If already visiting that same node, then follow the link normally."
       (if arg
           (org-open-at-point arg)
         (org-open-at-point)))))
-
-(defun my-org-file-id (file)
-  "Quickly get the file-level id from FILE.
-For use in heavy loops; it skips activating `org-mode'.
-For all other uses, see `org-id-get'."
-  (with-temp-buffer
-    (insert-file-contents-literally file nil 0 200)
-    (when (search-forward ":id: " nil t)
-      (when (= (line-number-at-pos) (line-number-at-pos (point-max)))
-        (error "Whoops, amend `my-org-file-id'"))
-      (delete-horizontal-space)
-      (buffer-substring (point) (line-end-position)))))
-
-(defun my-org-file-tags (file)
-  "Quickly get the file-tags from FILE.
-For use in heavy loops; it skips activating `org-mode'.
-For all other uses, see `org-get-tags'."
-  (with-temp-buffer
-    (insert-file-contents file nil 0 400)
-    (let ((max (or (save-excursion (re-search-forward "^ *?[^#:]"))
-                   (point-max))))
-      (when (search-forward "#+filetags: " max t)
-        (when (= (line-number-at-pos) (line-number-at-pos (point-max)))
-          (error "Whoops, amend `my-org-file-tags'"))
-        (thread-first (buffer-substring (point) (line-end-position))
-                      (string-trim)
-                      (string-split ":" t))))))
-
-(defun my-uuid-to-pageid (uuid)
-  (let* ((hexa (string-trim (string-replace "-" "" uuid)))
-         (decimal (string-to-number hexa 16)))
-    (if (or (= 0 decimal) (/= 32 (length hexa)))
-        (error "String should be a valid UUID 36 chars long: %s" uuid)
-      (substring (my-int-to-consonants decimal 5) -5))))
-
-;; Inspired by these results
-;; (ceiling (log 9999 10))
-;; (ceiling (log 10000 10))
-;; (ceiling (log 10001 10))
-(defun my-digits-length (num)
-  (let ((log (log num 10)))
-    (if (= (ceiling log) (floor log))
-        (+ 1 (ceiling log))
-      (ceiling log))))
-
-(defun my-int-to-consonants (integer &optional length)
-  (let ((result "")
-        (remainder integer))
-    (while (> remainder 0)
-      (setq result (concat (char-to-string (my-int-to-consonants-one-digit
-                                            (mod remainder 21)))
-                           result))
-      (setq remainder (/ remainder 21)))
-    (setq length (max 1 (or length 1)))
-    (if (< (length result))
-        (string-pad result length ?b t)
-      result)))
-
-(defun my-int-to-consonants-one-digit (integer)
-  "Convert INTEGER between 0 and 20 into one non-vowel letter."
-  ;; A b c d E f g h I j k l m n O p q r s t U v w x y z
-  ;; bcdfghjklmnpqrstvwxyz
-  ;; start counting from b, E would've been 4th char
-  (cond
-   ((< integer 3) (+ ?b integer))
-   ((< integer 6) (+ ?f integer -3))
-   ((< integer 11) (+ ?j integer -6))
-   ((< integer 16) (+ ?p integer -11))
-   ((< integer 21) (+ ?v integer -16))
-   (t (error "Input was larger than 20"))))
-
-(defun my-uuid-to-pageid-old2 (uuid)
-  (substring (my-uuid-to-base62 uuid) -4))
-
-;;(org-id-int-to-b36 3453453452312)
-(defun my-uuid-to-base62 (uuid)
-  (let ((decimal (string-to-number (string-replace "-" "" uuid) 16)))
-    (if (or (= 0 decimal) (/= 36 (length uuid)))
-        (error "String should only contain a valid UUID 36 chars long: %s" uuid)
-      ;; The highest UUID (ffffffff-ffff-ffff-ffff-ffffffffffff) makes
-      ;; a base62 string 22 chars long.  Let's always return 22 chars.
-      (my-int-to-base62 decimal 22))))
-
-(defun my-int-to-base62 (integer &optional length)
-  "Convert an INTEGER to a base-62 number represented as a string.
-If LENGTH is given, pad the string with leading zeroes as needed
-so the result is always that long or longer."
-  (let ((s "")
-        (i integer))
-    (while (> i 0)
-      (setq s (concat (char-to-string
-                       (my-int-to-base62-one-digit (mod i 62))) s)
-            i (/ i 62)))
-    (setq length (max 1 (or length 1)))
-    (if (< (length s) length)
-        (setq s (concat (make-string (- length (length s)) ?0) s)))
-    s))
-
-;; Workhorse for `my-int-to-base62'
-(defun my-int-to-base62-one-digit (integer)
-  "Convert INTEGER between 0 and 61 into one character 0..9, a..z, A..Z."
-  ;; Uses chars ?0, ?A, ?a off the ASCII table.  Evaluate those symbols and you
-  ;; see important gaps between the character sets:
-  ;; 0-9 has codes 48 thru 57
-  ;; A-Z has codes 65 thru 90
-  ;; a-z has codes 97 thru 122
-  ;; Why compose chars to construct the final base62 string?  It's either
-  ;; that, or you make a lookup string "0123456789abcdefg...", so you're
-  ;; looking something up anyway.  The ASCII table is faster.
-  (cond
-   ((< integer 10) (+ ?0 integer))
-   ((< integer 36) (+ ?a integer -10))
-   ((< integer 62) (+ ?A integer -36))
-   (t (error "Input was larger than 61"))))
 
 (defun my-all-recursive-subdirs (dir &optional exclude-dotfiles)
   (seq-filter #'file-directory-p
@@ -473,7 +352,6 @@ asynchronously so you can do something else."
 ;; (my-slugify "Slimline/\"pizza box\" computer chassis")
 ;; (my-slugify "#emacs")
 
-;; bloggable
 ;; REVIEW: this version uses the upstream `org-roam-node-slug' -- and should
 ;; cope well with overrides on that method
 (defun my-rename-roam-file-by-title (&optional path)
@@ -593,8 +471,6 @@ Can also take a file PATH instead of current buffer."
   (interactive)
   (eww-browse-url (plist-get (seq-random-elt eww-bookmarks) :url)))
 
-(defun my-guix-profile ())
-
 (defun my-org-roam-extract-subtree ()
   "Variant of `org-roam-extract-subtree'.
 It skips prompting, and inserts the metadata I want."
@@ -657,7 +533,7 @@ It skips prompting, and inserts the metadata I want."
       (search-forward "#+filetags" nil t)
       (forward-line 1)
       (open-line 2)
-      (insert "#+date: " (org-entry-get nil "CREATED"))
+      (insert "#+date: ")
       (save-buffer))))
 
 ;; bloggable
