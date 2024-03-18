@@ -115,20 +115,19 @@ so the result is always that long or longer."
    (t (error "Input was larger than 61"))))
 
 (defvar my-ids nil
-  "Database for checking ID collisions.
-This is not as important as it sounds.  I am using 5-char IDs,
-which haven't had a collision yet.  But maybe in the future I
-move to 4-char IDs, and that's what I like to check.  By
-futureproofing in this way, I won't have to set up redirects
-beyond a general one that cuts one char off the ID.")
+  "Database for checking ID collisions.")
 
 (defun my-check-id-collisions ()
   (interactive)
-  (cl-loop for id-uuids in my-ids
-           as uuids = (-distinct (cdr id-uuids))
-           when (> (length uuids) 1)
-           do (message "These uuids make same page-id: %s"
-                       uuids)))
+  (cl-loop
+   with found = nil
+   for id-uuids in my-ids
+   as uuids = (-distinct (cdr id-uuids))
+   when (> (length uuids) 1)
+   do (progn (setq found t)
+             (message "These uuids make same page-id: %s"
+                      uuids))
+   finally do (unless found (message "All uuids unique"))))
 
 (defun my-add-backlinks (&rest _)
   "Add a \"What links here\" subtree at the end.

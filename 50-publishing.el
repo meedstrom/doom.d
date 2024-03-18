@@ -35,7 +35,7 @@
 (defun my-publish (&optional rescan)
   "A single command I can use in a child emacs."
   (interactive "P")
-  (require 'ox-publish)
+  ;; (require 'ox-publish)
   (cd "/home/kept/roam") ;; for me to quick-search when an id fails to resolve
   (shell-command "rm -r /tmp/feed-entries/")
   (mkdir "/tmp/feed-entries/" t)
@@ -330,24 +330,8 @@ want in my main Emacs."
           ;;       is getting too complicated.
           (with-temp-buffer
 
-            ;; 04
-            ;; Insert title
-            ;; Would have given the href a normal hash-link, but the Note
-            ;; component is sometimes rendered elsewhere (the /recent page),
-            ;; where it's useful to get a full link.
-            ;; (insert "\n<h1 id=\"" permalink "\">"
-            ;; "<a href=\"/" permalink "/" slug "\">" title
-            ;; "</a></h1>")
-
             ;; 05 Insert the post body: the HTML produced by Org-export
-            ;; (insert "\n<div class=\"e-content "
-            ;;         (if (member "logseq" tags)
-            ;;             "logseq"
-            ;;           "notlogseq")
-            ;;         "\">")
             (insert-file-contents output-path)
-            ;; (goto-char (point-max))
-            ;; (insert "\n</div>")
 
             ;; 06
             ;; Set `content-start' after ToC, if there is one
@@ -501,30 +485,6 @@ want in my main Emacs."
               (delete-char -2)
               (insert "</p>"))
 
-            ;; (goto-char (marker-position content-start))
-            ;; (while (re-search-forward "id=\".*?\" class=\"outline-\\([123456]\\)\".*?>" nil t)
-            ;;   (if (evenp (string-to-number (match-string 1)))
-            ;;       (replace-match "class=\"section-even\">")
-            ;;     (replace-match "class=\"section-odd\">")))
-            ;; (goto-char (marker-position content-start))
-            ;; (while (re-search-forward "<div .*?class=\"outline-text-[123456]\".*?>" nil t)
-            ;;   (replace-match "<div class=\"text-in-section\">")
-            ;;   ;; Move heading inside of the div so my CSS can get it to line up
-            ;;   ;; FIXME: actually org wont even generate such a div if there is
-            ;;   ;; just a heading without body text on the same level.
-            ;;   ;; So two options
-            ;;   ;; 1. Create these divs entirely manually
-            ;;   ;; 2. Make the headings align via css, using rem units.
-            ;;   ;; need to do it manually bc need the div's padding so it must always be there
-            ;;   ;; or...
-            ;;   (goto-char (line-end-position))
-            ;;   (set-marker m1 (point))
-            ;;   (search-backward "<h")
-            ;;   (kill-region (point) (re-search-forward "</h.>"))
-            ;;   (goto-char (marker-position m1))
-            ;;   (newline)
-            ;;   (yank))
-
             ;; 26
             ;; Count # of total links
             (goto-char (marker-position content-start))
@@ -536,29 +496,11 @@ want in my main Emacs."
                                           (search-forward "</a>")
                                           (looking-at-p "</h"))
                                  count t))
-            ;; Don't count the headings' self-links
-            ;; (goto-char (marker-position content-start))
-            ;; (setq links
-            ;; (- links (cl-loop while (re-search-forward "<h[23456]" nil t)
-            ;; count t)))
 
-            ;; ;; 44
-            ;; ;; Org-export doesn't replace triple-dash in all situations (like
-            ;; ;; in a heading or when it butts up against a link on a newline),
-            ;; ;; so force it.  DO NOT do this inside code blocks tho.
-            ;; (goto-char (point-min))
-            ;; (let ((beg (point))
-            ;;       (end (re-search-forward "<\\(?:code\\|kbd\\|pre\\|samp\\)" nil t)))
-            ;;   (my-multi-hyphens-to-en-em-dashes beg end))
-            ;; (while (re-search-forward "</\\(?:code\\|kbd\\|pre\\|samp\\)>" nil t)
-            ;;   (let ((beg (point))
-            ;;         (end (re-search-forward "<\\(?:code\\|kbd\\|pre\\|samp\\)" nil t)))
-            ;;     (my-multi-hyphens-to-en-em-dashes beg end)))
-            ;; (let ((beg (point))
-            ;;       (end (point-max)))
-            ;;   (my-multi-hyphens-to-en-em-dashes beg end))
-
-            ;; equivalent to above?
+            ;; 44
+            ;; Org-export doesn't replace triple-dash in all situations (like
+            ;; in a heading or when it butts up against a link on a newline),
+            ;; so force it.  DO NOT do this inside code blocks tho.
             (goto-char (point-min))
             (while
                 (let* ((beg (point))
@@ -571,48 +513,6 @@ want in my main Emacs."
                   (my-multi-hyphens-to-en-em-dashes beg end)
                   (when elem-type
                     (search-forward (concat "</" elem-type ">") nil t))))
-
-            ;; ;; equivalent to above?
-            ;; (goto-char (point-min))
-            ;; (let ((code-block-type nil)))
-            ;; (while (progn
-            ;;          (let ((beg (point))
-            ;;                (end (or (re-search-forward
-            ;;                          "<\\(?:code\\|kbd\\|pre\\|samp\\)" nil t)
-            ;;                         (point-max))))
-            ;;            (my-multi-hyphens-to-en-em-dashes beg end))
-            ;;          (re-search-forward
-            ;;           "</\\(?:code\\|kbd\\|pre\\|samp\\)>" nil t)))
-
-            ;; ;; equivalent to above?
-            ;; (goto-char (point-min))
-            ;; (let ((beg (point))
-            ;;       (end nil))
-            ;;   (while beg
-            ;;     (setq end (or (re-search-forward
-            ;;                    "<\\(?:code\\|kbd\\|pre\\|samp\\)" nil t)
-            ;;                   (point-max)))
-            ;;     ;; 44
-            ;;     ;; Org-export doesn't replace triple-dash in all situations
-            ;;     ;; (like in a heading or when it butts up against a link on a
-            ;;     ;; newline), so force it.
-            ;;     (my-multi-hyphens-to-en-em-dashes beg end)
-            ;;     ;; 50
-            ;;     ;; Correct image paths
-            ;;     (goto-char beg)
-            ;;     (while (re-search-forward "<img src=\"[^h]" end t)
-            ;;       (backward-char 1)
-            ;;       (insert "/"))
-            ;;     ;; 55
-            ;;     ;; Wrap tables in divs that can be scrolled horizontally
-            ;;     (goto-char beg)
-            ;;     (while (search-forward "<table" end t)
-            ;;       (goto-char (match-beginning 0))
-            ;;       (insert "<div class=\"table-container\">")
-            ;;       (search-forward "</table>")
-            ;;       (insert "</div>"))
-            ;;     (setq beg (re-search-forward
-            ;;                "</\\(?:code\\|kbd\\|pre\\|samp\\)>" nil t))))
 
             ;; 45 While we're at it, fix multi-hyphens in the title too
             (setq title
@@ -636,8 +536,7 @@ want in my main Emacs."
             ;; thing, but the principle generalizes: any anchor tag linking to
             ;; a resource that is NOT on another domain (i.e. doesn't start
             ;; with "http") and is NOT another roam note (i.e. hasn't been
-            ;; given a class based on target tag earlier in this file), needs
-            ;; the fix.
+            ;; given a class at 09), needs the fix.
             ;;
             ;; While we're at it, such links also need rel="external" in order
             ;; to prevent SvelteKit from interpreting the URL as a route and
@@ -720,8 +619,8 @@ want in my main Emacs."
                       ;; https://validator.w3.org/feed/docs/atom.html#text
                       "\n\t<content type=\"xhtml\">"
                       "\n\t\t<div xmlns=\"http://www.w3.org/1999/xhtml\">\n"
-                      ;; NOTE: don't add spaces/tabs to content.  it
-                      ;; messes with <pre> tags inside content!
+                      ;; NOTE: don't try to indent content.  it
+                      ;; messes with <pre> tags inside!
                       content
                       "\n\t\t</div>"
                       "\n\t</content>"

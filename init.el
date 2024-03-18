@@ -21,7 +21,7 @@
        (web +tree-sitter)
        (javascript +tree-sitter)
        json
-       ;; (org +dragndrop +roam2)
+       ledger
        (sh +fish)
 
        :tools
