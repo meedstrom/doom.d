@@ -42,7 +42,6 @@
 (keymap-set global-map "<f2> <next>" (defrepeater #'my-next-buffer-of-same-mode))
 (keymap-set global-map "<f2> <prior>" (defrepeater #'my-previous-buffer-of-same-mode))
 (keymap-set global-map "<f2> b" #'backup-walker-start)
-(keymap-set global-map "<f2> c" #'org-roam-capture)
 (keymap-set global-map "<f2> d" #'my-insert-today)
 (keymap-set global-map "<f2> e d" #'eval-defun)
 (keymap-set global-map "<f2> e e" #'eval-last-sexp)
@@ -265,9 +264,10 @@
 (after! timer-list
   (keymap-set timer-list-mode-map "a" #'my-timer-list-autorefresh))
 
-;; Override some Doom Org keys
+;; Org localleader (on a hook to override "i")
 (my-hook-once 'org-load-hook
-  (map! :map org-mode-map :localleader "i" #'my-org-id-get-create-and-copy))
+  (map! :map org-mode-map :localleader "i" #'my-org-id-get-create-and-copy)
+  (map! :map org-mode-map :localleader "h" #'my-insert-heading-with-id))
 
 (after! dired
   ;; Dired's default unbound keys: `, b, E, J, K, r, z, <backspace>
@@ -347,7 +347,7 @@
 ;; Author's config: https://github.com/Fuco1/.emacs.d/blob/master/files/smartparens.el
 ;; Xah's simplification: https://old.reddit.com/r/emacs/comments/3sfmkz/could_this_be_a_pareditsmartparens_killer/cwxocld/
 (after! smartparens
-  (keymap-set smartparens-strict-mode-map ";" #'comment-sp))
+  (keymap-set smartparens-strict-mode-map ";" #'sp-comment))
 
 (keymap-set global-map "C-<left>" #'sp-forward-barf-sexp)
 (keymap-set global-map "C-<right>" #'sp-forward-slurp-sexp)
@@ -364,7 +364,7 @@
 (keymap-set global-map "C-;" #'sp-comment)
 (keymap-set global-map "M-[" #'sp-wrap-round)
 
-;; Already in agreement with doom's (default +smartparens):
+;; Already in agreement with the doom module '(default +smartparens)
 ;; (keymap-set global-map "M-<backspace>" #'sp-backward-unwrap-sexp)
 ;; (keymap-set global-map "M-<delete>" #'sp-unwrap-sexp)
 ;; (keymap-set global-map "C-M-b" #'sp-backward-sexp)

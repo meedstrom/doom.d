@@ -108,7 +108,8 @@ Kills the buffer if KEEP-BUF-P is nil, and FILE is not yet visited."
   (when autosave?
     (message "So you know, auto-save-visited-mode is still disabled!")))
 
-(defun my-add-lw-ref-slug ()
+;; used once
+(defun my-add-lw-ref-slugs ()
   (interactive)
   (while (org-next-visible-heading 1)
     (redisplay)

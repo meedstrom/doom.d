@@ -86,7 +86,6 @@
 (define-key global-map [remap org-open-at-point] #'my-org-open-at-point-as-maybe-roam-ref)
 (add-hook 'org-roam-capture-new-node-hook #'my-org-add-:CREATED:)
 (add-hook 'org-roam-buffer-postrender-functions #'magit-section-show-level-2)
-(add-hook 'org-insert-heading-hook #'my-org-id-get-create-and-copy)
 (setopt org-roam-directory "/home/kept/roam/")
 (setopt org-roam-extract-new-file-path "${slug}.org")
 (setopt org-roam-ui-browser-function #'my-browse-url-chromium-kiosk)
