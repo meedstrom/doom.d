@@ -127,7 +127,8 @@ want in my main Emacs."
      global-eldoc-mode))
   (setq whitespace-global-modes nil)
 
-  (add-hook 'my-org-roam-pre-scan-hook #'my-validate-org-buffer)
+  (when (equal '(16) current-prefix-arg)
+    (add-hook 'my-org-roam-pre-scan-hook #'my-validate-org-buffer))
   (setq debug-on-error t)
   (setq debug-on-quit t)
 
@@ -197,15 +198,15 @@ want in my main Emacs."
   (setopt org-export-use-babel nil)
   (setopt org-export-with-drawers '(not "logbook" "noexport")) ;; case-insensitive
   (setopt org-export-exclude-tags my-tags-to-avoid-uploading)
-  (setopt org-export-with-broken-links nil) ;; links would disappear quietly
+  (setopt org-export-with-broken-links nil) ;; links would disappear quietly!
   (setopt org-export-with-smart-quotes nil)
+  (setopt org-export-with-tags nil)
   (setopt org-export-with-todo-keywords nil)
   (setopt org-export-headline-levels 5) ;; go all the way to <h6> before making <li>
   ;; If we don't set this to "", there will be .html inside some links even
   ;; though I also set "" in the `org-publish-org-to' call.
   (setopt org-html-extension "")
   (setopt org-html-checkbox-type 'unicode) ;; how will it look in eww? test it.
-  (setopt org-html-self-link-headlines t)
   (setopt org-html-html5-fancy t)
   ;; why does it skip environments like \begin{align}?
   ;; (setopt org-html-with-latex 'verbatim)
@@ -226,7 +227,11 @@ want in my main Emacs."
 ;; Change some things about the Org files, before org-export does its thing.
 (add-hook 'org-export-before-parsing-functions #'my-add-backlinks)
 (add-hook 'org-export-before-parsing-functions #'my-replace-datestamps-with-links)
+(add-hook 'org-export-before-parsing-functions #'org-transclusion-mode)
 ;; (add-hook 'org-export-before-parsing-functions #'my-replace-web-links-with-ref-note-links)
+
+(defun my-postprocess (source-org-file html-file)
+  )
 
 ;; Struggled so long looking for a hook that would work like the old
 ;; before-export-hook.  Let this be a lesson: the Emacs hook system exists to
@@ -237,195 +242,148 @@ want in my main Emacs."
 
 (defun my-publish-to-blog (plist filename pub-dir)
   (redisplay) ;; I like watching programs work
-  (let ((case-fold-search t)
-        title id created tags link-in-heading)
-    ;; Fast early check that avoids loading org-mode
-    (with-temp-buffer
-      (insert-file-contents filename)
-      (forward-line 10)  ;; should be enough to grab the metadata
-      ;; protect ourselves against mentions of #+title etc in article text
-      (delete-region (point) (point-max))
-
+  ;; Skip exporting if we won't use the result
+  (cond
+   ((-intersection (my-org-file-tags filename)
+                   my-tags-to-avoid-uploading)
+    (message "Found exclude-tag, excluding: %s" filename))
+   ;; if neither pub or a hiding-tag, there could be an outdated tag, so skip
+   ;; to be safe
+   ((not (-intersection (my-org-file-tags filename)
+                        (cons "pub" my-tags-for-hiding)))
+    (warn "Not selected for publishing: %s" filename))
+   ;; OK, export
+   (t
+    ;; The original export-function.  By thy might, Bastien/Carsten/&c.
+    (org-publish-org-to 'html filename "" plist pub-dir)
+    ;; (my-postprocess filename (org-export-output-file-name "" nil pub-dir))
+    (with-current-buffer (or (find-buffer-visiting filename)
+                             (find-file-noselect filename))
       (goto-char (point-min))
-      (setq title (when (search-forward "\n#+title: " nil t)
-                    (delete-horizontal-space)
-                    (buffer-substring (point) (line-end-position))))
+      ;; Customize the resulting HTML file and pack it into a JSON object.
+      (let* ((title (org-get-title))
+             (created (substring (org-entry-get nil "CREATED") 1 -1))
+             (id (org-id-get))
+             (tags (org-get-tags))
+             (output-path (org-export-output-file-name "" nil pub-dir))
+             (slug (string-replace pub-dir "" output-path))
+             (permalink (-last-item (split-string pub-dir "/" t)))
+             (updated (save-excursion
+                        (goto-char (point-min))
+                        (when (search-forward "\n#+date: [" nil t)
+                          (buffer-substring (point) (1- (line-end-position))))))
+             ;; (wordcount (save-excursion
+             ;;              (if (re-search-forward "^[^#:\n]" nil t)
+             ;;                  (count-words (point) (point-max))
+             ;;                0)))
+             (wordcount
+              (save-excursion
+                (let ((sum 0))
+                  (while (re-search-forward "^[ \t]*[^#:\n]" nil t)
+                    (cl-incf sum (count-words (point) (line-end-position))))
+                  sum)))
+             (refs (save-excursion
+                     (when (search-forward ":roam_refs: " nil t)
+                       ;; Only top-level refs; not refs from a subheading
+                       (unless (search-backward "\n*" nil t)
+                         (buffer-substring (point) (line-end-position))))))
+             (subheadings-refs
+              (save-excursion
+                (let (alist)
+                  (while (search-forward ":roam_refs: " nil t)
+                    (let ((here (point))
+                          (ref (buffer-substring (point) (line-end-position))))
+                      ;; not a file-level ref
+                      (when (search-backward "\n*" nil t)
+                        (search-forward " ")
+                        (push (cons (buffer-substring (point) (line-end-position))
+                                    ref)
+                              alist)
+                        (goto-char here))))
+                  alist)))
+             (hidden (car (-intersection my-tags-for-hiding tags)))
+             (description (save-excursion
+                            (goto-char (point-min))
+                            (when (search-forward "\n#+subtitle: " nil t)
+                              (buffer-substring (point) (line-end-position)))))
+             (created-fancy
+              (format-time-string (car org-timestamp-custom-formats) (date-to-time created)))
+             (updated-fancy
+              (when updated
+                (format-time-string (car org-timestamp-custom-formats) (date-to-time updated))))
+             ;; (links-count 0)
+             (links-count
+              (save-excursion
+                (cl-loop while (re-search-forward org-link-bracket-re nil t)
+                         count t)))
+             (m1 (make-marker))
+             (after-toc (make-marker))
+             (content (my-customize-the-html output-path refs permalink))
+             (data-for-json nil)
+             (title (if (member "daily" tags)
+                        created-fancy
+                      (string-replace "--" "–"
+                                      (string-replace "---" "—" title)))))
+        (setq content-for-feed
+              (with-temp-buffer
+                (insert content)
+                (goto-char (point-min))
+                (let* ((locked (regexp-opt (append my-tags-to-avoid-uploading
+                                                   my-tags-for-hiding)))
+                       (re (rx "<a " (*? nonl) "class=\"" (*? nonl) (regexp locked) (*? nonl) ">"
+                               (group (*? anychar))
+                               "</a>")))
+                  (while (re-search-forward re nil t)
+                    (replace-match (match-string 1))))
+                (buffer-string)))
+        (setq data-for-json
+              `((slug . ,slug)
+                (permalink . ,permalink)
+                (title . ,title)
+                (created . ,created)
+                (updated . ,updated)
+                (created_fancy . ,created-fancy)
+                (updated_fancy . ,updated-fancy)
+                (wordcount . ,wordcount)
+                (links . ,links-count)
+                (tags . ,tags)
+                (hidden . ,hidden)
+                (description . ,description)
+                (content . ,content)))
 
-      (goto-char (point-min))
-      (setq id (when (search-forward "\n:id: " nil t)
-                 (delete-horizontal-space)
-                 (buffer-substring (point) (line-end-position))))
-
-      (goto-char (point-min))
-      (setq created (when (search-forward "\n:created: " nil t)
-                      (delete-horizontal-space)
-                      (cl-assert (not (looking-at-p "\n")))
-                      (buffer-substring (+ 1 (point)) (+ 11 (point)))))
-
-      (goto-char (point-min))
-      (setq tags (if (search-forward "\n#+filetags: " nil t)
-                     (thread-first (buffer-substring (point) (line-end-position))
-                                   (string-trim)
-                                   (string-split ":" t)
-                                   (sort #'string-lessp))
-                   '("")))
-
-      ;; TODO: Deprecate in favour of `my-validate-org-buffer'
-      ;; Bc of `org-html-self-link-headlines', disallow links in headings.
-      (goto-char (point-min))
-      (while (re-search-forward "^[[:space:]]*?\\*" nil t)
-        (when (search-forward "[[" (line-end-position) t)
-          ;; Some exceptions where it's OK
-          (unless (or (member "logseq" tags)
-                      (re-search-backward "TODO\\|DONE" (line-beginning-position) t)
-                      (warn "LINK INSIDE A HEADING: %s" filename))))))
-
-    ;; Skip exporting if we won't use the result
-    (cond
-     ;; TODO: Deprecate in favour of `my-validate-org-buffer'
-     ((not title)
-      (warn "TITLE MISSING: %s" filename))
-     ;; TODO: Deprecate in favour of `my-validate-org-buffer'
-     ((not created)
-      (warn "CREATION-DATE MISSING: %s" filename))
-     ;; TODO: Deprecate in favour of `my-validate-org-buffer'
-     ((not id)
-      (warn "ID MISSING: %s" filename))
-     ((-intersection tags my-tags-to-avoid-uploading)
-      (message "Found exclude-tag, excluding: %s" filename))
-     ;; if neither pub or a hiding-tag, there could be an outdated tag, so skip
-     ;; to be safe
-     ((not (-intersection tags (cons "pub" my-tags-for-hiding)))
-      (warn "Not selected for publishing"))
-     ;; TODO: deprecate in favour of `my-validate-org-buffer'.
-     ;; ensure all tags are lowercase so `-intersection' works
-     ((let ((case-fold-search nil))
-        (string-match-p "[[:upper:]]" (string-join tags)))
-      (warn "UPPERCASE IN TAG FOUND: %s" filename))
-
-     ;; OK, export
-     (t
-      (with-current-buffer (or (find-buffer-visiting filename)
-                               (find-file-noselect filename))
-        (let ((org-html-self-link-headlines (not (member "logseq" tags))))
-          ;; The original export-function.  By thy might, Bastien/Carsten/&c.
-          (org-publish-org-to 'html filename "" plist pub-dir))
-
-        ;; Customize the resulting HTML file and pack it into a JSON object.
-        (let* ((output-path (org-export-output-file-name "" nil pub-dir))
-               (slug (string-replace pub-dir "" output-path))
-               (permalink (-last-item (split-string pub-dir "/" t)))
-               (updated (save-excursion
-                          (goto-char (point-min))
-                          (when (search-forward "\n#+date: [" nil t)
-                            (buffer-substring (point) (1- (line-end-position))))))
-               (wordcount (save-excursion
-                            (if (re-search-forward "^[^#:\n]" nil t)
-                                (count-words (point) (point-max))
-                              0)))
-               (refs (save-excursion
-                       (when (search-forward ":roam_refs: " nil t)
-                         ;; Only top-level refs; not refs from a subheading
-                         (unless (search-backward "\n*" nil t)
-                           (buffer-substring (point) (line-end-position))))))
-               (subheadings-refs
-                (save-excursion
-                  (let (alist)
-                    (while (search-forward ":roam_refs: " nil t)
-                      (let ((here (point))
-                            (ref (buffer-substring (point) (line-end-position))))
-                        ;; not a file-level ref
-                        (when (search-backward "\n*" nil t)
-                          (search-forward " ")
-                          (push (cons (buffer-substring (point) (line-end-position))
-                                      ref)
-                                alist)
-                          (goto-char here))))
-                    alist)))
-               (hidden (car (-intersection my-tags-for-hiding tags)))
-               (description (save-excursion
-                              (goto-char (point-min))
-                              (when (search-forward "\n#+subtitle: " nil t)
-                                (buffer-substring (point) (line-end-position)))))
-               (created-fancy
-                (format-time-string (car org-timestamp-custom-formats) (date-to-time created)))
-               (updated-fancy
-                (when updated
-                  (format-time-string (car org-timestamp-custom-formats) (date-to-time updated))))
-               ;; (links-count 0)
-               (links-count
-                (save-excursion
-                  (goto-char (point-min))
-                  (cl-loop while (re-search-forward org-link-bracket-re nil t)
-                           count t)))
-               (m1 (make-marker))
-               (after-toc (make-marker))
-               (content (my-customize-the-html output-path refs permalink))
-               (data-for-json nil)
-               (title (if (member "daily" tags)
-                          created-fancy
-                        (string-replace "--" "–"
-                                        (string-replace "---" "—" title)))))
-          (setq content-for-feed
-                (with-temp-buffer
-                  (insert content)
-                  (goto-char (point-min))
-                  (let* ((locked (regexp-opt (append my-tags-to-avoid-uploading
-                                                     my-tags-for-hiding)))
-                         (re (rx "<a " (*? nonl) "class=\"" (*? nonl) (regexp locked) (*? nonl) ">"
-                                 (group (*? anychar))
-                                 "</a>")))
-                    (while (re-search-forward re nil t)
-                      (replace-match (match-string 1))))
-                  (buffer-string)))
-          (setq data-for-json
-                `((slug . ,slug)
-                  (permalink . ,permalink)
-                  (title . ,title)
-                  (created . ,created)
-                  (updated . ,updated)
-                  (created_fancy . ,created-fancy)
-                  (updated_fancy . ,updated-fancy)
-                  (wordcount . ,wordcount)
-                  (links . ,links-count)
-                  (tags . ,tags)
-                  (hidden . ,hidden)
-                  (description . ,description)
-                  (content . ,content)))
-
-          (when-let ((output-buf (find-buffer-visiting output-path)))
-            (kill-buffer output-buf))
-          (with-temp-file output-path
-            (insert (json-encode data-for-json)))
-          (when (and (not hidden)
-                     (not (-intersection tags '("tag" "daily" "stub")))
-                     (string-lessp "2023" (or updated created)))
-            ;; uniq filename that filesystem will sort chrono (idk if
-            ;; important)
-            (with-temp-file (concat "/tmp/roam/feed-entries/"
-                                    (or updated created)
-                                    permalink)
-              (insert "\n<entry>"
-                      "\n<title>" title "</title>"
-                      "\n<link href=\""
-                      (concat "https://edstrom.dev/" permalink "/" slug)
-                      "\" />"
-                      "\n<id>urn:uuid:" id "</id>"
-                      "\n<published>" created "T12:00:00Z</published>"
-                      (if updated
-                          (concat "\n<updated>" updated "T12:00:00Z</updated>")
-                        "")
-                      ;; Thru type="xhtml", we skip entity-escaping everything
-                      ;; https://validator.w3.org/feed/docs/atom.html#text
-                      "\n<content type=\"xhtml\">"
-                      "\n<div xmlns=\"http://www.w3.org/1999/xhtml\">\n"
-                      ;; NOTE: don't try to indent content.  it
-                      ;; messes with <pre> tags inside!
-                      content-for-feed
-                      "\n</div>"
-                      "\n</content>"
-                      "\n</entry>"))))
-        (kill-buffer (current-buffer)))))))
+        (when-let ((output-buf (find-buffer-visiting output-path)))
+          (kill-buffer output-buf))
+        (with-temp-file output-path
+          (insert (json-encode data-for-json)))
+        (when (and (not hidden)
+                   (not (-intersection tags '("tag" "daily" "stub")))
+                   (string-lessp "2023" (or updated created)))
+          ;; uniq filename that filesystem will sort chrono (idk if
+          ;; important)
+          (with-temp-file (concat "/tmp/roam/feed-entries/"
+                                  (or updated created)
+                                  permalink)
+            (insert "\n<entry>"
+                    "\n<title>" title "</title>"
+                    "\n<link href=\""
+                    (concat "https://edstrom.dev/" permalink "/" slug)
+                    "\" />"
+                    "\n<id>urn:uuid:" id "</id>"
+                    "\n<published>" created "T12:00:00Z</published>"
+                    (if updated
+                        (concat "\n<updated>" updated "T12:00:00Z</updated>")
+                      "")
+                    ;; Thru type="xhtml", we skip entity-escaping everything
+                    ;; https://validator.w3.org/feed/docs/atom.html#text
+                    "\n<content type=\"xhtml\">"
+                    "\n<div xmlns=\"http://www.w3.org/1999/xhtml\">\n"
+                    ;; NOTE: don't try to indent content.  it
+                    ;; messes with <pre> tags inside!
+                    content-for-feed
+                    "\n</div>"
+                    "\n</content>"
+                    "\n</entry>"))))
+      (kill-buffer (current-buffer))))))
 
 (defun my-customize-the-html (path refs permalink)
   (setq dom nil)
@@ -484,7 +442,8 @@ want in my main Emacs."
 
     ;; 07
     ;; Since Org didn't add an "outline-text-1" div in the beginning
-    (goto-char (marker-position after-toc))
+    (goto-char (point-min))
+    ;; (goto-char (marker-position after-toc))
     (insert "\n<div class=\"text-in-section\">")
     (if (search-forward "<section" nil t)
         (goto-char (match-beginning 0))
@@ -495,27 +454,27 @@ want in my main Emacs."
     ;; 08
     ;; MUST AFTER 07
     ;; Insert roam_refs before the post body
-    ;; TODO: consider doing this in the org markup before export? if it will be
-    ;; after toc anyway... ;; But it should be before toc. Huh. While we're at
-    ;; it, should the toc not be inside the text-in-section div? I think yes.
+    ;; TODO: consider doing this in the org markup before export?
     (when refs
-      (goto-char (marker-position after-toc))
-      (re-search-forward "<div.*?>")
-      (insert "\n<p>About ")
+      (goto-char (point-min))
+      (search-forward "<div class=\"text-in-section\">")
+      (insert "\n<p>Source ")
       (dolist (ref (split-string refs))
         (setq ref (string-replace "\"" "" ref)) ;; in case I wrapped it in quotes
-        (insert " <a href=\"" ref "\">" (replace-regexp-in-string "http.?://" "" ref) "</a>, "))
+        (insert " <a href=\"" ref "\">"
+                (replace-regexp-in-string "http.?://" "" ref)
+                "</a>, "))
       (delete-char -2)
       (insert "</p>"))
 
-    ;; Remove org-tags from headlines (each one re-appears in ToC
-    ;; also).  It was a bad default to put the nbsp entities outside
-    ;; the span so they couldn't be hidden with css...
-    (goto-char (point-min))
-    (while (search-forward "&#xa0;&#xa0;&#xa0;<span class=\"tag\">" nil t)
-      (let ((beg (match-beginning 0)))
-        (search-forward "</span></span>" (line-end-position))
-        (delete-region beg (point))))
+    ;; ;; Remove org-tags from headlines (each one re-appears in ToC
+    ;; ;; also).  It was a bad default to put the nbsp entities outside
+    ;; ;; the span so they couldn't be hidden with css...
+    ;; (goto-char (point-min))
+    ;; (while (search-forward "&#xa0;&#xa0;&#xa0;<span class=\"tag\">" nil t)
+    ;;   (let ((beg (match-beginning 0)))
+    ;;     (search-forward "</span></span>" (line-end-position))
+    ;;     (delete-region beg (point))))
 
     ;; Now parse XML because some things are easier to do to a parsed tree than
     ;; to a text buffer
@@ -569,7 +528,12 @@ want in my main Emacs."
            when id do
            (let ((uuid? (string-replace "ID-" "" id)))
              (when (org-uuidgen-p uuid?)
-               (dom-set-attribute heading 'id (my-uuid-to-pageid uuid?)))))
+               (let ((pageid (my-uuid-to-pageid uuid?)))
+                 (dom-set-attribute heading 'id pageid)
+                 (dom-append-child heading (dom-node
+                                            'a
+                                            `((href . ,(concat "#" pageid)))
+                                            " 🔗"))))))
 
   (funcall
    (defun recurse-avoiding-code-blocks (dom)
@@ -623,8 +587,14 @@ want in my main Emacs."
   ;; Return final HTML.  Phew!
   (with-temp-buffer
     (dom-print dom)
+    ;; Remove <body>/<html>
     (goto-char (point-min))
-    (while (re-search-forward "^\t*</?body>\\|^\t*</?html>" nil t)
-      (replace-match "")
-      (delete-blank-lines))
+    (delete-line)
+    (delete-line)
+    (goto-char (point-max))
+    (delete-line)
+    (delete-line)
+    ;; (while (re-search-forward "^</?body>\\|^</?html>" nil t)
+    ;;   (replace-match "")
+    ;;   (delete-blank-lines))
     (buffer-string)))

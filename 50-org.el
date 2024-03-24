@@ -9,18 +9,20 @@
 (setopt org-archive-location "/home/kept/roam/noagenda/archive.org::datetree/")
 (setopt org-clock-persist t)
 (setopt org-clock-auto-clock-resolution t)
+(setopt org-startup-folded 'nofold)
 (setopt org-agenda-include-diary t)
 (setopt citar-bibliography '("/home/kept/roam/refs/library_biblatex.bib"))
 (setopt org-agenda-todo-list-sublevels nil)
 (setopt org-agenda-todo-ignore-scheduled t)
-(setopt org-agenda-dim-blocked-tasks nil) ;; Speed up the agenda
-(setopt org-agenda-use-tag-inheritance '(todo search)) ;; Speed up the agenda
-(setopt org-agenda-ignore-properties '(stats)) ;; Speed up the agenda
-(setopt org-agenda-inhibit-startup t) ;; Speed up the agenda
+(setopt org-agenda-dim-blocked-tasks nil) ;; perf
+(setopt org-agenda-use-tag-inheritance '(todo search)) ;; perf
+(setopt org-agenda-ignore-properties '(stats)) ;; perf
+(setopt org-agenda-inhibit-startup t) ;; perf
 (setopt org-archive-save-context-info '(time file itags olpath))
 (setopt org-attach-id-dir "static/")
 (setopt org-pomodoro-play-sounds nil)
 (setopt org-export-backends '(html latex odt texinfo))
+(setopt org-export-with-toc nil)
 (setopt org-clock-out-remove-zero-time-clocks t)
 (setopt org-clock-idle-time 5)
 (setopt org-hide-leading-stars nil)
@@ -114,10 +116,13 @@
                      (when (org-clock-is-active)
                        (message (concat "Currently working on: "
                                         org-clock-current-task)))))
-  ;; Stuff to do if I'm not using Doom's Org
-  (unless (fboundp '+org-init-org-directory-h)
-    (require 'org-indent)
-    (add-hook 'org-mode-hook #'org-indent-mode)
+  ;; If using Doom's Org
+  (if (fboundp '+org-init-org-directory-h)
+      ;; fix interference with org-transclusion
+      (advice-remove 'org-link-search '+org--recenter-after-follow-link-a)
+    ;; if not using Doom's org
+    ;; (require 'org-indent)
+    ;; (add-hook 'org-mode-hook #'org-indent-mode)
     (my-change-latex-scale) ;; Bigger LaTeX preview
     ;; Adapt LaTeX preview scale to the font zoom
     (add-hook 'text-scale-mode-hook #'my-change-latex-scale)))
@@ -138,20 +143,11 @@
                  ("\\paragraph{%s}" . "\\paragraph*{%s}")
                  ("\\subparagraph{%s}" . "\\subparagraph*{%s}"))))
 
+(after! org-transclusion
+  (set-face-background 'org-transclusion "#222")
+  (setopt org-transclusion-exclude-elements '(property-drawer comment keyword)))
 
 
 ;;; Workaround the tide of org-element parser bugs since 9.5 rewrite
 
-;; ;; Workaround a startup bug that appeared on update 2024-01-15 (did doom change
-;; ;; default tab-width? i don't think so, but something strange's going on with
-;; ;; the org element parser)
-;; (setq-default tab-width 8)
-;; (hookgen org-mode-hook (setq tab-width 8))
-;; (setopt org-element-use-cache nil) ;; heavily bugged, ugh debug
-;; (after! org
-;;   (require 'org-element) ;; org-element-at-point not found ???
-;;   (require 'org-archive) ;; `org-add-archive-files' ???
-;;   (require 'org-macs) ;; invalid-function org-element-with-disabled-cache ???
-;;   ;; (require 'ox-html)  ;; htmlize not found , maybe this helps
-;;   ;; (org-require-package 'htmlize) ;; cannot be found!!! have to install it in packages.el
-;;   )
+(setq org-element-use-cache nil)

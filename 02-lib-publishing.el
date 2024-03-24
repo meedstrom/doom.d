@@ -18,14 +18,15 @@ For use in heavy loops; it skips activating `org-mode'.
 For all other uses, see `org-get-tags'."
   (with-temp-buffer
     (insert-file-contents file nil 0 400)
-    (let ((max (or (save-excursion (re-search-forward "^ *?[^#:]"))
-                   (point-max))))
-      (when (search-forward "#+filetags: " max t)
+    (let ((boundary (or (save-excursion (re-search-forward "^ *?[^#:]" nil t))
+                        (point-max))))
+      (when (search-forward "#+filetags: " boundary t)
         (when (= (line-number-at-pos) (line-number-at-pos (point-max)))
           (error "Whoops, amend `my-org-file-tags'"))
-        (string-split
-         (string-trim (buffer-substring (point) (line-end-position)))
-         ":" t)))))
+        (thread-first (buffer-substring (point) (line-end-position))
+                      (string-trim)
+                      (string-split ":" t)
+                      (sort #'string-lessp))))))
 
 (defun my-uuid-to-pageid (uuid)
   (let* ((hexa (string-trim (string-replace "-" "" uuid)))
@@ -313,32 +314,54 @@ Wrap the HTML output in an Org file that has a HTML export block."
     (insert "
 </feed>")))
 
-;; TODO: Scan thru all the body text for line that looks like ^:end:$ but is
-;; "off by one".  Also if there's an exact string :end: at the start or end of a
-;; line with other text, implying a newline got omitted.
-;; Repeat for #+end_src and all such constructs.
-;; I wonder if someone has actually made a linter for Org?
+(defun my-fail? (value problem)
+  "Like `cl-assert', but print PROBLEM and buffer filename."
+  (unless value
+    (error "%s" (concat problem (format " in %s:%d"
+                                        (buffer-file-name)
+                                        (line-number-at-pos))))))
+
+
+(defun my-assert-no-misplaced-syntax (str)
+  (not
+   (or
+    ;; TODO Scan thru all the body text for line that looks like ^:end:$ but is
+    ;; "off by one".
+
+    ;; Match ^:end: that has more text on the same line
+    (and (goto-char (point-min))
+         (re-search-forward (concat "^" str) nil t)
+         (looking-at-p "."))
+    ;; Match :end:$ that isn't on its own line
+    (and (goto-char (point-min))
+         (re-search-forward (concat str "$") nil t)
+         (goto-char (match-beginning 0))
+         (looking-back "[^ \n]")))))
+
 (defun my-validate-org-buffer ()
   (interactive)
-  (let ((file (buffer-file-name (buffer-base-buffer))))
+  (let ((file (buffer-file-name)))
     ;; Look for wrong amounts of brackets
     (goto-char (point-min))
     (while-let ((pos (search-forward "[[id:" nil t)))
       (when (looking-back (rx (literal "[[[id:")))
-        (warn "triple brackets at %s:%d") file (org-current-line))
+        (warn "triple brackets at %s:%d") file (line-number-at-pos))
       (unless (org-uuidgen-p (buffer-substring pos (1- (search-forward "]"))))
-        (warn "not proper UUID at %s:%d" file (org-current-line)))
+        (warn "not proper UUID at %s:%d" file (line-number-at-pos)))
       (goto-char pos)
       (unless (re-search-forward (rx (*? (not (any "[]"))) "]["
                                      (*? (not (any "[]"))) "]]")
                                  nil t)
-        (warn "weird brackets near position %d in %s" (org-current-line) file)))
+        (warn "weird brackets at %s:%d" file (line-number-at-pos))))
     (goto-char (point-min))
     (while (re-search-forward org-link-any-re nil t)
       (unless (string-match-p
                "\\(?:id:\\|http://\\|https://\\|file:\\|ftp://\\|info:\\)"
                (match-string 0))
-        (warn "disallowed link type at %s:%d" file (org-current-line))))
+        (warn "disallowed link type at %s:%d" file (line-number-at-pos))))
+    (my-fail? (my-assert-no-misplaced-syntax ":end:") "Possible mistake")
+    (my-fail? (my-assert-no-misplaced-syntax "#+end_src") "Possible mistake")
+    (my-fail? (my-assert-no-misplaced-syntax "#+end_quote") "Possible mistake")
     ;; check file-level metadata
     (goto-char (point-min))
     (my-validate-org-entry)
@@ -355,38 +378,46 @@ Wrap the HTML output in an Org file that has a HTML export block."
 (defun my-validate-org-entry ()
   "Validate entry at point, or file-level metadata if point is
  not under a heading."
-  (let ((file-level (not (org-get-heading)))
+  (let ((file-level-entry (not (org-get-heading)))
         (id (org-id-get))
         (title (or (org-get-heading) (org-get-title)))
         (created (org-entry-get nil "CREATED"))
         (tags (org-get-tags)))
-    (cl-assert id)
-    (cl-assert title)
-    (unless created
-      (warn "no CREATED at %s:%s" (buffer-file-name) (org-current-line)))
-    (cl-assert tags)
-    (cl-assert (org-uuidgen-p id))
-    (when (and created (not (string-blank-p created)))
-      (cl-assert (my-iso-datestamp-p (substring created 1 -1))))
-    ;; no links (or even datestamps) in headings
-    ;; (cl-assert (not (string-prefix-p "[" title)))
-    ;; (cl-assert (not (string-suffix-p "]" title)))
-    ;; no links in headings
-    (cl-assert (not (string-search "[[" title)))
-    (let ((filetag-line (save-excursion
-                          (goto-char (point-min))
-                          (search-forward "#+filetags")
-                          (buffer-substring (line-beginning-position) (line-end-position)))))
-      (when file-level
-        (setq title filetag-line))
-      ;; try to catch broken tags like "noexport:"
-      (when (string-match-p (rx " " alnum (+? (not " ")) ":" eol)
-                            title)
-        (error "Possible broken tag in %s" (buffer-file-name)))
-      ;; try to catch broken tags like ":noexport"
-      (when (string-match-p (rx " :" (+? (not " ")) (not ":") (*? space) eol)
-                            title)
-        (error "Possible broken tag in %s" (buffer-file-name))))))
+    (cl-flet ((my-fail? (value problem)
+                (unless value (error (concat problem " in %s:%d")
+                                     (buffer-file-name)
+                                     (line-number-at-pos)))))
+      (my-fail? id "No id")
+      (my-fail? (org-uuidgen-p id) "Org-id is not an UUID")
+      (my-fail? title "No title")
+      (my-fail? created "No CREATED property")
+      (my-fail? tags "No tags")
+      (let ((case-fold-search nil))
+        (my-fail? (not (string-match-p "[[:upper:]]" (string-join tags)))
+                  "Uppercase in tag found"))
+      (when (and created (not (string-blank-p created)))
+        (my-fail? (my-iso-datestamp-p (substring created 1 -1))
+                  "Property CREATED is not proper datestamp"))
+      ;; no links (or even datestamps) in headings
+      ;; (cl-fail (not (string-prefix-p "[" title)))
+      ;; (cl-fail (not (string-suffix-p "]" title)))
+      ;; no links in headings
+      (my-fail? (not (string-search "[[" title))
+                "Link in heading")
+      (let ((filetag-line (save-excursion
+                            (goto-char (point-min))
+                            (search-forward "#+filetags")
+                            (buffer-substring (line-beginning-position) (line-end-position)))))
+        (when file-level-entry
+          (setq title filetag-line))
+        ;; try to catch broken tags like "noexport:"
+        (my-fail? (not (string-match-p (rx " " alnum (+? (not " ")) ":" eol)
+                                       title))
+                  "Possible broken tag")
+        ;; try to catch broken tags like ":noexport"
+        (my-fail? (not (string-match-p (rx " :" (+? (not " ")) (not ":") (*? space) eol)
+                                       title))
+                  "Possible broken tag")))))
 
 ;; (defun my-validate-org-entry-tags ()
 ;;   (if (org-before-first-heading-p)
