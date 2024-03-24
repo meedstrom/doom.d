@@ -23,9 +23,9 @@ For all other uses, see `org-get-tags'."
       (when (search-forward "#+filetags: " max t)
         (when (= (line-number-at-pos) (line-number-at-pos (point-max)))
           (error "Whoops, amend `my-org-file-tags'"))
-        (thread-first (buffer-substring (point) (line-end-position))
-                      (string-trim)
-                      (string-split ":" t))))))
+        (string-split
+         (string-trim (buffer-substring (point) (line-end-position)))
+         ":" t)))))
 
 (defun my-uuid-to-pageid (uuid)
   (let* ((hexa (string-trim (string-replace "-" "" uuid)))
@@ -33,16 +33,6 @@ For all other uses, see `org-get-tags'."
     (if (or (= 0 decimal) (/= 32 (length hexa)))
         (error "String should be a valid UUID 36 chars long: %s" uuid)
       (substring (my-int-to-consonants decimal 5) -5))))
-
-;; Inspired by these results
-;; (ceiling (log 9999 10))
-;; (ceiling (log 10000 10))
-;; (ceiling (log 10001 10))
-(defun my-digits-length (num)
-  (let ((log (log num 10)))
-    (if (= (ceiling log) (floor log))
-        (+ 1 (ceiling log))
-      (ceiling log))))
 
 (defun my-int-to-consonants (integer &optional length)
   (let ((result "")
@@ -61,7 +51,7 @@ For all other uses, see `org-get-tags'."
   "Convert INTEGER between 0 and 20 into one non-vowel letter."
   ;; A b c d E f g h I j k l m n O p q r s t U v w x y z
   ;; bcdfghjklmnpqrstvwxyz
-  ;; start counting from b, E would've been 4th char
+  ;; if you start counting from b, E would've been 4th char
   (cond
    ((< integer 3) (+ ?b integer))
    ((< integer 6) (+ ?f integer -3))
@@ -70,7 +60,7 @@ For all other uses, see `org-get-tags'."
    ((< integer 21) (+ ?v integer -16))
    (t (error "Input was larger than 20"))))
 
-(defun my-uuid-to-pageid-old2 (uuid)
+(defun my-uuid-to-pageid-old-v2 (uuid)
   (substring (my-uuid-to-base62 uuid) -4))
 
 ;;(org-id-int-to-b36 3453453452312)
@@ -252,8 +242,7 @@ will not modify the source file."
 (defun my-generate-todo-log (path)
   "Generate a log of completed tasks using `org-agenda-write'.
 Wrap the HTML output in an Org file that has a HTML export block."
-
-  (cl-letf ((org-agenda-files '("/tmp/roam/archive.org"))
+  (cl-letf ((org-agenda-files '("/tmp/roam/org/archive.org"))
             (org-agenda-span 'fortnight)
             (org-agenda-prefix-format
              '((agenda . " %i %?-12t") (todo . "") (tags . "") (search . "")))
@@ -267,11 +256,11 @@ Wrap the HTML output in an Org file that has a HTML export block."
     (org-agenda-list)
     (org-agenda-log-mode)
     (org-agenda-archives-mode)
-    (shell-command "rm /tmp/todo-log-now.html")
-    (org-agenda-write "/tmp/todo-log-now.html")
+    (shell-command "rm /tmp/roam/todo-log-now.html")
+    (org-agenda-write "/tmp/roam/todo-log-now.html")
     (org-agenda-earlier 1)
-    (shell-command "rm /tmp/todo-log-last-week.html")
-    (org-agenda-write "/tmp/todo-log-last-week.html")
+    (shell-command "rm /tmp/roam/todo-log-last-week.html")
+    (org-agenda-write "/tmp/roam/todo-log-last-week.html")
     (org-agenda-quit)
     ;; (delete-other-windows)
     ;; (view-echo-area-messages)
@@ -287,14 +276,14 @@ Wrap the HTML output in an Org file that has a HTML export block."
               "\n#+date: "
               "\n#+begin_export html"
               "\n")
-      (insert-file-contents "/tmp/todo-log-last-week.html")
+      (insert-file-contents "/tmp/roam/todo-log-last-week.html")
       (delete-region (point) (search-forward "<pre>"))
       (insert "<pre class=\"agenda\">")
       (forward-line)
       (delete-region (1- (line-beginning-position)) (line-end-position))
       (search-forward "</pre>")
       (delete-region (1- (line-beginning-position)) (point-max))
-      (insert-file-contents "/tmp/todo-log-now.html")
+      (insert-file-contents "/tmp/roam/todo-log-now.html")
       (delete-region (point) (search-forward "<pre>"))
       (forward-line)
       (delete-region (1- (line-beginning-position)) (line-end-position))
@@ -312,34 +301,101 @@ Wrap the HTML output in an Org file that has a HTML export block."
   (with-temp-file path
     (insert "<?xml version=\"1.0\" encoding=\"utf-8\"?>
 <feed xmlns=\"http://www.w3.org/2005/Atom\">
-	<title>Martin Edström</title>
-	<link href=\"https://edstrom.dev\"/>
-	<updated>" (format-time-string "%FT%TZ") "</updated>
-	<author>
-		<name>Martin Edström</name>
-	</author>
-	<rights> © 2023-" (format-time-string "%Y") " Martin Edström </rights>
-	<id>https://edstrom.dev</id>")
+<title>Martin Edström</title>
+<link href=\"https://edstrom.dev\"/>
+<updated>" (format-time-string "%FT%TZ") "</updated>
+<author><name>Martin Edström</name></author>
+<rights> © 2023-" (format-time-string "%Y") " Martin Edström </rights>
+<id>https://edstrom.dev</id>")
     (dolist (entry (directory-files entries-dir t "[[:alpha:]]"))
       (insert-file-contents entry))
     (goto-char (point-max))
     (insert "
 </feed>")))
 
-(defun my-multi-hyphens-to-en-em-dashes (beg end)
-  (save-excursion
-    (let ((end end)) ;; don't modify input variable (golang habit)
-      (goto-char beg)
-      (while (search-forward "---" end t)
-        (unless (looking-at-p "-")
-          (replace-match "—")
-          (when end
-            (cl-decf end 2))))
-      (goto-char beg)
-      (while (search-forward "--" end t)
-        (unless (looking-at-p "-")
-          ;; NOTE can't use &ndash; for the atom feed since it is not
-          ;; defined in xml, so use unicode...
-          (replace-match "–")
-          (when end
-            (cl-decf end 1)))))))
+;; TODO: Scan thru all the body text for line that looks like ^:end:$ but is
+;; "off by one".  Also if there's an exact string :end: at the start or end of a
+;; line with other text, implying a newline got omitted.
+;; Repeat for #+end_src and all such constructs.
+;; I wonder if someone has actually made a linter for Org?
+(defun my-validate-org-buffer ()
+  (interactive)
+  (let ((file (buffer-file-name (buffer-base-buffer))))
+    ;; Look for wrong amounts of brackets
+    (goto-char (point-min))
+    (while-let ((pos (search-forward "[[id:" nil t)))
+      (when (looking-back (rx (literal "[[[id:")))
+        (warn "triple brackets at %s:%d") file (org-current-line))
+      (unless (org-uuidgen-p (buffer-substring pos (1- (search-forward "]"))))
+        (warn "not proper UUID at %s:%d" file (org-current-line)))
+      (goto-char pos)
+      (unless (re-search-forward (rx (*? (not (any "[]"))) "]["
+                                     (*? (not (any "[]"))) "]]")
+                                 nil t)
+        (warn "weird brackets near position %d in %s" (org-current-line) file)))
+    (goto-char (point-min))
+    (while (re-search-forward org-link-any-re nil t)
+      (unless (string-match-p
+               "\\(?:id:\\|http://\\|https://\\|file:\\|ftp://\\|info:\\)"
+               (match-string 0))
+        (warn "disallowed link type at %s:%d" file (org-current-line))))
+    ;; check file-level metadata
+    (goto-char (point-min))
+    (my-validate-org-entry)
+    ;; ensure the entire tags-value is correctly wrapped in colons
+    (cl-assert (progn (re-search-forward (rx bol "#+filetags:"))
+                      (re-search-forward " +:.+?:$" (line-end-position))))
+    ;; check metadata of each subtree that is also a roam node
+    (goto-char (point-min))
+    (while (not (eobp))
+      (org-next-visible-heading 1)
+      (when (org-id-get)
+        (my-validate-org-entry)))))
+
+(defun my-validate-org-entry ()
+  "Validate entry at point, or file-level metadata if point is
+ not under a heading."
+  (let ((file-level (not (org-get-heading)))
+        (id (org-id-get))
+        (title (or (org-get-heading) (org-get-title)))
+        (created (org-entry-get nil "CREATED"))
+        (tags (org-get-tags)))
+    (cl-assert id)
+    (cl-assert title)
+    (unless created
+      (warn "no CREATED at %s:%s" (buffer-file-name) (org-current-line)))
+    (cl-assert tags)
+    (cl-assert (org-uuidgen-p id))
+    (when (and created (not (string-blank-p created)))
+      (cl-assert (my-iso-datestamp-p (substring created 1 -1))))
+    ;; no links (or even datestamps) in headings
+    ;; (cl-assert (not (string-prefix-p "[" title)))
+    ;; (cl-assert (not (string-suffix-p "]" title)))
+    ;; no links in headings
+    (cl-assert (not (string-search "[[" title)))
+    (let ((filetag-line (save-excursion
+                          (goto-char (point-min))
+                          (search-forward "#+filetags")
+                          (buffer-substring (line-beginning-position) (line-end-position)))))
+      (when file-level
+        (setq title filetag-line))
+      ;; try to catch broken tags like "noexport:"
+      (when (string-match-p (rx " " alnum (+? (not " ")) ":" eol)
+                            title)
+        (error "Possible broken tag in %s" (buffer-file-name)))
+      ;; try to catch broken tags like ":noexport"
+      (when (string-match-p (rx " :" (+? (not " ")) (not ":") (*? space) eol)
+                            title)
+        (error "Possible broken tag in %s" (buffer-file-name))))))
+
+;; (defun my-validate-org-entry-tags ()
+;;   (if (org-before-first-heading-p)
+;;       (save-excursion
+;;         (goto-char (point-min))
+;;         (cl-assert (progn (re-search-forward (rx bol "#+filetags:"))
+;;                           (re-search-forward " +:.*?:$" (line-end-position)))))
+;;     (save-excursion
+;;       (unless (org-at-heading-p)
+;;         (org-previous-visible-heading 1))
+;;       (let ((pos (goto-char (line-beginning-position))))
+;;         (and (re-search-forward " +:.*:$" (line-end-position)))))))

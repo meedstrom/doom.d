@@ -6,6 +6,157 @@
 (require 'dash)
 (require 'crux)
 
+
+
+;; (defun org-roam-with-file (file keep-buf-p &rest body)
+;;   (declare (indent 2))
+;;   (apply #'org-roam-with-file* file keep-buf-p t body))
+;; (make-obsolete #'org-roam-with-file #'org-roam-with-file* "2024-03-23")
+
+;; see the line marked OVERRIDE, which is the only difference. i suspect the
+;; upstream design is a bug, but if it is really intended to have `unless',
+;; then propose adding this variant and the above compat wrapper
+(defmacro org-roam-with-file* (file keep-buf-p dont-save-p &rest body)
+  "Execute BODY within FILE.
+If FILE is nil, execute BODY in the current buffer.
+Kills the buffer if KEEP-BUF-P is nil, and FILE is not yet visited."
+  (declare (indent 3) (debug t))
+  `(let* (new-buf
+          (auto-mode-alist nil)
+          (find-file-hook nil)
+          (buf (or (and (not ,file)
+                        (current-buffer)) ;If FILE is nil, use current buffer
+                   (find-buffer-visiting ,file) ; If FILE is already visited, find buffer
+                   (progn
+                     (setq new-buf t)
+                     (find-file-noselect ,file)))) ; Else, visit FILE and return buffer
+          res)
+     (with-current-buffer buf
+       (unless (derived-mode-p 'org-mode)
+         (delay-mode-hooks
+           (let ((org-inhibit-startup t)
+                 (org-agenda-files nil))
+             (org-mode)
+             (hack-local-variables))))
+       (setq res (progn ,@body))
+       ;; (unless (and new-buf (not ,keep-buf-p))
+       ;; (when ,save-p  ;; ideal design, but hard to transition w backcompat
+       (unless (and new-buf (not ,keep-buf-p) (not ,dont-save-p)) ;;OVERRIDE
+         (save-buffer)))
+     (if (and new-buf (not ,keep-buf-p))
+         (when (find-buffer-visiting ,file)
+           (kill-buffer (find-buffer-visiting ,file))))
+     res))
+
+(defun my-org-roam-rewrite-links-ask ()
+  (interactive)
+  (require 'org-roam)
+  (require 'ol)
+  (let ((autosave? (when auto-save-visited-mode
+                     (auto-save-visited-mode 0)
+                     t))
+        ;; (org-inhibit-startup t)
+        ;; (org-agenda-files nil)
+        ;; (find-file-hook nil)
+        ;; (auto-mode-alist nil)
+        )
+    (unwind-protect
+        (cl-loop
+         for file in (org-roam-list-files)
+         unless (string-search "daily/" file)
+         do
+         ;; (progn
+         ;; (find-file file)
+         (org-roam-with-file* file t t
+           (goto-char (point-min))
+           (while-let ((end (re-search-forward org-link-bracket-re nil t)))
+             (let* ((beg (match-beginning 0))
+                    (link (match-string 0))
+                    (parts (split-string link "]\\["))
+                    (target (substring (car parts) 2))
+                    (desc (when (cadr parts)
+                            (substring (cadr parts) 0 -2)))
+                    (id (when (string-prefix-p "id:" target)
+                          (substring target 3)))
+                    (node (when id
+                            (org-roam-node-from-id id)))
+                    (true-title (when node
+                                  (org-roam-node-title node))))
+               (when (and node
+                          (not (or (string-equal-ignore-case desc true-title)
+                                   (member-ignore-case
+                                    desc (org-roam-node-aliases node)))))
+                 (switch-to-buffer (current-buffer))
+                 ;; (delay-mode-hooks
+                 ;; (org-mode)
+                 ;; (hack-local-variables))
+                 ;; (redisplay)
+                 (highlight-regexp (rx (literal link)))
+                 (when (yes-or-no-p (format "Rewrite link to this?  %s"
+                                            true-title))
+                   (unhighlight-regexp (rx (literal link)))
+                   (goto-char beg)
+                   (delete-region beg end)
+                   (insert (org-link-make-string target true-title))
+                   ;; Give user a chance to glimpse the result before moving
+                   ;; on
+                   (redisplay)
+                   (sleep-for .1)))))))
+      (when autosave?
+        (message "So you know, auto-save-visited-mode is still disabled!"))))
+  (save-some-buffers)
+  (when autosave?
+    (message "So you know, auto-save-visited-mode is still disabled!")))
+
+(defun my-add-lw-ref-slug ()
+  (interactive)
+  (while (org-next-visible-heading 1)
+    (redisplay)
+    (when-let* ((refs-string (org-entry-get nil "ROAM_REFS"))
+                (refs (split-string refs-string " "))
+                (ref (--find (string-search "greaterwrong.com" it) refs)))
+      (when (and
+             (not (string-match-p "/posts/.*?/." ref)) ;; slug already present
+             (= 0 (shell-command (concat "curl -o /tmp/tmp.html "
+                                         (shell-quote-argument ref)))))
+        (setq refs (delete ref refs))
+        (org-set-property
+         "ROAM_REFS"
+         (string-join
+          (cons
+           (with-temp-buffer
+             (insert-file-contents "/tmp/tmp.html")
+             (search-forward (string-replace "greater" "less" ref))
+             (search-backward "\"")
+             (forward-char 1)
+             ;; (search-forward "href=\"")
+             (->> (buffer-substring (point) (1- (search-forward "\"")))
+                  (string-replace "lesswrong.com" "greaterwrong.com")))
+           refs)
+          " "))))))
+
+;; used once
+(defun my-add-creation-date-in-all-roam-nodes ()
+  (interactive)
+  (require 'org-roam)
+  ;; (org-roam-db-autosync-mode 0)
+  (cl-letf ((before-save-hook nil)
+            (after-save-hook nil)
+            (find-file-hook nil))
+    (cl-loop
+     for file in (directory-files-recursively org-roam-directory "\\.org$")
+     unless (string-search file "/logseq/")
+     do (org-roam-with-file file nil
+          (goto-char (point-min))
+          (let ((file-level-date (my-org-add-:CREATED:)))
+            (while (progn (org-next-visible-heading 1) (not (eobp)))
+              (when (org-id-get)
+                (unless (org-entry-get nil "CREATED")
+                  (org-set-property "CREATED" file-level-date)))))
+          (save-buffer))))
+  ;; (org-roam-db-autosync-mode)
+  )
+
 (defun my-browse-url-chromium-kiosk (url &optional _)
   "Open URL in Chromium, in kiosk mode (no toolbar)."
   (let ((url (browse-url-encode-url url))
@@ -20,21 +171,6 @@
   (dolist (mode (seq-filter #'fboundp modes))
     (when (bound-and-true-p mode)
       (funcall mode 0))))
-
-;; TODO: check allll kinds of things
-(defun my-search-for-malformed-org-syntax ()
-  (interactive)
-  (cl-loop
-   for file in (directory-files-recursively org-roam-directory "\\.org$")
-   do (progn
-        (with-temp-buffer
-          (insert-file-contents file)
-          ;; Look for wrong amounts of brackets
-          (while (search-forward "[[id:" nil t)
-            (when (looking-back (rx (literal "[[[id:")))
-              (error "triple brackets at %s:%d") file (point))
-            (unless (re-search-forward (rx (*? (not (any "[]"))) "][" (*? (not (any "[]"))) "]]") nil t)
-              (message "weird brackets near position %d in %s" (point) file)))))))
 
 (defun my-read-lisp (s)
   "Check that S is a non-blank string, then parse it as lisp.
@@ -81,7 +217,10 @@ Useful when some of them are anonymous functions."
 
 (defun my-parseable-as-timestamp-p (time-string)
   "I think this works, but I haven't verified all cases."
-  (seq-find #'my-positive-number-p (parse-time-string time-string)))
+  (if (stringp time-string)
+      (seq-find #'my-positive-number-p (parse-time-string time-string))
+    (warn "Expected time string, but got not even a string: %s" time-string)
+    nil))
 
 (defun my-iso-datestamp-p (input)
   (when (my-parseable-as-timestamp-p input)
@@ -91,15 +230,21 @@ Useful when some of them are anonymous functions."
 (defun my-org-add-:CREATED: ()
   "Add CREATED property to entry at point, if none already.
 If file-level entry, check if the #+TITLE already looks like a
-date, and use that."
+date, and use that.  Return the property value."
   (interactive)
-  (unless (org-entry-get nil "CREATED")
-    (let ((date-string (format-time-string "[%F]")))
-      (when (org-before-first-heading-p)
-        (let ((title (org-get-title)))
-          (when (my-iso-datestamp-p title)
-            (setq date-string (concat "[" title "]")))))
-      (org-set-property "CREATED" date-string))))
+  (let ((preexisting (org-entry-get nil "CREATED")))
+    (if preexisting
+        preexisting
+      (let ((date-string (format-time-string "[%F]")))
+        (when (org-before-first-heading-p)
+          (let ((title (org-get-title)))
+            (unless title
+              (error "No title in file %s"
+                     (file-name-nondirectory (buffer-file-name))))
+            (when (my-iso-datestamp-p title)
+              (setq date-string (concat "[" title "]")))))
+        (org-set-property "CREATED" date-string)
+        date-string))))
 
 ;; used once
 (defun my-remove-pub-tag-if-noexport ()
@@ -159,6 +304,17 @@ also add a CREATED property with the current date."
         (org-id-copy))
     (message "Not an org-mode buffer")
     nil))
+
+;; Inspired by these results
+;; (ceiling (log 9999 10))
+;; (ceiling (log 10000 10))
+;; (ceiling (log 10001 10))
+(defun my-digits-length (num)
+  (let* ((log (log num 10))
+         (ceil (ceiling log)))
+    (if (= ceil (floor log))
+        (1+ ceil)
+      ceil)))
 
 (defun my-replace-in-file (file text replacement)
   "Dangerous"
@@ -954,7 +1110,7 @@ PROGRAM and PROGRAM-ARGS are passed on to `start-process'."
 PROGRAM and ARGS are passed on to `call-process'. Like
 `shell-command-to-string', this is synchronous and blocks Emacs
 until the program finishes."
-  `(with-temp-buffer 
+  `(with-temp-buffer
      (call-process ,program nil (current-buffer) nil ,@args)
      (buffer-string)))
 

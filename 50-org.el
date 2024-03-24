@@ -32,10 +32,9 @@
 (setopt org-datetree-add-timestamp nil)
 (setopt org-edit-src-content-indentation 0)
 ;; (setopt org-ellipsis "⤵")
-;; (setopt org-ellipsis "…")
+(setopt org-ellipsis "…")
 (setopt org-hide-emphasis-markers t) ; hide the *, =, and / markers
 (setopt org-image-actual-width '(200)) ; use #ATTR if available, else 200 px
-(setopt org-insert-heading-respect-content t)
 ;; (setopt org-latex-compiler "xelatex") ; allow unicode (åäö) in VERBATIM blocks
 (setopt org-log-done 'time)
 (setopt org-log-into-drawer t) ; hide spam
@@ -43,6 +42,7 @@
 (setopt org-use-speed-commands t)
 (setopt org-clock-x11idle-program-name (or (executable-find "xprintidle") "x11idle"))
 (setopt org-replace-disputed-keys t)
+(setopt org-tags-column -75)
 
 ;; (setq-default org-display-custom-times t) ;; could it cause org-element bugs due to daily page titles?
 (setopt org-agenda-files

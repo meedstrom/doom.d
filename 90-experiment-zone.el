@@ -1,25 +1,5 @@
 ;; Experiment zone -*- lexical-binding: t; -*-
 
-
-;;; Fixes for buffer-cycling
-
-;; Don't filter the buffer list when cycling.  How do people actually find the
-;; filtered buffers when they want them?  They can't possibly be typing out the
-;; name?
-(assoc-delete-all 'buffer-predicate default-frame-alist) ;; undoom
-(set-frame-parameter nil 'buffer-predicate nil) ;; undoom
-(setopt iflipb-ignore-buffers (lambda (&rest _) t))
-
-;; Never bury buffers, so the buffer list is truly chronological and
-;; unsurprising to cycle thru.  FWIW, might be worth knowing the command
-;; `unbury-buffer' and using that instead -- but I would prefer if there was a
-;; visual effect when a buffer gets buried, if I'm gonna have to keep track of
-;; what got buried as opposed to just switched out.
-(fset 'bury-buffer #'ignore)
-(fset 'bury-buffer-internal #'ignore)
-
-
-
 (hookgen doom-after-init-hook
   (setq my-stim-collection (my-stim-collection-generate)))
 
@@ -69,79 +49,6 @@
 ;; Just override org-roam-db-query so it pushes its arguments onto a list.
 
 ;; Aaanyway, probs not the origin of bugs so leave it.
-;;
-;; Hum.
-;;
-;; Shit.  Now that I'm using `while-no-input', I'm guessing it will *not*
-;; trigger the unwind-protect clause.  Which means we accumulate potentially a
-;; lot of extra sql insert queries from retrying that form.
-;;
-;;
-;; OK I've gone about it wrong.  while-no-input won't help anyway, forget it.
-;; issue is emacs FREEZES!
-;; - try sending a SIGUSR2:  killall -USR2 emacs
-;; - emit debug messages everywhere so you see where it froze and thus wehre
-;;   the problem
-;; - (emacsql-enable-debugging (org-roam-db)) then check hidden buffer
-;;   *emacsql-log*
-
-
-
-
-
-(defun my-validate-org-buffer ()
-  (interactive)
-  (let ((file (buffer-file-name (buffer-base-buffer))))
-    ;; Look for wrong amounts of brackets
-    (goto-char (point-min))
-    (while-let ((pos (search-forward "[[id:" nil t)))
-      (when (looking-back (rx (literal "[[[id:")))
-        (warn "triple brackets at %s:%d") file (point))
-      (unless (and (looking-at-p org-uuid-regexp)
-                   (= 37 (length (buffer-substring pos (search-forward "]")))))
-        (warn "not proper UUID at %s:%d" file (point)))
-      (goto-char pos)
-      (unless (re-search-forward (rx (*? (not (any "[]"))) "]["
-                                     (*? (not (any "[]"))) "]]")
-                                 nil t)
-        (warn "weird brackets near position %d in %s" (point) file)))
-    ;; Look for bad link type
-    (goto-char (point-min))
-    (while (search-forward "[[" nil t)
-      (unless (looking-at-p
-               "\\(?:id:\\|http://\\|https://\\|file:\\|ftp://\\|info:\\)")
-        (warn "unknown link type at %s:%d" file (point))))
-    ;; check file-level metadata
-    (goto-char (point-min))
-    (my-validate-org-entry)
-    ;; ensure the entire tags-expression is wrapped in colons
-    (cl-assert (progn (re-search-forward (rx bol "#+filetags:"))
-                      (re-search-forward " +:.*?:$" (line-end-position))))
-    (goto-char (point-min))
-    (while (not (eobp))
-      (org-next-visible-heading 1)
-      (when (org-id-get)
-        (my-validate-org-entry)))))
-
-(defun my-validate-org-entry ()
-  (let ((id (org-id-get))
-        (title (or (org-get-heading) (org-get-title)))
-        (created (org-entry-get nil "CREATED"))
-        (tags (org-get-tags)))
-    (cl-assert id)
-    (cl-assert title)
-    ;; (cl-assert created)
-    (cl-assert tags)
-    (cl-assert (org-uuidgen-p id))
-    (when (and created (not (string-blank-p created)))
-      (cl-assert (my-iso-datestamp-p (substring created 1 -1))))
-    (cl-assert (not (string-prefix-p "[" title)))
-    (cl-assert (not (string-suffix-p "]" title)))
-    ;; try to catch broken tags like :noexport
-    (cl-assert (not (string-match-p (rx ":" (*? (not (any ":" " "))) eol)
-                                    title)))))
-
-;; (add-hook 'my-org-roam-pre-scan-hook #'my-validate-org-buffer)
 
 (after! org-roam-db
   (defun org-roam-db-update-file (&optional file-path _)

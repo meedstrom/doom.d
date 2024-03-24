@@ -22,7 +22,7 @@
 (setopt proced-enable-color-flag t)
 (setopt abbrev-suggest t)
 (setopt use-short-answers t)
-(setopt backtrace-on-redisplay-error t)
+(setopt backtrace-on-redisplay-error nil)
 (setq byte-compile-warnings '(not free-vars))
 (setopt eval-expression-print-length 64)
 (setopt eval-expression-print-level 16)
@@ -126,3 +126,20 @@
 ;; - Seda
 ;; - Tim
 ;; - Thor & Emil
+
+
+;;; Fixes for buffer-cycling
+
+;; Don't filter the buffer list when cycling.  How do people actually find the
+;; filtered buffers when they want them?
+(assoc-delete-all 'buffer-predicate default-frame-alist) ;; undoom
+(set-frame-parameter nil 'buffer-predicate nil) ;; undoom
+(setopt iflipb-ignore-buffers (lambda (&rest _) t))
+
+;; Never bury buffers, so the buffer list is truly chronological and
+;; unsurprising to cycle thru.  FWIW, might be worth knowing the command
+;; `unbury-buffer' and using that instead -- but I would prefer if there was a
+;; visual effect when a buffer gets buried, if I'm gonna have to keep track of
+;; what got buried as opposed to just switched out.
+(fset 'bury-buffer #'ignore)
+(fset 'bury-buffer-internal #'ignore)
