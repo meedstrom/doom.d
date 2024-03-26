@@ -240,10 +240,10 @@ will not modify the source file."
     ;; Keep the whole link
     link))
 
-(defun my-generate-todo-log (path)
+(defun my-generate-todo-log (src path)
   "Generate a log of completed tasks using `org-agenda-write'.
 Wrap the HTML output in an Org file that has a HTML export block."
-  (cl-letf ((org-agenda-files '("/tmp/roam/org/archive.org"))
+  (cl-letf ((org-agenda-files (list src))
             (org-agenda-span 'fortnight)
             (org-agenda-prefix-format
              '((agenda . " %i %?-12t") (todo . "") (tags . "") (search . "")))

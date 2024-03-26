@@ -33,8 +33,8 @@
 (setopt org-publish-project-alist
         `(("my-slipbox-blog"
            :base-directory "/tmp/roam/org/"
-           :publishing-directory "/home/kept/pub/posts/"
-           ;; :publishing-directory "/tmp/roam/html/"
+           ;; :publishing-directory "/home/kept/pub/posts/"
+           :publishing-directory "/tmp/roam/html/"
            :publishing-function my-publish-to-blog
            :preparation-function my-prep-fn
            :recursive t
@@ -47,8 +47,9 @@
 
           ("my-slipbox-blog-attachments"
            :base-extension "png\\|jpg\\|gif"
-           :base-directory "/tmp/roam/org/attachments/"
-           :publishing-directory "/home/kept/pub/attachments/"
+           :base-directory "/tmp/roam/attachments/"
+           ;; :publishing-directory "/home/kept/pub/attachments/"
+           :publishing-directory "/tmp/roam/attachments/"
            :publishing-function org-publish-attachment)))
 
 (defun my-publish (&optional rescan)
@@ -79,7 +80,8 @@ changed the export code, but not the notes)."
   ;; of the originals
   (shell-command "rm -r /tmp/roam/org/")
   (my-check-id-collisions)
-  (my-make-atom-feed "/home/kept/pub/posts.atom" "/tmp/roam/feed-entries/")
+  ;; (my-make-atom-feed "/home/kept/pub/posts.atom" "/tmp/roam/feed-entries/")
+  (my-make-atom-feed "/tmp/roam/posts.atom" "/tmp/roam/feed-entries/")
   ;; (f-write (json-encode-alist my-id-old-new-alist)
   ;;      'utf-8 "/home/kept/pub/idMappings.json")
   (f-write (json-encode my-id-old-new-alist)
@@ -90,7 +92,7 @@ changed the export code, but not the notes)."
   (message "Prepping website")
   (cd "/home/kept/pub/")
   (async-shell-command "./encrypt-rebuild.sh")
-  (async-shell-command "chromium --app=http://localhost:5173"))
+  (async-shell-command "chromium-browser --app=http://localhost:5173"))
 
 (defvar my-publish-scanned-already nil)
 (defun my-prep-fn (_)
@@ -153,38 +155,41 @@ want in my main Emacs."
 
   ;; For hygiene, ensure that this subordinate emacs syncs nothing to disk
   (my-state-sync-mode 0)
+  ;; (eager-state-preempt-kill-emacs-hook-mode 0)
   (setq kill-emacs-hook nil)
 
   ;; Copy the files to /tmp to work from there
-  (shell-command "rm -r /tmp/roam/org/")
+  (shell-command "rm -rfv /tmp/roam/org/")
   (shell-command "cp -a /home/kept/roam /tmp/roam/org")
-  ;; (shell-command "cp -a /home/sync-phone/beorg/* /tmp/roam/org/")
-  (shell-command "rm -r /tmp/roam/org/*/logseq/") ;; logseq auto-backups
-  ;; (shell-command "shopt -s globstar && rm /tmp/roam/org/**/*.gpg") ;; no crypts
+
+  ;; Don't try to include crypts, logseq backups or syncthing duplicates
+  (shell-command "rm -r /tmp/roam/org/*/logseq/")
+  (shell-command "shopt -s globstar && rm -f /tmp/roam/org/**/*.gpg")
+  (shell-command "shopt -s globstar && rm -f /tmp/roam/org/**/*sync-conflict*")
 
   ;; Flatten the directory tree (no more subdirs)
-  (cl-loop
-   for file in (directory-files-recursively "/tmp/roam/org/" "\\.org$" nil)
-   unless (equal "/tmp/roam/org/" (file-name-directory file))
-   do (rename-file file "/tmp/roam/org/"))
-
-  (shell-command "rm /tmp/roam/org/*sync-conflict*") ;; syncthing
+  ;; REVIEW: Maybe cut bc we make those subdirs anyway later
+  ;; (cl-loop
+  ;;  for file in (directory-files-recursively "/tmp/roam/org/" "\\.org$" nil)
+  ;;  unless (equal "/tmp/roam/org/" (file-name-directory file))
+  ;;  do (rename-file file "/tmp/roam/org/"))
 
   ;; Generate a pretty log of completed TODOs
-  (my-generate-todo-log "/tmp/roam/org/todo-log.org")
+  (my-generate-todo-log "/tmp/roam/org/noagenda/archive.org"
+                        "/tmp/roam/org/todo-log.org")
 
   ;; Ensure each post will get a unique ID in the URL
   ;; NOTE: we check for page id collision later, not now
   (cl-loop
-   with default-directory = "/tmp/roam/org/"
-   for path in (directory-files "/tmp/roam/org/" t "\\.org$")
+   for path in (directory-files-recursively "/tmp/roam/org/" "\\.org$")
    as uuid = (my-org-file-id path)
-   when uuid do
-   (let ((pageid (my-uuid-to-pageid uuid)))
-     (mkdir pageid t)
-     (rename-file path (concat pageid "/"))))
+   if uuid do
+   (let ((new (concat "/tmp/roam/org/" (my-uuid-to-pageid uuid) "/")))
+     (mkdir new t)
+     (rename-file path new))
+   else do (delete-file path))
 
-  ;; Tell `org-id-locations' and the org-roam DB about the new directory.
+  ;; Tell `org-id-locations' and the org-roam DB about the temporary directory.
   (setopt org-roam-directory "/tmp/roam/org/")
   (setopt org-roam-db-location "/tmp/roam/org-roam.db")
   (setopt org-agenda-files '("/tmp/roam/org/"))
@@ -195,6 +200,9 @@ want in my main Emacs."
     (org-roam-db-sync 'force))
   (fset 'org-id-update-id-locations #'ignore) ;; stop triggering during publish
 
+  (shell-command "rm -rf /tmp/roam/{html,json}/")
+  (shell-command "mkdir -p /tmp/roam/{html,json}")
+  
   (setopt org-export-use-babel nil)
   (setopt org-export-with-drawers '(not "logbook" "noexport")) ;; case-insensitive
   (setopt org-export-exclude-tags my-tags-to-avoid-uploading)
@@ -208,14 +216,13 @@ want in my main Emacs."
   (setopt org-html-extension "")
   (setopt org-html-checkbox-type 'unicode) ;; how will it look in eww? test it.
   (setopt org-html-html5-fancy t)
-  ;; why does it skip environments like \begin{align}?
+  ;; why does it skip envs like \begin{align}?
   ;; (setopt org-html-with-latex 'verbatim)
   (setopt org-html-with-latex 'html) ;; use `org-latex-to-html-convert-command'
   (setopt org-latex-to-html-convert-command "node /home/kept/pub/texToMathML.js '%i'")
   (setopt org-inhibit-startup t) ;; from org-publish-org-to
 
   ;; Reset
-  ;; (setq my-heading-locations nil)
   (setq my-id-old-new-alist nil)
   ;; A lookup-table used by `my-replace-web-links-with-ref-note-links'
   (setq my-refs-cache (org-roam-db-query
@@ -241,26 +248,26 @@ want in my main Emacs."
 ;; the following wrapper around `org-publish-org-to'.
 
 (defun my-publish-to-blog (plist filename pub-dir)
-  (redisplay) ;; I like watching programs work
-  ;; Skip exporting if we won't use the result
+  ;; I like watching programs work
+  (redisplay)
   (cond
+   ;; Skip exporting if we already know we won't publish the result
    ((-intersection (my-org-file-tags filename)
                    my-tags-to-avoid-uploading)
     (message "Found exclude-tag, excluding: %s" filename))
-   ;; if neither pub or a hiding-tag, there could be an outdated tag, so skip
-   ;; to be safe
+   ;; Always expect pub or a hiding-tag, so if neither found, there could be a
+   ;; deprecated tag.  Skip to be safe.
    ((not (-intersection (my-org-file-tags filename)
                         (cons "pub" my-tags-for-hiding)))
     (warn "Not selected for publishing: %s" filename))
    ;; OK, export
    (t
-    ;; The original export-function.  By thy might, Bastien/Carsten/&c.
     (org-publish-org-to 'html filename "" plist pub-dir)
     ;; (my-postprocess filename (org-export-output-file-name "" nil pub-dir))
+    ;; Customize the resulting HTML file and pack it into a JSON object
     (with-current-buffer (or (find-buffer-visiting filename)
                              (find-file-noselect filename))
       (goto-char (point-min))
-      ;; Customize the resulting HTML file and pack it into a JSON object.
       (let* ((title (org-get-title))
              (created (substring (org-entry-get nil "CREATED") 1 -1))
              (id (org-id-get))
@@ -272,16 +279,14 @@ want in my main Emacs."
                         (goto-char (point-min))
                         (when (search-forward "\n#+date: [" nil t)
                           (buffer-substring (point) (1- (line-end-position))))))
-             ;; (wordcount (save-excursion
-             ;;              (if (re-search-forward "^[^#:\n]" nil t)
-             ;;                  (count-words (point) (point-max))
-             ;;                0)))
              (wordcount
               (save-excursion
                 (let ((sum 0))
                   (while (re-search-forward "^[ \t]*[^#:\n]" nil t)
                     (cl-incf sum (count-words (point) (line-end-position))))
                   sum)))
+             ;; TODO migrate to this
+             ;; (refs (org-roam-node-refs (org-roam-node-at-point)))
              (refs (save-excursion
                      (when (search-forward ":roam_refs: " nil t)
                        ;; Only top-level refs; not refs from a subheading
@@ -353,7 +358,8 @@ want in my main Emacs."
 
         (when-let ((output-buf (find-buffer-visiting output-path)))
           (kill-buffer output-buf))
-        (with-temp-file output-path
+        (with-temp-file (string-replace "html" "json" output-path)
+          (mkdir default-directory)
           (insert (json-encode data-for-json)))
         (when (and (not hidden)
                    (not (-intersection tags '("tag" "daily" "stub")))
@@ -383,7 +389,8 @@ want in my main Emacs."
                     "\n</div>"
                     "\n</content>"
                     "\n</entry>"))))
-      (kill-buffer (current-buffer))))))
+      ;; (kill-buffer (current-buffer))
+      ))))
 
 (defun my-customize-the-html (path refs permalink)
   (setq dom nil)
@@ -531,9 +538,14 @@ want in my main Emacs."
                (let ((pageid (my-uuid-to-pageid uuid?)))
                  (dom-set-attribute heading 'id pageid)
                  (dom-append-child heading (dom-node
+                                            'span '((class . "spacer"))
+                                            " "))
+                 (dom-append-child heading (dom-node
                                             'a
-                                            `((href . ,(concat "#" pageid)))
-                                            " 🔗"))))))
+                                            `((href . ,(concat "#" pageid))
+                                              (class . "permalink")
+                                              (rel . "bookmark"))
+                                            "🔗"))))))
 
   (funcall
    (defun recurse-avoiding-code-blocks (dom)
@@ -588,13 +600,13 @@ want in my main Emacs."
   (with-temp-buffer
     (dom-print dom)
     ;; Remove <body>/<html>
-    (goto-char (point-min))
-    (delete-line)
-    (delete-line)
-    (goto-char (point-max))
-    (delete-line)
-    (delete-line)
-    ;; (while (re-search-forward "^</?body>\\|^</?html>" nil t)
-    ;;   (replace-match "")
-    ;;   (delete-blank-lines))
+    ;; (goto-char (point-min))
+    ;; (delete-line)
+    ;; (delete-line)
+    ;; (goto-char (point-max))
+    ;; (delete-line)
+    ;; (delete-line)
+    (while (re-search-forward "^</?body>\\|^</?html>" nil t)
+      (replace-match "")
+      (delete-blank-lines))
     (buffer-string)))

@@ -6,7 +6,40 @@
 (require 'dash)
 (require 'crux)
 
+(defun my-transclude-node-as-subtree-here ()
+  "Insert a link and a transclusion.
 
+Result will basically look like:
+
+** [[Note]]
+#+transclude: [[Note]]
+
+but adapt to the surrounding outline level."
+  (interactive)
+  (let ((level (org-current-level))
+        (node (org-roam-node-read)))
+    (insert (org-link-make-string (concat "id:" (org-roam-node-id node))
+                                  (org-roam-node-formatted node)))
+    (duplicate-line)
+    (beginning-of-line-text)
+    ;; (goto-char (line-beginning-position))
+    (insert (make-string (+ 1 level) (string-to-char "*")) " ")
+    (forward-line 1)
+    ;; (goto-char (line-beginning-position))
+    (beginning-of-line-text)
+    (insert "#+transclude: ")
+    (goto-char (line-end-position))
+    (insert " :level " (format "%d" (+ 2 level)))
+    ;; If the target is a subtree rather than file-level node, then cut out the
+    ;; initial heading because we already made a heading.
+    ;; NOTE it currently prevents `org-transclusion-exclude-elements' from
+    ;; having an effect.
+    (unless (= 0 (org-roam-node-level node))
+      ;; TODO: I usually have 4-5 lines in my property drawers, and where it's
+      ;; off, I can change the value on a case-by-case basis, but it won't be
+      ;; futureproof.  Patch `org-transclusion-content-range-of-lines' to
+      ;; respect `org-transclusion-exclude-elements'!
+      (insert " :lines 5-"))))
 
 ;; (defun org-roam-with-file (file keep-buf-p &rest body)
 ;;   (declare (indent 2))
@@ -1644,11 +1677,16 @@ instead of hippie-expand and set `tab-always-indent' to
 
 (defun my-eww-other-window ()
   (interactive)
-  (if (featurep 'eww)
-      (let ((newbuf (eww-open-in-new-buffer)))
-        (save-excursion
-          (other-window 1)
-          (switch-to-buffer newbuf)))))
+  (when-let ((thing (thing-at-point 'url)))
+    (if (derived-mode-p 'eww-mode)
+        (let ((newbuf (eww-open-in-new-buffer)))
+          (save-window-excursion
+            (other-window 1)
+            (switch-to-buffer newbuf)
+            ;; (eww thing)
+            ))
+      (other-window 1)
+      (eww thing))))
 
 (defun my-capitalize-this-word ()
   (interactive)

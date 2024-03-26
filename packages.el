@@ -116,7 +116,11 @@
 ;; Org
 (package! vulpea)
 (package! org-anki)
-(package! org-transclusion)
+(package! org-transclusion
+  :recipe (:pre-build (("make" "org-transclusion.org")
+                       ("make" "-C" "./docs" "org-transclusion.texi")
+                       ("makeinfo" "./docs/org-transclusion.texi" "-o" "./docs/org-transclusion.info")
+                       ("install-info" "./docs/org-transclusion.info" "./docs/dir"))))
 (package! org-roam)
 (package! htmlize)
 (package! delve :recipe (:host github :repo "publicimageltd/delve"))
