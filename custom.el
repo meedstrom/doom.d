@@ -15,6 +15,8 @@
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
+ '(custom-safe-themes
+   '("8d8207a39e18e2cc95ebddf62f841442d36fcba01a2a9451773d4ed30b632443" "694dbeb8f98dddfb603a2fe0c04101f3fe457ee49bf90a6a581271e7f9c580c8" default))
  '(elfeed-feeds
    '("https://edstrom.dev/posts.atom" "https://edstrom.dev/feed"))
  '(magit-todos-insert-after '(bottom) nil nil "Changed by setter of obsolete option `magit-todos-insert-at'")
@@ -25,7 +27,7 @@
      (nameless-current-name . "my")
      (org-confirm-babel-evaluate)
      (org-refile-targets quote
-                         (("/home/kept/roam/noagenda/2021-08-27-somedaymaybe.org" :maxlevel . 3)))
+      (("/home/kept/roam/noagenda/2021-08-27-somedaymaybe.org" :maxlevel . 3)))
      (org-drill-scope . directory)
      (require-final-newline . t)
      (require-final-newline))))

@@ -108,17 +108,27 @@ so the result is always that long or longer."
 (defvar my-ids nil
   "Database for checking ID collisions.")
 
+(defvar my-ids* (make-hash-table :test #'equal)
+  "Database for checking ID collisions.")
+
+;; (defun my-check-id-collisions ()
+;;   (interactive)
+;;   (cl-loop
+;;    with found = nil
+;;    for id-uuids in my-ids
+;;    as uuids = (-distinct (cdr id-uuids))
+;;    when (> (length uuids) 1)
+;;    do (progn (setq found t)
+;;              (message "These uuids make same page-id: %s"
+;;                       uuids))
+;;    finally do (unless found (message "All uuids unique"))))
+
 (defun my-check-id-collisions ()
   (interactive)
-  (cl-loop
-   with found = nil
-   for id-uuids in my-ids
-   as uuids = (-distinct (cdr id-uuids))
-   when (> (length uuids) 1)
-   do (progn (setq found t)
-             (message "These uuids make same page-id: %s"
-                      uuids))
-   finally do (unless found (message "All uuids unique"))))
+  (cl-loop for v being the hash-values of my-ids*
+           as uuids = (-distinct v)
+           when (> (length uuids) 1)
+           do (message "These uuids make same page-id: %s" uuids)))
 
 (defun my-add-backlinks (&rest _)
   "Add a \"What links here\" subtree at the end.
@@ -314,29 +324,25 @@ Wrap the HTML output in an Org file that has a HTML export block."
     (insert "
 </feed>")))
 
-(defun my-fail? (value problem)
-  "Like `cl-assert', but print PROBLEM and buffer filename."
-  (unless value
-    (error "%s" (concat problem (format " in %s:%d"
-                                        (buffer-file-name)
-                                        (line-number-at-pos))))))
+(defun my-err (problem)
+  (error "%s" (concat problem (format " in %s:%d"
+                                      (buffer-file-name)
+                                      (line-number-at-pos)))))
 
+(defun my-find-misplaced-syntax (str)
+  (or
+   ;; TODO Scan thru all the body text for line that looks like ^:end:$ but is
+   ;; "off by one".
 
-(defun my-assert-no-misplaced-syntax (str)
-  (not
-   (or
-    ;; TODO Scan thru all the body text for line that looks like ^:end:$ but is
-    ;; "off by one".
-
-    ;; Match ^:end: that has more text on the same line
-    (and (goto-char (point-min))
-         (re-search-forward (concat "^" str) nil t)
-         (looking-at-p "."))
-    ;; Match :end:$ that isn't on its own line
-    (and (goto-char (point-min))
-         (re-search-forward (concat str "$") nil t)
-         (goto-char (match-beginning 0))
-         (looking-back "[^ \n]")))))
+   ;; Match ^:end: that has more text on the same line
+   (and (goto-char (point-min))
+        (re-search-forward (concat "^" str) nil t)
+        (looking-at-p "."))
+   ;; Match :end:$ that isn't on its own line
+   (and (goto-char (point-min))
+        (re-search-forward (concat str "$") nil t)
+        (goto-char (match-beginning 0))
+        (looking-back "[^ \n]"))))
 
 (defun my-validate-org-buffer ()
   (interactive)
@@ -359,11 +365,15 @@ Wrap the HTML output in an Org file that has a HTML export block."
                "\\(?:id:\\|http://\\|https://\\|file:\\|ftp://\\|info:\\)"
                (match-string 0))
         (warn "disallowed link type at %s:%d" file (line-number-at-pos))))
-    (my-fail? (my-assert-no-misplaced-syntax ":end:") "Possible mistake")
-    (my-fail? (my-assert-no-misplaced-syntax "#+end_src") "Possible mistake")
-    (my-fail? (my-assert-no-misplaced-syntax "#+end_quote") "Possible mistake")
-    ;; check file-level metadata
+    (when (my-find-misplaced-syntax ":end:") (my-err "Possible mistake"))
+    (when (my-find-misplaced-syntax "#\\+end_src") (my-err "Possible mistake"))
+    (when (my-find-misplaced-syntax "#\\+end_quote") (my-err "Possible mistake"))
     (goto-char (point-min))
+    (unless (-intersection (org-get-tags) (append '("pub")
+                                                  my-tags-for-hiding
+                                                  my-tags-to-avoid-uploading))
+      (my-err "No tag that indicates publishability"))
+    ;; check file-level metadata
     (my-validate-org-entry)
     ;; ensure the entire tags-value is correctly wrapped in colons
     (cl-assert (progn (re-search-forward (rx bol "#+filetags:"))
@@ -381,43 +391,35 @@ Wrap the HTML output in an Org file that has a HTML export block."
   (let ((file-level-entry (not (org-get-heading)))
         (id (org-id-get))
         (title (or (org-get-heading) (org-get-title)))
-        (created (org-entry-get nil "CREATED"))
+        (created (org-entry-get nil "created"))
         (tags (org-get-tags)))
-    (cl-flet ((my-fail? (value problem)
-                (unless value (error (concat problem " in %s:%d")
-                                     (buffer-file-name)
-                                     (line-number-at-pos)))))
-      (my-fail? id "No id")
-      (my-fail? (org-uuidgen-p id) "Org-id is not an UUID")
-      (my-fail? title "No title")
-      (my-fail? created "No CREATED property")
-      (my-fail? tags "No tags")
-      (let ((case-fold-search nil))
-        (my-fail? (not (string-match-p "[[:upper:]]" (string-join tags)))
-                  "Uppercase in tag found"))
-      (when (and created (not (string-blank-p created)))
-        (my-fail? (my-iso-datestamp-p (substring created 1 -1))
-                  "Property CREATED is not proper datestamp"))
-      ;; no links (or even datestamps) in headings
-      ;; (cl-fail (not (string-prefix-p "[" title)))
-      ;; (cl-fail (not (string-suffix-p "]" title)))
-      ;; no links in headings
-      (my-fail? (not (string-search "[[" title))
-                "Link in heading")
-      (let ((filetag-line (save-excursion
-                            (goto-char (point-min))
-                            (search-forward "#+filetags")
-                            (buffer-substring (line-beginning-position) (line-end-position)))))
-        (when file-level-entry
-          (setq title filetag-line))
-        ;; try to catch broken tags like "noexport:"
-        (my-fail? (not (string-match-p (rx " " alnum (+? (not " ")) ":" eol)
-                                       title))
-                  "Possible broken tag")
-        ;; try to catch broken tags like ":noexport"
-        (my-fail? (not (string-match-p (rx " :" (+? (not " ")) (not ":") (*? space) eol)
-                                       title))
-                  "Possible broken tag")))))
+    (unless id (my-err "No id"))
+    (unless (org-uuidgen-p id) (my-err "Org-id is not an UUID"))
+    (unless title (my-err "No title"))
+    (unless created (my-err "No CREATED property"))
+    (unless tags (my-err "No tags"))
+    (let ((case-fold-search nil))
+      (unless (not (string-match-p "[[:upper:]]" (string-join tags)))
+        (my-err "Uppercase in tag found")))
+    (when (and created (not (string-blank-p created)))
+      (unless (my-iso-datestamp-p (substring created 1 -1))
+        (my-err "Property CREATED is not proper datestamp")))
+    (when (string-search "\"" (org-entry-get nil "roam_refs"))
+      (my-err "Quote-sign in roam_refs"))
+    (let ((filetag-line (save-excursion
+                          (goto-char (point-min))
+                          (search-forward "#+filetags")
+                          (buffer-substring (line-beginning-position) (line-end-position)))))
+      (when file-level-entry
+        (setq title filetag-line))
+      ;; try to catch broken tags like "noexport:"
+      (unless (not (string-match-p (rx " " alnum (+? (not " ")) ":" eol)
+                                   title))
+        (my-err "Possible broken tag"))
+      ;; try to catch broken tags like ":noexport"
+      (unless (not (string-match-p (rx " :" (+? (not " ")) (not ":") (*? space) eol)
+                                   title))
+        (my-err "Possible broken tag")))))
 
 ;; (defun my-validate-org-entry-tags ()
 ;;   (if (org-before-first-heading-p)
@@ -430,3 +432,12 @@ Wrap the HTML output in an Org file that has a HTML export block."
 ;;         (org-previous-visible-heading 1))
 ;;       (let ((pos (goto-char (line-beginning-position))))
 ;;         (and (re-search-forward " +:.*:$" (line-end-position)))))))
+
+(defun my-add-refs-as-paragraphs (_)
+  "NOTE: Subtrees only, leaving file-level refs alone."
+  (save-excursion
+    (goto-char (point-min))
+    (while (re-search-forward "^\\*+ " nil t)
+      (when-let ((refs (org-entry-get nil "roam_refs")))
+        (search-forward ":end:")
+        (insert "\nSource " refs "\n\n")))))

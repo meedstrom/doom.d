@@ -6,17 +6,67 @@
 (require 'dash)
 (require 'crux)
 
+(defun my-rename-roam-asset-and-rewrite-links ()
+  (interactive)
+  (when (or (equal default-directory org-roam-directory)
+            (when (yes-or-no-p "Not in org-roam-directory, go there?")
+              (find-file org-roam-directory)
+              t))
+    (when-let ((bufs (--filter (string-search "*grep*" (buffer-name it))
+                               (buffer-list))))
+      (when (yes-or-no-p "Some *grep* buffers, kill to be sure this works?")
+        (mapc #'kill-buffer bufs)))
+    (let* ((filename (file-relative-name
+                      (read-file-name "File: ") org-roam-directory))
+           (new (read-string "New name: " filename)))
+      (mkdir (file-name-directory new) t)
+      (unless (file-writable-p new)
+        (error "New path wouldn't be writable"))
+      (rgrep (regexp-quote filename) "*.org")
+      (run-with-timer
+       1 nil
+       (lambda ()
+         (save-window-excursion
+           (delete-other-windows)
+           (switch-to-buffer (--find (string-search "*grep*" (buffer-name it))
+                                     (buffer-list)))
+           (wgrep-change-to-wgrep-mode)
+           (goto-char (point-min))
+           (query-replace filename new)
+           (wgrep-finish-edit)
+           (when (yes-or-no-p "Finished editing links, rename file?")
+             (rename-file filename new)
+             (message "File moved from %s to %s" filename new)))))
+      (message "Waiting for rgrep to populate buffer..."))))
+
+(defun my-org-insert-after-front-matter (&rest strings)
+  "Self-explanatory.
+Note that #+options: toc:t would always generate the table of
+contents before anything else, but if there is an explicit #+TOC,
+this function will insert before it."
+  (save-excursion
+    (goto-char (point-min))
+    (let ((first-heading (or (re-search-forward "^\\*+ " nil t)
+                             (point-max))))
+      (goto-char (point-min))
+      (if (re-search-forward "^[ \t]*#\\+TOC:" first-heading t)
+          (goto-char (1- (line-beginning-position)))
+        (or (re-search-forward "^ *?[^#:]" nil t)
+            (goto-char (point-max))))
+      (newline)
+      (apply #'insert strings))))
+
 (defun my-transclude-node-as-subtree-here ()
   "Insert a link and a transclusion.
 
 Result will basically look like:
 
 ** [[Note]]
-#+transclude: [[Note]]
+#+transclude: [[Note]] :level 3
 
 but adapt to the surrounding outline level."
   (interactive)
-  (let ((level (org-current-level))
+  (let ((level (or (org-current-level) 0))
         (node (org-roam-node-read)))
     (insert (org-link-make-string (concat "id:" (org-roam-node-id node))
                                   (org-roam-node-formatted node)))
