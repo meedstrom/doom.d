@@ -30,7 +30,6 @@
            :base-directory "/tmp/roam/org/"
            :publishing-directory "/tmp/roam/html/"
            :publishing-function my-publish-to-blog
-           :preparation-function my-prep-fn
            :recursive t
            :body-only t
            :with-toc nil
@@ -45,50 +44,42 @@
            :publishing-directory "/tmp/roam/attachments/"
            :publishing-function org-publish-attachment)))
 
-(defun my-publish (&optional rescan)
-  "A single command I can use in a child emacs.
+;; This function is where I can make destructive env changes that I
+;; don't want in my main Emacs.
+(defun my-publish ()
+  "All-in-one command for use in a child emacs.
 
-The command started out as a nonessential convenience wrapper,
-but turns out it's essential for wrapup after all files are
-exported: compile and move the feed entries and that other json.
+With C-u, also rebuild the org-roam-db that's in /tmp, else reuse
+it from some past run (makes sense if you only changed the export
+code, but not the notes).
 
-With prefix argument RESCAN, rebuild the org-roam-db that's in
-/tmp, else reuse it from some past run (makes sense if you only
-changed the export code, but not the notes)."
-  (interactive "P")
-  (cd "/home/kept/roam/") ;; for me to quick-search when an id fails to resolve
-  (shell-command "rm -r /tmp/roam/feed-entries/")
-  (mkdir "/tmp/roam/feed-entries/" t)
-  (switch-to-buffer "*Messages*") ;; for watching it work
-  (goto-char (point-max))
-  (when rescan
-    (shell-command "rm /tmp/roam/org-roam.db"))
-  (sleep-for .05)
-  (org-publish "my-slipbox-blog-attachments" t)
-  (org-publish "my-slipbox-blog" t)
-  ;; (org-publish "my-slipbox-blog-feed" t)
-  ;; Ensure it's gone from recentf so I don't accidentally edit these instead
-  ;; of the originals
-  (shell-command "rm -r /tmp/roam/org/")
-  (my-check-id-collisions)
-  (my-make-atom-feed "/tmp/roam/posts.atom" "/tmp/roam/feed-entries/")
-  (f-write (json-encode my-id-old-new-alist) 'utf-8 "/tmp/roam/idMappings.json")
-  (find-file "/home/kept/pub/")
-  (message "Prepping website")
-  (cd "/home/kept/pub/")
-  (shell-command "./encrypt-rebuild.sh")
-  (start-process "chromium" nil "chromium-browser" "--app=http://localhost:5173"))
-
-(defvar my-publish-scanned-already nil)
-(defun my-prep-fn (_)
-  "Prepare Emacs and temp files for publishing my website.
-Since I intend to run `org-publish' in a subordinate Emacs, this
-function is where I can make destructive env changes that I don't
-want in my main Emacs."
+With C-u C-u, also run `my-validate-org-buffer' on each file
+scanned."
+  (interactive)
   (require 'org-roam)
   (require 'org-agenda)
+  (switch-to-buffer "*Messages*") ;; for watching it work
+  (goto-char (point-max))
+  (setopt org-export-use-babel nil)
+  (setopt org-export-with-drawers '(not "logbook" "noexport")) ;; case-insensitive
+  (setopt org-export-exclude-tags my-tags-to-avoid-uploading)
+  (setopt org-export-with-broken-links nil) ;; links would disappear quietly!
+  (setopt org-export-with-smart-quotes nil)
+  (setopt org-export-with-tags nil)
+  (setopt org-export-with-todo-keywords nil)
+  (setopt org-export-headline-levels 5) ;; go all the way to <h6> before making <li>
+  ;; If we don't set this to "", there will be .html inside some links even
+  ;; though I also set "" in the `org-publish-org-to' call.
+  (setopt org-html-extension "")
+  (setopt org-html-checkbox-type 'unicode) ;; how will it look in eww? test it.
+  (setopt org-html-html5-fancy t)
+  ;; why does it skip envs like \begin{align}?
+  ;; (setopt org-html-with-latex 'verbatim)
+  (setopt org-html-with-latex 'html) ;; use `org-latex-to-html-convert-command'
+  (setopt org-latex-to-html-convert-command "node /home/kept/pub/texToMathML.js '%i'")
+  (setopt org-inhibit-startup t) ;; from org-publish-org-to
   (setq debug-on-error t)
-  (setq debug-on-quit t)
+  ;; (setq debug-on-quit t)
 
   ;; Speed up publishing
   (setq org-mode-hook nil)
@@ -116,19 +107,17 @@ want in my main Emacs."
   (setq whitespace-global-modes nil)
   (remove-hook 'org-export-before-parsing-functions #'org-attach-expand-links)
 
-  (when (equal '(16) current-prefix-arg)
-    (add-hook 'my-org-roam-pre-scan-hook #'my-validate-org-buffer))
   (my-remove-all-advice 'org-roam-db-update-file) ;; disable vulpea
 
   ;; Switch theme for 2 reasons
   ;; 1. Show me that this is not my normal Emacs
   ;; 2. Syntax-highlight code blocks in a way that looks OK on the web in
   ;;    both light and dark mode
-  (setq theme 'doom-monokai-machine)
-  ;; (setq theme 'doom-rouge)
-  ;; (setq theme 'doom-zenburn)
-  (unless (member theme custom-enabled-themes)
-    (load-theme theme))
+  (let ((theme 'doom-monokai-machine))
+    ;; (setq theme 'doom-rouge)
+    ;; (setq theme 'doom-zenburn)
+    (unless (member theme custom-enabled-themes)
+      (load-theme theme)))
 
   (use-package! prism
     :config
@@ -148,17 +137,17 @@ want in my main Emacs."
   (shell-command "rm -rfv /tmp/roam/org/")
   (shell-command "cp -a /home/kept/roam /tmp/roam/org")
 
-  ;; Don't try to include crypts, logseq backups or syncthing duplicates
+  ;; Exclude backups and duplicates
   (shell-command "rm -r /tmp/roam/org/*/logseq/")
-  (shell-command "shopt -s globstar && rm -f /tmp/roam/org/**/*.gpg")
   (shell-command "shopt -s globstar && rm -f /tmp/roam/org/**/*sync-conflict*")
 
-  ;; Generate a pretty log of completed TODOs
   (my-generate-todo-log "/tmp/roam/org/noagenda/archive.org"
                         "/tmp/roam/org/todo-log.org")
 
-  ;; Ensure each post will get a unique ID in the URL
-  ;; NOTE: we check for page id collision later, not now
+  ;; Ensure each post URL will have a unique ID by now placing them in
+  ;; subdirectories named by ID, so the org-id resolver will translate all ID
+  ;; links into these filesystem paths.
+  ;; NOTE: we check for ID collisions later
   (cl-loop
    for path in (directory-files-recursively "/tmp/roam/org/" "\\.org$")
    as uuid = (my-org-file-id path)
@@ -167,6 +156,11 @@ want in my main Emacs."
      (mkdir new t)
      (rename-file path new))
    else do (delete-file path))
+
+  (when (>= (car current-prefix-arg) 4)
+    (shell-command "rm /tmp/roam/org-roam.db"))
+  (when (>= (car current-prefix-arg) 16)
+    (add-hook 'my-org-roam-pre-scan-hook #'my-validate-org-buffer))
 
   ;; Tell `org-id-locations' and the org-roam DB about the temporary directory.
   (setopt org-roam-directory "/tmp/roam/org/")
@@ -177,29 +171,12 @@ want in my main Emacs."
     (org-id-update-id-locations) ;; find files with ROAM_EXCLUDE too
     (org-roam-update-org-id-locations)
     (org-roam-db-sync 'force))
-  (fset 'org-id-update-id-locations #'ignore) ;; stop triggering during publish
+  ;; (fset 'org-id-update-id-locations #'ignore) ;; stop triggering during publish
 
   (shell-command "rm -rf /tmp/roam/{html,json}/")
   (shell-command "mkdir -p /tmp/roam/{html,json}")
-  
-  (setopt org-export-use-babel nil)
-  (setopt org-export-with-drawers '(not "logbook" "noexport")) ;; case-insensitive
-  (setopt org-export-exclude-tags my-tags-to-avoid-uploading)
-  (setopt org-export-with-broken-links nil) ;; links would disappear quietly!
-  (setopt org-export-with-smart-quotes nil)
-  (setopt org-export-with-tags nil)
-  (setopt org-export-with-todo-keywords nil)
-  (setopt org-export-headline-levels 5) ;; go all the way to <h6> before making <li>
-  ;; If we don't set this to "", there will be .html inside some links even
-  ;; though I also set "" in the `org-publish-org-to' call.
-  (setopt org-html-extension "")
-  (setopt org-html-checkbox-type 'unicode) ;; how will it look in eww? test it.
-  (setopt org-html-html5-fancy t)
-  ;; why does it skip envs like \begin{align}?
-  ;; (setopt org-html-with-latex 'verbatim)
-  (setopt org-html-with-latex 'html) ;; use `org-latex-to-html-convert-command'
-  (setopt org-latex-to-html-convert-command "node /home/kept/pub/texToMathML.js '%i'")
-  (setopt org-inhibit-startup t) ;; from org-publish-org-to
+  (shell-command "rm -r /tmp/roam/feed-entries/")
+  (shell-command "mkdir -p /tmp/roam/feed-entries/")
 
   ;; Reset
   (setq my-id-old-new-alist nil)
@@ -215,20 +192,35 @@ want in my main Emacs."
   (add-hook 'org-export-before-parsing-functions #'my-replace-datestamps-with-links)
   (add-hook 'org-export-before-parsing-functions #'org-transclusion-mode)
   ;; (add-hook 'org-export-before-parsing-functions #'my-replace-web-links-with-ref-note-links)
-  (add-hook 'org-export-before-parsing-functions #'my-add-refs-as-paragraphs))
+  (add-hook 'org-export-before-parsing-functions #'my-add-refs-as-paragraphs)
+
+  (org-publish "my-slipbox-blog-attachments" t)
+  (org-publish "my-slipbox-blog" t)
+
+  ;; Ensure it's gone from recentf so I don't accidentally edit these instead
+  ;; of the originals
+  (shell-command "rm -r /tmp/roam/org/")
+  (my-check-id-collisions)
+  (my-make-atom-feed "/tmp/roam/posts.atom" "/tmp/roam/feed-entries/")
+  (f-write (json-encode my-id-old-new-alist) 'utf-8 "/tmp/roam/idMappings.json")
+  (find-file "/home/kept/pub/")
+  (message "Prepping website")
+  (async-shell-command "./encrypt-rebuild.sh")
+  (start-process "chromium" nil "chromium-browser" "--app=http://localhost:5173"))
 
 (defun my-publish-to-blog (plist filename pub-dir)
-  "Take org file FILENAME and generate stuff in PUB-DIR.
-All args passed on to `org-publish-org-to'."
+  "Take org file FILENAME and make html file in PUB-DIR.
+Also wrap that same html in a json file and an atom entry.
+
+All arguments pass through to `org-publish-org-to'."
   (redisplay) ;; I like watching it work
-  (cond
-   ;; Skip exporting if we already know we won't publish the result
-   ((-intersection (my-org-file-tags filename)
-                   my-tags-to-avoid-uploading)
-    (message "Found exclude-tag, excluding: %s" filename))
-   (t
+  (if (-intersection (my-org-file-tags filename) my-tags-to-avoid-uploading)
+      ;; If we already know we won't publish it, don't export the file at all.
+      ;; Saves so much time.  Some other issues can also disqualify the file,
+      ;; but I take care of them in `my-validate-org-buffer'.
+      (message "Found exclude-tag, excluding: %s" filename)
     (org-publish-org-to 'html filename "" plist pub-dir)
-    ;; Customize the resulting HTML file and pack it into a JSON object
+    ;; Now pack a JSON object holding the exported HTML plus metadata
     (when-let ((already-open (find-buffer-visiting filename)))
       (cl-assert (not (buffer-modified-p already-open)))
       (kill-buffer already-open))
@@ -262,20 +254,18 @@ All args passed on to `org-publish-org-to'."
                                                       (org-get-title)))))
              (wordcount
               (save-excursion
-                (let ((sum 0))
-                  ;; Seek lines that don't start with # or :
-                  (while (re-search-forward "^[ \t]*[^#:\n]" nil t)
-                    (if (and (eq (preceding-char) ?*)
-                             (member "noexport" (org-get-tags)))
-                        ;; Don't count words under hidden subtrees
-                        (org-next-visible-heading 1)
-                      (cl-incf sum (count-words (point) (line-end-position)))))
-                  sum)))
+                (cl-loop while (re-search-forward my-org-text-line-re nil t)
+                         if (and (eq (preceding-char) ?*)
+                                 (member "noexport" (org-get-tags)))
+                         ;; Don't count words under hidden subtrees
+                         do (org-next-visible-heading 1)
+                         else sum (count-words (point) (line-end-position)))))
              (links-count
               (save-excursion
                 (cl-loop while (re-search-forward org-link-bracket-re nil t)
-                         unless (member "noexport" (org-get-tags))
-                         count t)))
+                         if (member "noexport" (org-get-tags))
+                         do (org-next-visible-heading 1)
+                         else count t)))
              (content (my-customize-the-html output-path refs permalink slug))
              (content-for-feed
               (with-temp-buffer
@@ -290,7 +280,6 @@ All args passed on to `org-publish-org-to'."
                   (while (re-search-forward re nil t)
                     (replace-match (match-string 1)))
                   (buffer-string)))))
-
         ;; Write JSON object
         (let ((dir (concat "/tmp/roam/json/" permalink "/")))
           (mkdir dir)
@@ -336,8 +325,7 @@ All args passed on to `org-publish-org-to'."
                     "\n</content>"
                     "\n</entry>"))))
       (cl-assert (not (buffer-modified-p)))
-      (kill-buffer (current-buffer))))))
-
+      (kill-buffer (current-buffer)))))
 
 
 (defun my-customize-the-html (path refs permalink slug)
@@ -408,20 +396,6 @@ All args passed on to `org-publish-org-to'."
       ;; than to a text buffer
       (setq dom (libxml-parse-html-region)))
 
-    ;; Insert roam_refs at top of file
-    (when refs
-      (let ((first-div (car (dom-by-class dom "text-in-section")))
-            (ref-paragraph
-             (apply #'dom-node 'p nil
-                    "Source "
-                    (cdr (cl-loop
-                          for ref in (split-string refs)
-                          append (list ", "
-                                       (dom-node 'a `((href . ,ref))
-                                                 (replace-regexp-in-string
-                                                  "^http.?://" "" ref))))))))
-        (dom-add-child-before first-div ref-paragraph)))
-
     ;; Mess with internal links
     (cl-loop
      for anchor in (dom-by-tag dom 'a)
@@ -455,6 +429,18 @@ All args passed on to `org-publish-org-to'."
           ;; Style the link based on target tag
           (when target-tags
             (dom-set-attribute anchor 'class (string-join target-tags " ")))))
+
+    ;; Format undescribed links more nicely
+    (cl-loop for anchor in (dom-by-tag dom 'a)
+             as children = (dom-children anchor)
+             as desc = (car children)
+             as fixed-desc = (->> desc
+                                  (replace-regexp-in-string "^http.?://" "")
+                                  (string-replace "%20" " "))
+             unless (equal fixed-desc desc)
+             do (progn
+                  (dom-add-child-before children fixed-desc desc)
+                  (dom-remove-node children desc)))
 
     ;; Mess with headings
     (cl-loop
@@ -525,7 +511,7 @@ All args passed on to `org-publish-org-to'."
              do (progn
                   (dom-set-attribute a 'href (concat "/" path))
                   (dom-set-attribute a 'rel "external")))
-
+    
     ;; Declutter
     (cl-loop for node in (dom-by-class dom "^org-ul$")
              do (dom-remove-attribute node 'class))

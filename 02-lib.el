@@ -6,27 +6,34 @@
 (require 'dash)
 (require 'crux)
 
-(defun my-rename-roam-asset-and-rewrite-links ()
+(defun my-rename-and-relink-asset-at-point ()
   (interactive)
-  (when (or (equal default-directory org-roam-directory)
-            (when (yes-or-no-p "Not in org-roam-directory, go there?")
-              (find-file org-roam-directory)
-              t))
-    (when-let ((bufs (--filter (string-search "*grep*" (buffer-name it))
-                               (buffer-list))))
-      (when (yes-or-no-p "Some *grep* buffers, kill to be sure this works?")
-        (mapc #'kill-buffer bufs)))
-    (let* ((filename (file-relative-name
-                      (read-file-name "File: ") org-roam-directory))
-           (new (read-string "New name: " filename)))
-      (mkdir (file-name-directory new) t)
-      (unless (file-writable-p new)
-        (error "New path wouldn't be writable"))
-      (rgrep (regexp-quote filename) "*.org")
-      (run-with-timer
-       1 nil
-       (lambda ()
-         (save-window-excursion
+  (let ((thing (if (derived-mode-p 'dired-mode)
+                   (dired-get-filename)
+                 (thing-at-point 'existing-filename))))
+    (unless (string-prefix-p org-roam-directory thing)
+      (error "That file doesn't seem to be under `org-roam-directory'"))
+    (my-rename-roam-asset-and-rewrite-links t thing)))
+
+(defun my-rename-roam-asset-and-rewrite-links (&optional yy asset)
+  (interactive "P")
+  (when-let ((bufs (--filter (string-search "*grep*" (buffer-name it))
+                             (buffer-list))))
+    (if (or yy (yes-or-no-p "Existing *grep* buffers must be killed, ok?"))
+        (mapc #'kill-buffer bufs)
+      (error "Existing *grep* buffers would confuse this command, stopped")))
+  (let* ((default-directory org-roam-directory)
+         (filename (file-relative-name (or asset (read-file-name "File: "))))
+         (new (read-string "New name: " filename)))
+    (mkdir (file-name-directory new) t)
+    (unless (file-writable-p new)
+      (error "New path wouldn't be writable"))
+    (rgrep (regexp-quote filename) "*.org")
+    (run-with-timer
+     1 nil
+     (lambda ()
+       (save-window-excursion
+         (let ((default-directory org-roam-directory))
            (delete-other-windows)
            (switch-to-buffer (--find (string-search "*grep*" (buffer-name it))
                                      (buffer-list)))
@@ -34,10 +41,10 @@
            (goto-char (point-min))
            (query-replace filename new)
            (wgrep-finish-edit)
-           (when (yes-or-no-p "Finished editing links, rename file?")
+           (when (or yy (yes-or-no-p "Finished editing links, rename file?"))
              (rename-file filename new)
-             (message "File moved from %s to %s" filename new)))))
-      (message "Waiting for rgrep to populate buffer..."))))
+             (message "File moved to %s" new))))))
+    (message "Waiting for rgrep to populate buffer...")))
 
 (defun my-org-insert-after-front-matter (&rest strings)
   "Self-explanatory.

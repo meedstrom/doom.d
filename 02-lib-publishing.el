@@ -392,7 +392,8 @@ Wrap the HTML output in an Org file that has a HTML export block."
         (id (org-id-get))
         (title (or (org-get-heading) (org-get-title)))
         (created (org-entry-get nil "created"))
-        (tags (org-get-tags)))
+        (tags (org-get-tags))
+        (refs (org-entry-get nil "roam_refs")))
     (unless id (my-err "No id"))
     (unless (org-uuidgen-p id) (my-err "Org-id is not an UUID"))
     (unless title (my-err "No title"))
@@ -404,7 +405,7 @@ Wrap the HTML output in an Org file that has a HTML export block."
     (when (and created (not (string-blank-p created)))
       (unless (my-iso-datestamp-p (substring created 1 -1))
         (my-err "Property CREATED is not proper datestamp")))
-    (when (string-search "\"" (org-entry-get nil "roam_refs"))
+    (when (and refs (string-search "\"" refs))
       (my-err "Quote-sign in roam_refs"))
     (let ((filetag-line (save-excursion
                           (goto-char (point-min))
@@ -421,23 +422,21 @@ Wrap the HTML output in an Org file that has a HTML export block."
                                    title))
         (my-err "Possible broken tag")))))
 
-;; (defun my-validate-org-entry-tags ()
-;;   (if (org-before-first-heading-p)
-;;       (save-excursion
-;;         (goto-char (point-min))
-;;         (cl-assert (progn (re-search-forward (rx bol "#+filetags:"))
-;;                           (re-search-forward " +:.*?:$" (line-end-position)))))
-;;     (save-excursion
-;;       (unless (org-at-heading-p)
-;;         (org-previous-visible-heading 1))
-;;       (let ((pos (goto-char (line-beginning-position))))
-;;         (and (re-search-forward " +:.*:$" (line-end-position)))))))
+(defvar my-org-text-line-re "^[ \t]*[^#:\n]"
+  "Regexp to match a line that isn't commented out or a property drawer.
+Useful for jumping past a file's front matter.")
 
 (defun my-add-refs-as-paragraphs (_)
-  "NOTE: Subtrees only, leaving file-level refs alone."
   (save-excursion
     (goto-char (point-min))
-    (while (re-search-forward "^\\*+ " nil t)
-      (when-let ((refs (org-entry-get nil "roam_refs")))
-        (search-forward ":end:")
-        (insert "\nSource " refs "\n\n")))))
+    (when (re-search-forward my-org-text-line-re nil t)
+      (goto-char (line-beginning-position))
+      (open-line 2)
+      (while (progn
+               (when-let ((refs (org-entry-get nil "roam_refs")))
+                 (while (progn
+                          (forward-line 1)
+                          (or (looking-at-p "^[ \t]*:") (eobp))))
+                 (insert "\nSource " refs "\n\n"))
+               (org-next-visible-heading 1)
+               (not (eobp)))))))
