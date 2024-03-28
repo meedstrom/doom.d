@@ -7,7 +7,6 @@
 (defvar my-tags-to-avoid-uploading '("noexport" "archive" "private" "censor"))
 (defvar my-tags-for-hiding '("gri" "shrink" "privy" "lover" "fren"))
 (defvar my-refs-cache nil)
-(defvar my-id-old-new-alist nil)
 
 ;; TODO: Upstream
 ;; Override the info: link type so it won't get exported into an empty <a
@@ -22,7 +21,7 @@
 ;; it has one, instead of e.g. "org953031".  That way, hash-links such as
 ;; #ID-e10bbdfe-1ffb-4c54-9228-2818afdfc5ba will make the web browser jump to
 ;; that heading.  Thank org-roam for this convenience!  Note that I convert
-;; these IDs later via `my-uuid-to-pageid'.
+;; these IDs later via `my-uuid-to-short'.
 (after! ox (require 'org-roam-export))
 
 (setopt org-publish-project-alist
@@ -49,7 +48,7 @@
 (defun my-publish ()
   "All-in-one command for use in a child emacs.
 
-With C-u, also rebuild the org-roam-db that's in /tmp, else reuse
+With C-u, first rebuild the org-roam-db that's in /tmp, else reuse
 it from some past run (makes sense if you only changed the export
 code, but not the notes).
 
@@ -68,10 +67,10 @@ scanned."
   (setopt org-export-with-tags nil)
   (setopt org-export-with-todo-keywords nil)
   (setopt org-export-headline-levels 5) ;; go all the way to <h6> before making <li>
-  ;; If we don't set this to "", there will be .html inside some links even
-  ;; though I also set "" in the `org-publish-org-to' call.
+  ;; BUG If we don't set this to "", there will be .html inside some links even
+  ;; though I set "" in the `org-publish-org-to' call.
   (setopt org-html-extension "")
-  (setopt org-html-checkbox-type 'unicode) ;; how will it look in eww? test it.
+  (setopt org-html-checkbox-type 'unicode)
   (setopt org-html-html5-fancy t)
   ;; why does it skip envs like \begin{align}?
   ;; (setopt org-html-with-latex 'verbatim)
@@ -80,34 +79,53 @@ scanned."
   (setopt org-inhibit-startup t) ;; from org-publish-org-to
   (setq debug-on-error t)
   ;; (setq debug-on-quit t)
+  (my-remove-all-advice 'org-roam-db-update-file) ;; disable vulpea
 
   ;; Speed up publishing
   (setq org-mode-hook nil)
   (gcmh-mode 0)
   (setq gc-cons-threshold (* 4 1000 1000 1000))
   (fset 'org-publish-write-cache-file #'ignore) ;; huge effect!
+  ;; Not sure these help perf much
   (advice-remove 'after-find-file #'doom--shut-up-autosave-a)
-  ;; (undefadvice! '+org--fix-async-export-a :around '(org-export-to-file org-export-as))
-  ;; (undefadvice! +org-babel-disable-async-maybe-a :around #'ob-async-org-babel-execute-src-block)
-
-  ;; Not sure it helps speed at all
+  (when (modulep! org)
+    (undefadvice! '+org--fix-async-export-a :around '(org-export-to-file org-export-as))
+    (undefadvice! '+org-babel-disable-async-maybe-a :around #'ob-async-org-babel-execute-src-block))
+  (remove-hook 'org-export-before-parsing-functions #'org-attach-expand-links)
+  (setq whitespace-global-modes nil)
   (my-disable-modes-if-present
-   '(global-emojify-mode
-     apheleia-global-mode
-     solaire-global-mode
-     ws-butler-global-mode
-     smartparens-global-mode
-     projectile-mode
-     global-diff-hl-mode
+   '(apheleia-global-mode
+     auto-encryption-mode
+     auto-save-mode
+     auto-save-visited-mode
+     awesome-tray-mode
      beginend-global-mode
      better-jumper-mode
-     global-prettify-symbols-mode
+     context-menu-mode
+     diff-hl-flydiff-mode
+     dired-hist-mode
+     editorconfig-mode
+     electric-indent-mode
+     global-diff-hl-mode
+     global-eldoc-mode
+     global-emojify-mode
+     global-form-feed-mode
      global-ligature-mode
-     global-eldoc-mode))
-  (setq whitespace-global-modes nil)
-  (remove-hook 'org-export-before-parsing-functions #'org-attach-expand-links)
-
-  (my-remove-all-advice 'org-roam-db-update-file) ;; disable vulpea
+     global-prettify-symbols-mode
+     my-auto-commit-mode
+     nerd-icons-completion-mode
+     pixel-scroll-precision-mode
+     projectile-mode
+     recentf-mode
+     repeat-mode
+     save-place-mode
+     savehist-mode
+     show-paren-mode
+     smartparens-global-mode
+     solaire-global-mode
+     window-divider-mode
+     winner-mode
+     ws-butler-global-mode))
 
   ;; Switch theme for 2 reasons
   ;; 1. Show me that this is not my normal Emacs
@@ -119,6 +137,7 @@ scanned."
     (unless (member theme custom-enabled-themes)
       (load-theme theme)))
 
+  ;; I don't always enable prism, so ensure it's on
   (use-package! prism
     :config
     (setq prism-comments nil)
@@ -130,39 +149,38 @@ scanned."
 
   ;; For hygiene, ensure that this subordinate emacs syncs nothing to disk
   (my-state-sync-mode 0)
-  ;; (eager-state-preempt-kill-emacs-hook-mode 0)
+  ;; (preempt-kill-emacs-hook-mode 0)
   (setq kill-emacs-hook nil)
 
   ;; Copy the files to /tmp to work from there
   (shell-command "rm -rfv /tmp/roam/org/")
   (shell-command "cp -a /home/kept/roam /tmp/roam/org")
 
-  ;; Exclude backups and duplicates
-  (shell-command "rm -r /tmp/roam/org/*/logseq/")
-  (shell-command "shopt -s globstar && rm -f /tmp/roam/org/**/*sync-conflict*")
-
+  ;; Make a pretty-printed post of completed todos
   (my-generate-todo-log "/tmp/roam/org/noagenda/archive.org"
-                        "/tmp/roam/org/todo-log.org")
+                        "/tmp/roam/org/noagenda/todo-log.org")
 
-  ;; Ensure each post URL will have a unique ID by now placing them in
-  ;; subdirectories named by ID, so the org-id resolver will translate all ID
-  ;; links into these filesystem paths.
-  ;; NOTE: we check for ID collisions later
+  ;; Ensure that each post URL will contain a unique ID by now placing them in
+  ;; subdirectories named by that ID, so org-export will translate all
+  ;; org-id links into these filesystem paths.
   (cl-loop
    for path in (directory-files-recursively "/tmp/roam/org/" "\\.org$")
-   as uuid = (my-org-file-id path)
-   if uuid do
-   (let ((new (concat "/tmp/roam/org/" (my-uuid-to-pageid uuid) "/")))
-     (mkdir new t)
-     (rename-file path new))
-   else do (delete-file path))
+   unless (and (not (string-search ".sync-conflict-" path))
+               (not (string-search "/logseq/" path))
+               (let* ((uuid (my-org-file-id path))
+                      (new (concat "/tmp/roam/org/" (my-uuid-to-short uuid) "/")))
+                 (mkdir new t)
+                 (rename-file path new)
+                 t))
+   do (delete-file path))
 
-  (when (>= (car current-prefix-arg) 4)
+  (when (equal current-prefix-arg '(4))
     (shell-command "rm /tmp/roam/org-roam.db"))
-  (when (>= (car current-prefix-arg) 16)
+  (when (equal current-prefix-arg '(16))
+    (shell-command "rm /tmp/roam/org-roam.db")
     (add-hook 'my-org-roam-pre-scan-hook #'my-validate-org-buffer))
 
-  ;; Tell `org-id-locations' and the org-roam DB about the temporary directory.
+  ;; Tell `org-id-locations' and the org-roam DB about the new work directory.
   (setopt org-roam-directory "/tmp/roam/org/")
   (setopt org-roam-db-location "/tmp/roam/org-roam.db")
   (setopt org-agenda-files '("/tmp/roam/org/"))
@@ -171,15 +189,13 @@ scanned."
     (org-id-update-id-locations) ;; find files with ROAM_EXCLUDE too
     (org-roam-update-org-id-locations)
     (org-roam-db-sync 'force))
-  ;; (fset 'org-id-update-id-locations #'ignore) ;; stop triggering during publish
 
+  ;; Reset
   (shell-command "rm -rf /tmp/roam/{html,json}/")
   (shell-command "mkdir -p /tmp/roam/{html,json}")
   (shell-command "rm -r /tmp/roam/feed-entries/")
   (shell-command "mkdir -p /tmp/roam/feed-entries/")
-
-  ;; Reset
-  (setq my-id-old-new-alist nil)
+  (setq my-ids (clrhash my-ids))
   ;; A lookup-table used by `my-replace-web-links-with-ref-note-links'
   (setq my-refs-cache (org-roam-db-query
                        [:select [ref id title]
@@ -197,12 +213,9 @@ scanned."
   (org-publish "my-slipbox-blog-attachments" t)
   (org-publish "my-slipbox-blog" t)
 
-  ;; Ensure it's gone from recentf so I don't accidentally edit these instead
-  ;; of the originals
-  (shell-command "rm -r /tmp/roam/org/")
+  (shell-command "rm -r /tmp/roam/org/") ;; so recentf won't take me there
   (my-check-id-collisions)
   (my-make-atom-feed "/tmp/roam/posts.atom" "/tmp/roam/feed-entries/")
-  (f-write (json-encode my-id-old-new-alist) 'utf-8 "/tmp/roam/idMappings.json")
   (find-file "/home/kept/pub/")
   (message "Prepping website")
   (async-shell-command "./encrypt-rebuild.sh")
@@ -405,27 +418,17 @@ All arguments pass through to `org-publish-org-to'."
                                 (string-replace "ID-" "")
                                 (string-replace "id:" "")))
      when (and uuid? (org-uuidgen-p uuid?))
-     do (let ((shortid-old-v2 (my-uuid-to-pageid-old-v2 uuid?))
-              (shortid (my-uuid-to-pageid uuid?))
+     do (let ((shortid (my-uuid-to-short uuid?))
               (target-tags (-flatten (org-roam-db-query
                                       `[:select [tag]
                                         :from tags
                                         :where (= node-id ,uuid?)]))))
-          ;; Replace all UUID with my shortened form.
-          ;; Then remove the hash-part of the link (i.e. the bit after the #
-          ;; character in domain.com/PAGE-ID/slug#HEADING-ID) if the HEADING-ID
-          ;; matches PAGE-ID anyway (i.e. it's a file-level id)
-          (dom-set-attribute anchor 'href
-                             (my-strip-hashlink-if-same-as-permalink
-                              (string-replace hash shortid href)))
-
-          ;; Record old ID for redirects on the website
-          (unless (assoc shortid-old-v2 my-id-old-new-alist)
-            (push (cons shortid-old-v2 shortid) my-id-old-new-alist))
-
-          ;; Associate ID with original UUID to check for collisions
-          (push uuid? (gethash shortid my-ids*))
-
+          ;; Replace all UUID with my shortened form, and strip the #HEADING-ID
+          ;; if it matches /PAGE-ID.
+          (dom-set-attribute anchor 'href (my-strip-hash-if-matches-base
+                                           (string-replace hash shortid href)))
+          ;; Associate short-ID with original UUID to check for collisions
+          (push uuid? (gethash shortid my-ids))
           ;; Style the link based on target tag
           (when target-tags
             (dom-set-attribute anchor 'class (string-join target-tags " ")))))
@@ -434,22 +437,24 @@ All arguments pass through to `org-publish-org-to'."
     (cl-loop for anchor in (dom-by-tag dom 'a)
              as children = (dom-children anchor)
              as desc = (car children)
-             as fixed-desc = (->> desc
-                                  (replace-regexp-in-string "^http.?://" "")
-                                  (string-replace "%20" " "))
+             as fixed-desc = (when (and desc (stringp desc))
+                               (->> desc
+                                    (replace-regexp-in-string "^http.?://" "")
+                                    (string-replace "%20" " ")))
+             when fixed-desc
              unless (equal fixed-desc desc)
              do (progn
-                  (dom-add-child-before children fixed-desc desc)
-                  (dom-remove-node children desc)))
+                  (dom-add-child-before anchor fixed-desc desc)
+                  (dom-remove-node anchor desc)))
 
     ;; Mess with headings
     (cl-loop
      for heading in (--mapcat (dom-by-tag dom it) '(h2 h3 h4 h5 h6))
      as id = (dom-attr heading 'id)
-     when id do
+     when (and id (stringp id)) do
      (let ((uuid? (string-replace "ID-" "" id)))
        (when (org-uuidgen-p uuid?)
-         (let* ((hashid (my-uuid-to-pageid uuid?))
+         (let* ((hashid (my-uuid-to-short uuid?))
                 ;; Since my blog's Note component may appear on other routes
                 ;; than the canonical one (like /recent/400 or
                 ;; /unlocked/...), hardcode the full URL
@@ -499,7 +504,10 @@ All arguments pass through to `org-publish-org-to'."
              ;; REVIEW Maybe use underscores in the filename and replace them
              ;; here for spaces?
              and when (string-search alt path)
-             do (dom-set-attribute img 'alt (file-name-sans-extension alt)))
+             do (dom-set-attribute
+                 img 'alt (->> alt
+                               (file-name-sans-extension)
+                               (string-replace "_" " "))))
 
     ;; Correct anchor paths to assets for <a href="localfile"><img
     ;; src="localfile"></img></a> type of things. Such links also need

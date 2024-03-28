@@ -6,6 +6,12 @@
 (require 'dash)
 (require 'crux)
 
+;; WIP
+(defun my-bright-switch ()
+  "Switch between 4%, 20% and 100% monitor brightness."
+  (interactive)
+  )
+
 (defun my-rename-and-relink-asset-at-point ()
   (interactive)
   (let ((thing (if (derived-mode-p 'dired-mode)
@@ -24,7 +30,10 @@
       (error "Existing *grep* buffers would confuse this command, stopped")))
   (let* ((default-directory org-roam-directory)
          (filename (file-relative-name (or asset (read-file-name "File: "))))
-         (new (read-string "New name: " filename)))
+         (new* (read-string "New name: " filename))
+         ;; HACK replace spaces with underscores bc typing underscores is PITA
+         (new (concat (file-name-directory new*)
+                      (string-replace " " "_" (file-name-nondirectory new*)))))
     (mkdir (file-name-directory new) t)
     (unless (file-writable-p new)
       (error "New path wouldn't be writable"))
@@ -296,6 +305,50 @@ Stop once the buffer is no longer visible."
 Useful when some of them are anonymous functions."
   (advice-mapc (lambda (f _) (advice-remove symbol f)) symbol))
 
+(defun my-uuid-to-pageid-old-v2 (uuid)
+  (substring (my-uuid-to-base62 uuid) -4))
+
+;;(org-id-int-to-b36 3453453452312)
+(defun my-uuid-to-base62 (uuid)
+  (let ((decimal (string-to-number (string-replace "-" "" uuid) 16)))
+    (if (or (= 0 decimal) (/= 36 (length uuid)))
+        (error "String should only contain a valid UUID 36 chars long: %s" uuid)
+      ;; The highest UUID (ffffffff-ffff-ffff-ffff-ffffffffffff) makes
+      ;; a base62 string 22 chars long.  Let's always return 22 chars.
+      (my-int-to-base62 decimal 22))))
+
+(defun my-int-to-base62 (integer &optional length)
+  "Convert an INTEGER to a base-62 number represented as a string.
+If LENGTH is given, pad the string with leading zeroes as needed
+so the result is always that long or longer."
+  (let ((s "")
+        (i integer))
+    (while (> i 0)
+      (setq s (concat (char-to-string
+                       (my-int-to-base62-one-digit (mod i 62))) s)
+            i (/ i 62)))
+    (setq length (max 1 (or length 1)))
+    (if (< (length s) length)
+        (setq s (concat (make-string (- length (length s)) ?0) s)))
+    s))
+
+;; Workhorse for `my-int-to-base62'
+(defun my-int-to-base62-one-digit (integer)
+  "Convert INTEGER between 0 and 61 into one character 0..9, a..z, A..Z."
+  ;; Uses chars ?0, ?A, ?a off the ASCII table.  Evaluate those symbols and you
+  ;; see important gaps between the character sets:
+  ;; 0-9 has codes 48 thru 57
+  ;; A-Z has codes 65 thru 90
+  ;; a-z has codes 97 thru 122
+  ;; Why compose chars to construct the final base62 string?  It's either
+  ;; that, or you make a lookup string "0123456789abcdefg...", so you're
+  ;; looking something up anyway.  The ASCII table is faster.
+  (cond
+   ((< integer 10) (+ ?0 integer))
+   ((< integer 36) (+ ?a integer -10))
+   ((< integer 62) (+ ?A integer -36))
+   (t (error "Input was larger than 61"))))
+
 (defun my-insert-heading-with-id ()
   (interactive)
   (org-insert-heading)
@@ -364,21 +417,20 @@ date, and use that.  Return the property value."
             (org-roam-tag-add '("pub")))))))
 
 (defun my-anki-field-for-webpage ()
-  (cl-letf ((org-mode-hook nil))
-    ;; NOTE: Use `delay-mode-hooks' instead of the `cl-letf'
-    (org-mode))
-  (save-excursion
-    (when-let* ((uuid (progn (goto-char (point-min))
-                             (org-id-get)))
-                (url (concat "https://edstrom.dev/" (my-uuid-to-pageid uuid))))
-      (concat "<a href=\"" url "\">" url "</a>"))))
+  (delay-mode-hooks
+    (org-mode)
+    (save-excursion
+      (when-let* ((uuid (progn (goto-char (point-min))
+                               (org-id-get)))
+                  (url (concat "https://edstrom.dev/" (my-uuid-to-short uuid))))
+        (concat "<a href=\"" url "\">" url "</a>")))))
 
 (defun my-anki-field-for-webpage-fast ()
   (save-excursion
     (goto-char (point-min))
     (re-search-forward ":ID: +")
     (when-let* ((uuid (buffer-substring (point) (line-end-position)))
-                (url (concat "https://edstrom.dev/" (my-uuid-to-pageid uuid))))
+                (url (concat "https://edstrom.dev/" (my-uuid-to-short uuid))))
       (concat "<a href=\"" url "\">" url "</a>"))))
 
 (defun my-org-id-get-create-and-copy ()
@@ -1077,7 +1129,9 @@ If you're in the minibuffer it will use the other buffer file name."
   (let ((filename (buffer-file-name (if (window-minibuffer-p)
                                         (window-buffer (previous-window))
                                       (current-buffer)))))
-    (when filename (insert (kill-new filename)))))
+    (when filename
+      (insert filename)
+      (kill-new filename))))
 
 (defun my-insert-buffer-base-filename ()
   "Insert the base filename for the current buffer.
@@ -1087,7 +1141,9 @@ name."
   (let ((filename (buffer-file-name (if (window-minibuffer-p)
                                         (window-buffer (previous-window))
                                       (current-buffer)))))
-    (when filename (insert (kill-new (file-name-base filename))))))
+    (when filename
+      (insert (file-name-base filename))
+      (kill-new (file-name-base filename)))))
 
 (defvar my-yank-ring '())
 

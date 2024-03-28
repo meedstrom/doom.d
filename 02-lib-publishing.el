@@ -28,7 +28,7 @@ For all other uses, see `org-get-tags'."
                       (string-split ":" t)
                       (sort #'string-lessp))))))
 
-(defun my-uuid-to-pageid (uuid)
+(defun my-uuid-to-short (uuid)
   (let* ((hexa (string-trim (string-replace "-" "" uuid)))
          (decimal (string-to-number hexa 16)))
     (if (or (= 0 decimal) (/= 32 (length hexa)))
@@ -61,74 +61,16 @@ For all other uses, see `org-get-tags'."
    ((< integer 21) (+ ?v integer -16))
    (t (error "Input was larger than 20"))))
 
-(defun my-uuid-to-pageid-old-v2 (uuid)
-  (substring (my-uuid-to-base62 uuid) -4))
 
-;;(org-id-int-to-b36 3453453452312)
-(defun my-uuid-to-base62 (uuid)
-  (let ((decimal (string-to-number (string-replace "-" "" uuid) 16)))
-    (if (or (= 0 decimal) (/= 36 (length uuid)))
-        (error "String should only contain a valid UUID 36 chars long: %s" uuid)
-      ;; The highest UUID (ffffffff-ffff-ffff-ffff-ffffffffffff) makes
-      ;; a base62 string 22 chars long.  Let's always return 22 chars.
-      (my-int-to-base62 decimal 22))))
-
-(defun my-int-to-base62 (integer &optional length)
-  "Convert an INTEGER to a base-62 number represented as a string.
-If LENGTH is given, pad the string with leading zeroes as needed
-so the result is always that long or longer."
-  (let ((s "")
-        (i integer))
-    (while (> i 0)
-      (setq s (concat (char-to-string
-                       (my-int-to-base62-one-digit (mod i 62))) s)
-            i (/ i 62)))
-    (setq length (max 1 (or length 1)))
-    (if (< (length s) length)
-        (setq s (concat (make-string (- length (length s)) ?0) s)))
-    s))
-
-;; Workhorse for `my-int-to-base62'
-(defun my-int-to-base62-one-digit (integer)
-  "Convert INTEGER between 0 and 61 into one character 0..9, a..z, A..Z."
-  ;; Uses chars ?0, ?A, ?a off the ASCII table.  Evaluate those symbols and you
-  ;; see important gaps between the character sets:
-  ;; 0-9 has codes 48 thru 57
-  ;; A-Z has codes 65 thru 90
-  ;; a-z has codes 97 thru 122
-  ;; Why compose chars to construct the final base62 string?  It's either
-  ;; that, or you make a lookup string "0123456789abcdefg...", so you're
-  ;; looking something up anyway.  The ASCII table is faster.
-  (cond
-   ((< integer 10) (+ ?0 integer))
-   ((< integer 36) (+ ?a integer -10))
-   ((< integer 62) (+ ?A integer -36))
-   (t (error "Input was larger than 61"))))
-
-(defvar my-ids nil
+(defvar my-ids (make-hash-table :size 4000 :test #'equal)
   "Database for checking ID collisions.")
-
-(defvar my-ids* (make-hash-table :test #'equal)
-  "Database for checking ID collisions.")
-
-;; (defun my-check-id-collisions ()
-;;   (interactive)
-;;   (cl-loop
-;;    with found = nil
-;;    for id-uuids in my-ids
-;;    as uuids = (-distinct (cdr id-uuids))
-;;    when (> (length uuids) 1)
-;;    do (progn (setq found t)
-;;              (message "These uuids make same page-id: %s"
-;;                       uuids))
-;;    finally do (unless found (message "All uuids unique"))))
 
 (defun my-check-id-collisions ()
   (interactive)
-  (cl-loop for v being the hash-values of my-ids*
+  (cl-loop for v being the hash-values of my-ids
            as uuids = (-distinct v)
            when (> (length uuids) 1)
-           do (message "These uuids make same page-id: %s" uuids)))
+           do (warn "These uuids make same page-id: %s" uuids)))
 
 (defun my-add-backlinks (&rest _)
   "Add a \"What links here\" subtree at the end.
@@ -240,15 +182,16 @@ will not modify the source file."
                               (date-to-time datestamp))))
                   (insert (concat "[[id:" (caar daily-id) "][<" fancy ">]]")))))))))))
 
-(defun my-strip-hashlink-if-same-as-permalink (link)
-  (if-let* ((hash-pos (string-search "#" link))
-            (hash-part (substring link (1+ hash-pos)))
-            (base-part (substring link 0 hash-pos))
-            (same (string-search hash-part base-part)))
-      ;; Cut off the hash
-      base-part
-    ;; Keep the whole link
-    link))
+(defun my-strip-hash-if-matches-base (link)
+  ;; Remove the hash-part of the link (i.e. the bit after the #
+  ;; character in domain.com/PAGE-ID/slug#HEADING-ID) if the HEADING-ID
+  ;; matches PAGE-ID anyway (i.e. it's a file-level id)
+  (let* ((splits (split-string link "#"))
+         (base (car splits))
+         (hash (cadr splits)))
+    (if (and hash (string-search hash base))
+        base
+      link)))
 
 (defun my-generate-todo-log (src path)
   "Generate a log of completed tasks using `org-agenda-write'.
@@ -324,11 +267,6 @@ Wrap the HTML output in an Org file that has a HTML export block."
     (insert "
 </feed>")))
 
-(defun my-err (problem)
-  (error "%s" (concat problem (format " in %s:%d"
-                                      (buffer-file-name)
-                                      (line-number-at-pos)))))
-
 (defun my-find-misplaced-syntax (str)
   (or
    ;; TODO Scan thru all the body text for line that looks like ^:end:$ but is
@@ -344,69 +282,84 @@ Wrap the HTML output in an Org file that has a HTML export block."
         (goto-char (match-beginning 0))
         (looking-back "[^ \n]"))))
 
+(defun my-locate-warn (problem)
+  (warn "%s in %s:%d" problem (buffer-file-name) (line-number-at-pos)))
+
+(defun my-locate-err (problem)
+  (error "%s in %s:%d" problem (buffer-file-name) (line-number-at-pos)))
+
 (defun my-validate-org-buffer ()
   (interactive)
-  (let ((file (buffer-file-name)))
+  (let ((file (buffer-file-name))
+        (bufdata (list `((buftags . ,(-flatten (org-get-buffer-tags)))))))
     ;; Look for wrong amounts of brackets
     (goto-char (point-min))
     (while-let ((pos (search-forward "[[id:" nil t)))
       (when (looking-back (rx (literal "[[[id:")))
-        (warn "triple brackets at %s:%d") file (line-number-at-pos))
+        (my-locate-warn "triple brackets"))
       (unless (org-uuidgen-p (buffer-substring pos (1- (search-forward "]"))))
-        (warn "not proper UUID at %s:%d" file (line-number-at-pos)))
+        (my-locate-warn "not proper UUID"))
       (goto-char pos)
       (unless (re-search-forward (rx (*? (not (any "[]"))) "]["
                                      (*? (not (any "[]"))) "]]")
                                  nil t)
-        (warn "weird brackets at %s:%d" file (line-number-at-pos))))
+        (my-locate-warn "weird brackets")))
     (goto-char (point-min))
     (while (re-search-forward org-link-any-re nil t)
       (unless (string-match-p
                "\\(?:id:\\|http://\\|https://\\|file:\\|ftp://\\|info:\\)"
                (match-string 0))
-        (warn "disallowed link type at %s:%d" file (line-number-at-pos))))
-    (when (my-find-misplaced-syntax ":end:") (my-err "Possible mistake"))
-    (when (my-find-misplaced-syntax "#\\+end_src") (my-err "Possible mistake"))
-    (when (my-find-misplaced-syntax "#\\+end_quote") (my-err "Possible mistake"))
-    (goto-char (point-min))
-    (unless (-intersection (org-get-tags) (append '("pub")
-                                                  my-tags-for-hiding
-                                                  my-tags-to-avoid-uploading))
-      (my-err "No tag that indicates publishability"))
+        (my-locate-warn "disallowed link type")))
+    (when (my-find-misplaced-syntax ":end:") (my-locate-err "Possible mistake"))
+    (when (my-find-misplaced-syntax "#\\+end_src") (my-locate-err "Possible mistake"))
+    (when (my-find-misplaced-syntax "#\\+end_quote") (my-locate-err "Possible mistake"))
     ;; check file-level metadata
-    (my-validate-org-entry)
-    ;; ensure the entire tags-value is correctly wrapped in colons
-    (cl-assert (progn (re-search-forward (rx bol "#+filetags:"))
-                      (re-search-forward " +:.+?:$" (line-end-position))))
-    ;; check metadata of each subtree that is also a roam node
+    (goto-char (point-min))
+    (my-validate-org-entry bufdata)
+    ;; check each subtree that is its own roam node
     (goto-char (point-min))
     (while (not (eobp))
       (org-next-visible-heading 1)
       (when (org-id-get)
-        (my-validate-org-entry)))))
+        (my-validate-org-entry bufdata)))
+    (goto-char (point-min))
+    (unless (progn (re-search-forward (rx bol "#+filetags:"))
+                   (re-search-forward " +:.+?:$" (line-end-position)))
+      (my-locate-err "Tags may not be correctly wrapped in colons"))
+    (unless (-intersection (org-get-tags) (append '("pub")
+                                                  my-tags-for-hiding
+                                                  my-tags-to-avoid-uploading))
+      (my-locate-err "No tag that indicates publishability"))))
 
-(defun my-validate-org-entry ()
+(defun my-validate-org-entry (bufdata)
   "Validate entry at point, or file-level metadata if point is
  not under a heading."
   (let ((file-level-entry (not (org-get-heading)))
         (id (org-id-get))
         (title (or (org-get-heading) (org-get-title)))
         (created (org-entry-get nil "created"))
+        (refs (org-entry-get nil "roam_refs"))
         (tags (org-get-tags))
-        (refs (org-entry-get nil "roam_refs")))
-    (unless id (my-err "No id"))
-    (unless (org-uuidgen-p id) (my-err "Org-id is not an UUID"))
-    (unless title (my-err "No title"))
-    (unless created (my-err "No CREATED property"))
-    (unless tags (my-err "No tags"))
+        (buftags (alist-get 'buftags bufdata)))
+    (unless id (my-locate-err "No id"))
+    (unless (org-uuidgen-p id) (my-locate-err "Org-id is not an UUID"))
+    (unless title (my-locate-err "No title"))
+    (unless created (my-locate-err "No CREATED property"))
+    (unless tags (my-locate-err "No tags"))
     (let ((case-fold-search nil))
       (unless (not (string-match-p "[[:upper:]]" (string-join tags)))
-        (my-err "Uppercase in tag found")))
+        (my-locate-err "Uppercase in tag found")))
+    (dolist (tag tags)
+      (when (--any-p (and (not (= (length it) (length tag)))
+                          (or (string-search it tag)
+                              (string-search tag it)))
+                     buftags)
+        (my-locate-err "A tag is a substring of another tag (lost colon?)")))
     (when (and created (not (string-blank-p created)))
       (unless (my-iso-datestamp-p (substring created 1 -1))
-        (my-err "Property CREATED is not proper datestamp")))
+        (my-locate-err "Property CREATED is not proper datestamp")))
     (when (and refs (string-search "\"" refs))
-      (my-err "Quote-sign in roam_refs"))
+      (my-locate-err "Quote-sign in roam_refs"))
     (let ((filetag-line (save-excursion
                           (goto-char (point-min))
                           (search-forward "#+filetags")
@@ -414,13 +367,13 @@ Wrap the HTML output in an Org file that has a HTML export block."
       (when file-level-entry
         (setq title filetag-line))
       ;; try to catch broken tags like "noexport:"
-      (unless (not (string-match-p (rx " " alnum (+? (not " ")) ":" eol)
-                                   title))
-        (my-err "Possible broken tag"))
+      (when (string-match-p (rx " " alnum (+? (not " ")) ":" eol)
+                            title)
+        (my-locate-err "Possible broken tag"))
       ;; try to catch broken tags like ":noexport"
-      (unless (not (string-match-p (rx " :" (+? (not " ")) (not ":") (*? space) eol)
-                                   title))
-        (my-err "Possible broken tag")))))
+      (when (string-match-p (rx " :" (+? (not " ")) (not ":") (*? space) eol)
+                            title)
+        (my-locate-err "Possible broken tag")))))
 
 (defvar my-org-text-line-re "^[ \t]*[^#:\n]"
   "Regexp to match a line that isn't commented out or a property drawer.
@@ -440,3 +393,50 @@ Useful for jumping past a file's front matter.")
                  (insert "\nSource " refs "\n\n"))
                (org-next-visible-heading 1)
                (not (eobp)))))))
+
+;; bugfix (C-s xml-escape-string)
+(require 'dom)
+(defun dom-print (dom &optional pretty xml)
+  "Print DOM at point as HTML/XML.
+If PRETTY, indent the HTML/XML logically.
+If XML, generate XML instead of HTML."
+  (let ((column (current-column)))
+    (insert (format "<%s" (dom-tag dom)))
+    (let ((attr (dom-attributes dom)))
+      (dolist (elem attr)
+	;; In HTML, these are boolean attributes that should not have
+	;; an = value.
+	(insert (if (and (memq (car elem)
+			       '(async autofocus autoplay checked
+			         contenteditable controls default
+			         defer disabled formNoValidate frameborder
+			         hidden ismap itemscope loop
+			         multiple muted nomodule novalidate open
+			         readonly required reversed
+			         scoped selected typemustmatch))
+			 (cdr elem)
+			 (not xml))
+		    (format " %s" (car elem))
+		  (format " %s=\"%s\"" (car elem)
+	                  (url-insert-entities-in-string (cdr elem)))))))
+    (let* ((children (dom-children dom))
+	   (non-text nil))
+      (if (null children)
+	  (insert " />")
+	(insert ">")
+        (dolist (child children)
+	  (if (stringp child)
+	      (insert (xml-escape-string child))
+	    (setq non-text t)
+	    (when pretty
+              (insert "\n" (make-string (+ column 2) ?\s)))
+	    (dom-print child pretty xml)))
+	;; If we inserted non-text child nodes, or a text node that
+	;; ends with a newline, then we indent the end tag.
+        (when (and pretty
+		   (or (bolp)
+		       non-text))
+	  (unless (bolp)
+            (insert "\n"))
+	  (insert (make-string column ?\s)))
+        (insert (format "</%s>" (dom-tag dom)))))))

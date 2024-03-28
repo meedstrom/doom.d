@@ -3,6 +3,8 @@
 (hookgen doom-after-init-hook
   (setq my-stim-collection (my-stim-collection-generate)))
 
+;; try to make delete-file fast again
+(advice-remove 'delete-file #'delete-file-projectile-remove-from-cache)
 
 (defun my-write-roam-graph-tsv ()
   (let ((tsv-string
