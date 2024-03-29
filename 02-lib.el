@@ -8,7 +8,7 @@
 
 ;; WIP
 (defun my-bright-switch ()
-  "Switch between 4%, 20% and 100% monitor brightness."
+  "Switch between 1%, 10% and 100% monitor brightness."
   (interactive)
   )
 
@@ -269,7 +269,7 @@ Kills the buffer if KEEP-BUF-P is nil, and FILE is not yet visited."
 
 (defun my-disable-modes-if-present (modes)
   (dolist (mode (seq-filter #'fboundp modes))
-    (when (bound-and-true-p mode)
+    (when mode
       (funcall mode 0))))
 
 (defun my-read-lisp (s)

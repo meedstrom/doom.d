@@ -32,7 +32,7 @@
   (circadian-setup))
 
 (use-package prism
-  :disabled ;; bit buggy here and there
+  :defer
   :init
   (setopt prism-comments nil)
   ;; The default (40 50 60) is a nice fix for fruit-salad themes but if the

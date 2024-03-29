@@ -16,7 +16,7 @@
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(custom-safe-themes
-   '("8d8207a39e18e2cc95ebddf62f841442d36fcba01a2a9451773d4ed30b632443" "694dbeb8f98dddfb603a2fe0c04101f3fe457ee49bf90a6a581271e7f9c580c8" default))
+   '("7776ba149258df15039b1f0aba4b180d95069b2589bc7d6570a833f05fdf7b6d" "95e934b092694a2624adb653043d1dc016a6712fa27b788f9ff4dffb8ee08290" "943f5fc368a959c5858ff466401357da25b5991c0eeb396e865fd8071e8fe88e" "93011fe35859772a6766df8a4be817add8bfe105246173206478a0706f88b33d" "8d8207a39e18e2cc95ebddf62f841442d36fcba01a2a9451773d4ed30b632443" "694dbeb8f98dddfb603a2fe0c04101f3fe457ee49bf90a6a581271e7f9c580c8" default))
  '(elfeed-feeds
    '("https://edstrom.dev/posts.atom" "https://edstrom.dev/feed"))
  '(magit-todos-insert-after '(bottom) nil nil "Changed by setter of obsolete option `magit-todos-insert-at'")

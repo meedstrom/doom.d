@@ -61,12 +61,10 @@ For all other uses, see `org-get-tags'."
    ((< integer 21) (+ ?v integer -16))
    (t (error "Input was larger than 20"))))
 
-
 (defvar my-ids (make-hash-table :size 4000 :test #'equal)
   "Database for checking ID collisions.")
 
 (defun my-check-id-collisions ()
-  (interactive)
   (cl-loop for v being the hash-values of my-ids
            as uuids = (-distinct v)
            when (> (length uuids) 1)
@@ -183,9 +181,9 @@ will not modify the source file."
                   (insert (concat "[[id:" (caar daily-id) "][<" fancy ">]]")))))))))))
 
 (defun my-strip-hash-if-matches-base (link)
-  ;; Remove the hash-part of the link (i.e. the bit after the #
-  ;; character in domain.com/PAGE-ID/slug#HEADING-ID) if the HEADING-ID
-  ;; matches PAGE-ID anyway (i.e. it's a file-level id)
+  "Remove the hash-part of the link (i.e. the bit after the #
+character in domain.com/PAGE-ID/slug#HEADING-ID) if the HEADING-ID
+matches PAGE-ID anyway (i.e. it's a file-level id)"
   (let* ((splits (split-string link "#"))
          (base (car splits))
          (hash (cadr splits)))
@@ -193,15 +191,18 @@ will not modify the source file."
         base
       link)))
 
-(defun my-generate-todo-log (src path)
+(defun my-generate-todo-log-from (src)
   "Generate a log of completed tasks using `org-agenda-write'.
-Wrap the HTML output in an Org file that has a HTML export block."
+Wrap that function's HTML output in an Org file that has a HTML
+export block."
   (cl-letf ((org-agenda-files (list src))
             (org-agenda-span 'fortnight)
             (org-agenda-prefix-format
              '((agenda . " %i %?-12t") (todo . "") (tags . "") (search . "")))
-            (org-agenda-show-inherited-tags nil))
+            (org-agenda-show-inherited-tags nil)
+            (path (concat (file-name-directory src) "todo-log.org")))
 
+    ;; TODO: verify it works with cl-letf
     ;; (setopt org-agenda-files '("/home/kept/roam/noagenda/archive.org"))
     ;; (setopt org-agenda-span 'fortnight)
     ;; (setopt org-agenda-prefix-format '((agenda . " %i %?-12t") (todo . "") (tags . "") (search . "")))
@@ -216,8 +217,6 @@ Wrap the HTML output in an Org file that has a HTML export block."
     (shell-command "rm /tmp/roam/todo-log-last-week.html")
     (org-agenda-write "/tmp/roam/todo-log-last-week.html")
     (org-agenda-quit)
-    ;; (delete-other-windows)
-    ;; (view-echo-area-messages)
     (with-current-buffer (or (find-buffer-visiting path)
                              (find-file path))
       (delete-region (point-min) (point-max))
@@ -247,7 +246,9 @@ Wrap the HTML output in an Org file that has a HTML export block."
       (goto-char (point-min))
       (search-forward "-today")
       (replace-match "")
-      (save-buffer))))
+      (save-buffer)
+      (kill-buffer))
+    (view-echo-area-messages)))
 
 (defun my-make-atom-feed (path entries-dir)
   (when (file-exists-p path)
@@ -266,6 +267,41 @@ Wrap the HTML output in an Org file that has a HTML export block."
     (goto-char (point-max))
     (insert "
 </feed>")))
+
+(defun my-make-atom-entry (post uuid)
+  (let-alist post
+    (let ((content-for-feed
+           (with-temp-buffer
+             (buffer-disable-undo)
+             (insert .content)
+             (goto-char (point-min))
+             (let* ((locked (regexp-opt (append my-tags-to-avoid-uploading
+                                                my-tags-for-hiding)))
+                    (re (rx "<a " (*? nonl) "class=\"" (*? nonl)
+                            (regexp locked)
+                            (*? nonl) ">" (group (*? anychar)) "</a>")))
+               (while (re-search-forward re nil t)
+                 (replace-match (match-string 1)))
+               (buffer-string)))))
+      (concat "\n<entry>"
+              "\n<title>" .title "</title>"
+              "\n<link href=\""
+              "https://edstrom.dev/" .pageid "/" .slug
+              "\" />"
+              "\n<id>urn:uuid:" uuid "</id>"
+              "\n<published>" .created "T12:00:00Z</published>"
+              (if .updated
+                  (concat "\n<updated>" .updated "T12:00:00Z</updated>")
+                "")
+              ;; This type="xhtml" lets us skip entity-escaping unicode
+              ;; https://validator.w3.org/feed/docs/atom.html#text
+              "\n<content type=\"xhtml\">"
+              "\n<div xmlns=\"http://www.w3.org/1999/xhtml\">\n"
+              ;; FYI, never pretty-print html, indentation ruins <pre>!
+              content-for-feed
+              "\n</div>"
+              "\n</content>"
+              "\n</entry>"))))
 
 (defun my-find-misplaced-syntax (str)
   (or
@@ -393,6 +429,9 @@ Useful for jumping past a file's front matter.")
                  (insert "\nSource " refs "\n\n"))
                (org-next-visible-heading 1)
                (not (eobp)))))))
+
+
+;;; Patches
 
 ;; bugfix (C-s xml-escape-string)
 (require 'dom)
