@@ -256,3 +256,128 @@ If FORCE, force a rebuild of the cache from scratch."
 ;;                              (buffer-substring-no-properties
 ;;                               (match-end 0) (point-at-eol))
 ;;                              directory))))
+
+
+(after! ox-publish
+  (defun org-publish-get-base-files (project)
+    "Return a list of all files in PROJECT."
+    (let* ((base-dir (file-name-as-directory
+                      (org-publish-property :base-directory project)))
+           (extension (or (org-publish-property :base-extension project) "org"))
+           (match (if (eq extension 'any) ""
+                    (format "^[^\\.].*\\.\\(%s\\)$" extension)))
+           (base-files
+            (cond ((not (file-exists-p base-dir)) nil)
+                  ((not (org-publish-property :recursive project))
+                   (cl-remove-if #'file-directory-p
+                                 (directory-files base-dir t match t)))
+                  (t
+                   ;; Find all files recursively.  Unlike to
+                   ;; `directory-files-recursively', we follow symlinks
+                   ;; to other directories.
+                   (letrec ((files nil)
+                            (walk-tree
+                             (lambda (dir depth)
+                               (when (> depth 100)
+                                 (error "Apparent cycle of symbolic links for %S"
+                                        base-dir))
+                               (dolist (f (file-name-all-completions "" dir))
+                                 (pcase f
+                                   ((or "./" "../") nil)
+                                   ((pred directory-name-p)
+                                    (funcall walk-tree
+                                             (expand-file-name f dir)
+                                             (1+ depth)))
+                                   ((pred (string-match match))
+                                    (push (expand-file-name f dir) files))
+                                   (_ nil)))
+                               files)))
+                     (funcall walk-tree base-dir 0))))))
+
+      (org-uniquify
+       (append
+        ;; Files from BASE-DIR.  Apply exclusion filter before adding
+        ;; included files.
+        (let* ((exclude-regexp (org-publish-property :exclude project))
+               (exclude-tags (org-publish-property :exclude-tags project))
+               (filtered-by-regexp
+                (if exclude-regexp
+                    (cl-remove-if
+                     (lambda (f)
+                       ;; Match against relative names, yet BASE-DIR file
+                       ;; names are absolute.
+                       (string-match exclude-regexp
+                                     (file-relative-name f base-dir)))
+                     base-files)
+                  base-files)))
+          (if exclude-tags
+              (cl-remove-if
+               (lambda (f)
+                 (cl-intersection exclude-tags (my-org-file-tags f)
+                                  :test #'string-equal-ignore-case))
+               filtered-by-regexp)
+            filtered-by-regexp))
+        ;; Sitemap file.
+        (and (org-publish-property :auto-sitemap project)
+             (list (expand-file-name
+                    (or (org-publish-property :sitemap-filename project)
+                        "sitemap.org")
+                    base-dir)))
+        ;; Included files.
+        (mapcar (lambda (f) (expand-file-name f base-dir))
+                (org-publish-property :include project))))))
+
+  (defun org-publish-get-project-from-filename (filename &optional up)
+    "Return a project that FILENAME belongs to.
+When UP is non-nil, return a meta-project (i.e., with a :components part)
+publishing FILENAME."
+    (let* ((filename (expand-file-name filename))
+           (project
+            (cl-some
+             (lambda (p)
+               ;; Ignore meta-projects.
+               (unless (org-publish-property :components p)
+                 (let ((base (expand-file-name
+                              (org-publish-property :base-directory p))))
+                   (cond
+                    ;; Check if FILENAME is explicitly included in one
+                    ;; project.
+                    ((cl-some (lambda (f) (file-equal-p f filename))
+                              (mapcar (lambda (f) (expand-file-name f base))
+                                      (org-publish-property :include p)))
+                     p)
+                    ;; Exclude file names matching :exclude property.
+                    ((let ((exclude-re (org-publish-property :exclude p)))
+                       (and exclude-re
+                            (string-match-p exclude-re
+                                            (file-relative-name filename base))))
+                     nil)
+                    ;; Check :extension.  Handle special `any'
+                    ;; extension.
+                    ((let ((extension (org-publish-property :base-extension p)))
+                       (not (or (eq extension 'any)
+                                (string= (or extension "org")
+                                         (file-name-extension filename)))))
+                     nil)
+                    ;; Check if FILENAME belong to project's base
+                    ;; directory, or some of its sub-directories
+                    ;; if :recursive in non-nil.
+                    ((member filename (org-publish-get-base-files p)) p)
+                    (t nil)))))
+             org-publish-project-alist)))
+      (cond
+       ((not project) nil)
+       ((not up) project)
+       ;; When optional argument UP is non-nil, return the top-most
+       ;; meta-project effectively publishing FILENAME.
+       (t
+        (letrec ((find-parent-project
+                  (lambda (project)
+                    (or (cl-some
+                         (lambda (p)
+                           (and (member (car project)
+                                        (org-publish-property :components p))
+                                (funcall find-parent-project p)))
+                         org-publish-project-alist)
+                        project))))
+          (funcall find-parent-project project)))))))

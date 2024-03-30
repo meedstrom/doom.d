@@ -18,8 +18,8 @@
 ;; Give each h2...h6 heading an ID attribute that matches its source org-id, if
 ;; it has one, instead of e.g. "org953031".  That way, hash-links such as
 ;; #ID-e10bbdfe-1ffb-4c54-9228-2818afdfc5ba will make the web browser jump to
-;; that heading.  Thank org-roam for this convenience!  Note that I convert
-;; these IDs later via `my-uuid-to-short'.
+;; that heading.  Thank org-roam for including this code!  Note that I
+;; convert these IDs later using `my-uuid-to-short'.
 (after! ox
   (require 'org-roam-export))
 
@@ -33,15 +33,8 @@
            :with-toc nil
            :section-numbers nil
            ;; NOTE: this works only for subtrees, so we also check file-level
-           ;; tag in `my-publish-to-blog'.  Maybe report a bug?
-           :exclude-tags ,my-tags-to-avoid-uploading)
-
-          ;; TODO: replace with a simple cp -a
-          ("my-slipbox-blog-attachments"
-           :base-extension "png\\|jpg\\|gif"
-           :base-directory "/home/kept/roam/attachments/"
-           :publishing-directory "/tmp/roam/attachments/"
-           :publishing-function org-publish-attachment)))
+           ;; tag in `my-publish-to-blog'.  Maybe upstream a patch?
+           :exclude-tags ,my-tags-to-avoid-uploading)))
 
 ;; This function is where I can make destructive env changes that I
 ;; don't want in my main Emacs.
@@ -58,8 +51,7 @@ scanned."
   (require 'org-roam)
   (require 'org-agenda)
   (require 'ox-publish)
-  ;; (switch-to-buffer "*Messages*")
-  ;; (goto-char (point-max))
+  (require 'prism)
   (view-echo-area-messages) ;; for watching it work
   (setopt org-export-use-babel nil)
   (setopt org-export-with-drawers '(not "logbook" "noexport")) ;; case-insensitive
@@ -79,6 +71,7 @@ scanned."
   (setopt org-html-with-latex 'html) ;; use `org-latex-to-html-convert-command'
   (setopt org-latex-to-html-convert-command "node /home/kept/pub/texToMathML.js '%i'")
   (setopt org-inhibit-startup t) ;; from org-publish-org-to
+  (setopt save-silently t)
   (setq debug-on-error t)
   ;; (setq debug-on-quit t)
   (my-remove-all-advice 'org-roam-db-update-file) ;; disable vulpea
@@ -91,10 +84,6 @@ scanned."
 
   ;; Attempt to speed up publishing, not sure these help much
   (advice-remove 'after-find-file #'doom--shut-up-autosave-a)
-  ;; TODO: Review if I'd ever need these
-  (when (modulep! org)
-    (undefadvice! '+org--fix-async-export-a :around '(org-export-to-file org-export-as))
-    (undefadvice! '+org-babel-disable-async-maybe-a :around #'ob-async-org-babel-execute-src-block))
   (remove-hook 'org-export-before-parsing-functions #'org-attach-expand-links)
   (setq whitespace-global-modes nil)
   (my-disable-modes-if-present
@@ -130,6 +119,10 @@ scanned."
      window-divider-mode
      winner-mode
      ws-butler-global-mode))
+  ;; TODO: Review if I ever need these
+  (when (modulep! org)
+    (undefadvice! '+org--fix-async-export-a :around '(org-export-to-file org-export-as))
+    (undefadvice! '+org-babel-disable-async-maybe-a :around #'ob-async-org-babel-execute-src-block))
 
   ;; For hygiene, ensure that this subordinate emacs syncs nothing to disk
   (my-state-sync-mode 0)
@@ -146,9 +139,6 @@ scanned."
     ;; (setq theme 'doom-zenburn)
     (unless (member theme custom-enabled-themes)
       (load-theme theme)))
-
-  ;; Sometimes I disable prism, so ensure it's on.  Config in another file.
-  (require 'prism)
 
   ;; Copy the files to /tmp to work from there
   (shell-command "rm -rfv /tmp/roam/org/")
@@ -169,6 +159,8 @@ scanned."
                                            "/")))
                          (mkdir new t)
                          (rename-file path new)
+                         (make-symbolic-link "../attachments"
+                                             (concat new "attachments"))
                          t))
            do (delete-file path))
 
@@ -206,12 +198,12 @@ scanned."
   ;; (add-hook 'org-export-before-parsing-functions #'my-replace-web-links-with-ref-note-links)
   (add-hook 'org-export-before-parsing-functions #'my-add-refs-as-paragraphs)
 
-  (org-publish "my-slipbox-blog-attachments" t)
+  ;; (org-publish "my-slipbox-blog-attachments" t)
   (org-publish "my-slipbox-blog" t)
 
-  (shell-command "rm -r /tmp/roam/org/") ;; so recentf won't take me there
+  ;; (shell-command "rm -r /tmp/roam/org/") ;; so recentf won't take me there
   (my-check-id-collisions)
-  (my-make-atom-feed "/tmp/roam/posts.atom" "/tmp/roam/feed-entries/")
+  (my-make-atom-feed "/tmp/roam/posts.atom" "/tmp/roam/atom/")
   (find-file "/home/kept/pub/")
   (message "Prepping website")
   (async-shell-command "./encrypt-rebuild.sh")
@@ -229,14 +221,13 @@ All arguments pass through to `org-publish-org-to'."
       ;; but I take care of them in `my-validate-org-buffer'.
       (message "Found exclude-tag, excluding: %s" filename)
     (org-publish-org-to 'html filename "" plist pub-dir)
-    ;; Now postprocess
+    ;; Begin postprocess
     (when-let ((already-open (find-buffer-visiting filename)))
       (cl-assert (not (buffer-modified-p already-open)))
       (cl-assert (memq (buffer-local-value 'buffer-undo-list already-open)
                        '(t nil)))
       (kill-buffer already-open))
     (with-current-buffer (find-file-noselect filename)
-      (buffer-disable-undo)
       (goto-char (point-min))
       (let* ((html-path (org-export-output-file-name "" nil pub-dir))
              (keywords (org-collect-keywords '("date" "subtitle")))
@@ -246,10 +237,11 @@ All arguments pass through to `org-publish-org-to'."
              (updated (let ((value (map-elt keywords "DATE")))
                         (when (and value (not (string-blank-p (car value))))
                           (substring (car value) 1 -1))))
-             (created-fancy
+             ;; underscore bc of js
+             (created_fancy
               (format-time-string (car org-timestamp-custom-formats)
                                   (date-to-time created)))
-             (updated-fancy
+             (updated_fancy
               (when updated
                 (format-time-string (car org-timestamp-custom-formats)
                                     (date-to-time updated))))
@@ -260,22 +252,22 @@ All arguments pass through to `org-publish-org-to'."
                 (slug . ,(string-replace pub-dir "" html-path))
                 (hidden . ,hidden)
                 (created . ,created)
-                (created_fancy . ,created-fancy)
+                (created_fancy . ,created_fancy)
                 (updated . ,updated)
-                (updated_fancy . ,updated-fancy)
+                (updated_fancy . ,updated_fancy)
                 (title .  ,(if (member "daily" tags)
-                               created-fancy
+                               created_fancy
                              (->> (org-get-title)
                                   (string-replace "---" "—")
                                   (string-replace "--" "–"))))
                 (tags . ,tags)
                 (description . ,(car (map-elt keywords "SUBTITLE")))))
-             (content (my-customize-the-html metadata html-path))
-             (post (-snoc metadata `(content . ,content))))
+             (post (-snoc metadata
+                          `(content . ,(my-customize-the-html metadata html-path)))))
         ;; Write JSON object
         (with-temp-file (concat "/tmp/roam/json/" pageid)
           (insert (json-encode post)))
-        ;; Write Atom entry
+        ;; Write Atom entry if it's an ok one for the feed
         (when (and (not hidden)
                    (not (-intersection tags '("tag" "daily" "stub")))
                    (string-lessp "2023" (or updated created)))
@@ -359,7 +351,17 @@ All arguments pass through to `org-publish-org-to'."
       ;;     (dom-add-child-before dom new-toc toc)
       ;;     (dom-remove-node dom toc)))
 
-      ;; (cl-loop for section in (dom-by-class dom "^outline-.$")
+      ;; (cl-loop
+      ;;  for div in (dom-by-class dom "^outline-.$")
+      ;;  as parity = (if (string-match-p "[246]" (dom-attr div 'class))
+      ;;                  "even"
+      ;;                "odd")
+      ;;  as new = (dom-node 'section `((class . ,parity)) (dom-children div))
+      ;;  )
+
+      ;; (cl-loop for section in (dom-by-tag dom 'section)
+      ;;          as children = (dom-children section)
+      ;;          do (--find-index (eq 'section (dom-tag it)) children)
       ;;          )
 
       ;; Mess with internal links
@@ -418,13 +420,12 @@ All arguments pass through to `org-publish-org-to'."
                      (dom-set-attribute heading 'id hashid)
                      (dom-append-child heading selflink)))))
 
-      ;; Edit text strings except for those in code blocks
-      (cl-labels ((fix-text-in-children (dom)
+      ;; Org-export doesn't replace double/triple-dash in all situations (like
+      ;; in a heading or when it butts up against a link on a newline), so
+      ;; force it
+      (cl-labels ((fix-text-nodes-except-code-blocks (dom)
                     (cl-loop
                      for child in (dom-children dom)
-                     ;; Org-export doesn't replace double/triple-dash in all
-                     ;; situations (like in a heading or when it butts up against
-                     ;; a link on a newline), so force it
                      if (stringp child)
                      do (let ((fixed-child (->> child
                                                 (string-replace "---" "—")
@@ -432,42 +433,9 @@ All arguments pass through to `org-publish-org-to'."
                           (unless (equal fixed-child child)
                             (dom-add-child-before dom fixed-child child)
                             (dom-remove-node dom child)))
-                     ;; Wrap tables in divs that can be scrolled left-right
-                     ;; TODO: place outside this function
-                     ;; else if (eq 'table (dom-tag child))
-                     ;; do (let ((wrapped-table (dom-node 'div
-                     ;;                                   '((class . "table-container"))
-                     ;;                                   child)))
-                     ;;      (dom-add-child-before dom wrapped-table child)
-                     ;;      (dom-remove-node dom child))
                      else if (not (member (dom-tag child) '(code pre kbd samp)))
-                     do (fix-text-in-children child))))
-        (fix-text-in-children dom))
-
-      ;; (funcall
-      ;;  (defun fix-text-in-children (dom)
-      ;;    (cl-loop for child in (dom-children dom)
-      ;;             ;; Org-export doesn't replace double/triple-dash in all
-      ;;             ;; situations (like in a heading or when it butts up against a
-      ;;             ;; link on a newline), so force it
-      ;;             if (stringp child)
-      ;;             do (let ((fixed-child (->> child
-      ;;                                        (string-replace "---" "—")
-      ;;                                        (string-replace "--" "–"))))
-      ;;                  (unless (equal fixed-child child)
-      ;;                    (dom-add-child-before dom fixed-child child)
-      ;;                    (dom-remove-node dom child)))
-      ;;             ;; Wrap tables in divs that can be scrolled left-right
-      ;;             ;; TODO: place outside this function
-      ;;             ;; else if (eq 'table (dom-tag child))
-      ;;             ;; do (let ((wrapped-table (dom-node 'div
-      ;;             ;;                                   '((class . "table-container"))
-      ;;             ;;                                   child)))
-      ;;             ;;      (dom-add-child-before dom wrapped-table child)
-      ;;             ;;      (dom-remove-node dom child))
-      ;;             else if (not (member (dom-tag child) '(code pre kbd samp)))
-      ;;             do (fix-text-in-children child)))
-      ;;  dom)
+                     do (fix-text-nodes-except-code-blocks child))))
+        (fix-text-nodes-except-code-blocks dom))
 
       ;; Wrap tables in divs that can be scrolled left-right
       (cl-loop for tbl in (dom-by-tag dom 'table)
@@ -487,67 +455,27 @@ All arguments pass through to `org-publish-org-to'."
                ;; Fix paths
                do (dom-set-attribute img 'src (concat "/" path))
                ;; Org exports an image alt-text that is just the image
-               ;; basename. So now I try to rename my images so they all have
-               ;; descriptive names. Then here just strip .jpg/.png extension.
+               ;; basename.  Interesting idea, since the alt-text becomes
+               ;; portable if that's where you put the alt-text!  Go with it
+               ;; and just strip .jpg/.png extension.
                and when (string-search alt path)
                do (dom-set-attribute img 'alt (->> alt
                                                    (file-name-sans-extension)
                                                    (string-replace "_" " "))))
 
-      ;; ;; Correct anchor paths to assets for self-linked images like <a
-      ;; ;; href="localfile"><img src="localfile"></img></a>, same correction as
-      ;; ;; above.  (REVIEW Maybe automatically mke them self-link if there's no
-      ;; ;; anchor? Yeah, obviously...)  Such links also need rel="external" in
-      ;; ;; order to prevent SvelteKit from interpreting the URL as a route and
-      ;; ;; executing [first]/[[second]]/+page.ts.
-      ;; (cl-loop for a in (dom-by-tag dom 'a)
-      ;;          as path = (dom-attr a 'href)
-      ;;          when (string-prefix-p "attach" path)
-      ;;          do (progn
-      ;;               (dom-set-attribute a 'href (concat "/" path))
-      ;;               (dom-set-attribute a 'rel "external")))
-
-      ;; ;; Let images that aren't links become self-links.  Such links also need
-      ;; ;; rel="external" in order to prevent SvelteKit from interpreting the URL
-      ;; ;; as a route and executing the route.
-      ;; (cl-labels ((linkified? (node)
-      ;;               (if (eq (dom-tag node) 'a)
-      ;;                   t
-      ;;                 (linkified? (dom-parent dom node)))))
-      ;;   (cl-loop for img in (dom-by-tag dom 'img)
-      ;;            as parent = (dom-parent dom img)
-      ;;            unless (linkified? img)
-      ;;            do (let ((linkified-img
-      ;;                      (dom-node 'a `((href . ,(dom-attr img 'src))
-      ;;                                     (rel . "external"))
-      ;;                                img)))
-      ;;                 (dom-add-child-before parent linkified-img img)
-      ;;                 (dom-remove-node parent img))))
-
+      ;; FIXME: I think it actually replaces all image links
+      ;; Let images that aren't links become self-links.  Such links also need
+      ;; rel="external" in order to prevent SvelteKit from interpreting the URL
+      ;; as a route and executing the route.
       (cl-loop for img in (dom-by-tag dom 'img)
                as parent = (dom-parent dom img)
-               ;; Assume that if the immediate parent is not an anchor tag,
-               ;; neither is any ancestor. I don't believe Org generates
-               ;; monstrosities like <a><p><span><img>.
                unless (eq 'a (dom-tag parent))
-               do (let ((linkified-img (dom-node 'a
-                                                 `((href . ,(dom-attr img 'src))
-                                                   (rel . "external"))
-                                                 (copy-sequence img)))
-                        (grandparent (dom-parent dom parent)))
-                    ;; parent is often an otherwise empty <p> tag, better destroyed as it
-                    ;; can cause the area to look weird due to link styling
-                    ;; NOTE: danger will robinson. if you have two images on
-                    ;; the same line, the first iter destroys the <p> tag and
-                    ;; then the second image has a nil parent
-                    (if (and (eq 'p (dom-tag parent))
-                             (= 1 (length (dom-children parent))))
-                        (progn
-                          (dom-add-child-before grandparent linkified-img parent)
-                          (dom-remove-node grandparent parent))
-                      (dom-add-child-before parent linkified-img img)
-                      (dom-remove-node parent img))
-                    ))
+               do (let ((linkified-img
+                         (dom-node 'a `((href . ,(dom-attr img 'src))
+                                        (rel . "external"))
+                                   (copy-sequence img))))
+                    (dom-add-child-before parent linkified-img img)
+                    (dom-remove-node parent img)))
 
       ;; Return final HTML.  Phew!
       (with-temp-buffer

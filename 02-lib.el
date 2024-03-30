@@ -750,7 +750,8 @@ Can also take a file PATH instead of current buffer."
       (kill-new url)
       (message "Copied %s" url))))
 
-;; TODO: would be cool to use the "motion" program and start it watching me right away.
+;; TODO: would be cool to use the "motion" program and start it watching me
+;; right away.
 (defun my-browse-random-lw-post ()
   "Practice something for my Youtube channel."
   (interactive)
@@ -803,37 +804,37 @@ It skips prompting, and inserts the metadata I want."
            (parent-creation (save-excursion
                               (goto-char (point-min))
                               (org-entry-get nil "CREATED"))))
-      (when (file-exists-p file-path)
-        (user-error "%s exists. Aborting" file-path))
-      (org-cut-subtree)
-      (open-line 1)
-      (insert "- " (org-link-make-string
-                    (concat "id:" (org-roam-node-id node))
-                    (org-roam-node-formatted node)))
-      (save-buffer)
-      (find-file file-path)
-      (org-paste-subtree)
-      (while (> (org-current-level) 1)
-        (org-promote-subtree))
-      (save-buffer)
-      (org-roam-promote-entire-buffer)
-      (goto-char (point-min))
-      (unless (org-entry-get nil "CREATED")
-        (org-set-property "CREATED" (or parent-creation
-                                        (format-time-string "[%F]"))))
-      (org-roam-tag-add (or parent-tags
-                            '("noexport")))
-      (search-forward "#+title")
-      (goto-char (line-beginning-position))
-      (if (version<= "29" emacs-version)
-          (ensure-empty-lines 0)
-        (when (looking-back "\n\n")
-          (join-line)))
-      (search-forward "#+filetags" nil t)
-      (forward-line 1)
-      (open-line 2)
-      (insert "#+date: ")
-      (save-buffer))))
+      (if (file-exists-p file-path)
+          (user-error "%s exists. Aborting" file-path)
+        (org-cut-subtree)
+        (open-line 1)
+        (insert "- " (org-link-make-string
+                      (concat "id:" (org-roam-node-id node))
+                      (org-roam-node-formatted node)))
+        (save-buffer)
+        (find-file file-path)
+        (org-paste-subtree)
+        (while (> (org-current-level) 1)
+          (org-promote-subtree))
+        (save-buffer)
+        (org-roam-promote-entire-buffer)
+        (goto-char (point-min))
+        (unless (org-entry-get nil "CREATED")
+          (org-set-property "CREATED" (or parent-creation
+                                          (format-time-string "[%F]"))))
+        (org-roam-tag-add (or parent-tags
+                              '("noexport")))
+        (search-forward "#+title")
+        (goto-char (line-beginning-position))
+        (if (version<= "29" emacs-version)
+            (ensure-empty-lines 0)
+          (when (looking-back "\n\n")
+            (join-line)))
+        (search-forward "#+filetags" nil t)
+        (forward-line 1)
+        (open-line 2)
+        (insert "#+date: ")
+        (save-buffer)))))
 
 ;; bloggable
 (defun my-truncate-buffer-and-move-excess (&optional _string)
