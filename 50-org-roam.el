@@ -66,6 +66,7 @@
   (memoize-restore #'org-roam-node-read--completions)
   (memoize #'org-roam-node-read--completions)
   (org-roam-node-read--completions nil nil))
+;; (my-roam-memo-refresh)
 
 (let ((timer (timer-create)))
   (defun my-roam-memo-schedule (&rest _)
@@ -74,6 +75,7 @@
     (setq timer (run-with-idle-timer 10 nil #'my-roam-memo-refresh))))
 
 (after! org-roam
+  (org-roam-db-autosync-mode)
   ;; Org-roam source ends up below recentf in consult-buffer, no me gusta.
   ;; (consult-org-roam-mode)
   (use-package memoize :demand)
@@ -133,6 +135,16 @@
                       ,(lines "#+title: ${title}"
                               "#+filetags: :noexport:stub:"
                               "#+date: "))
+           :immediate-finish t
+           :jump-to-captured t)
+
+          ;; ("l" "Unsorted LW" plain "* ${title}%?"
+          ;;  :target (file+olp "unsorted-lw.org")
+          ;;  :immediate-finish t
+          ;;  :jump-to-captured t)
+
+          ("l" "Unsorted LW" entry "* ${title}%?"
+           :target (node "87724b00-7083-4884-8f1d-6210868679ff")
            :immediate-finish t
            :jump-to-captured t)
 
