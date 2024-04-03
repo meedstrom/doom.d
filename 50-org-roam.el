@@ -130,45 +130,47 @@
            :jump-to-captured t)))
 
 (setopt org-roam-capture-templates
-        `(("d" "default" plain "%?" :if-new
-           (file+head "${slug}.org"
-                      ,(lines "#+title: ${title}"
-                              "#+filetags: :noexport:stub:"
-                              "#+date: "))
+        `(("d" "default" plain "%?"
+           :target (file+head "${slug}.org"
+                              ,(concat "#+title: ${title}"
+                                       "\n#+filetags: :noexport:stub:"
+                                       "\n#+date: "))
            :immediate-finish t
            :jump-to-captured t)
 
-          ;; ("l" "Unsorted LW" plain "* ${title}%?"
-          ;;  :target (file+olp "unsorted-lw.org")
-          ;;  :immediate-finish t
-          ;;  :jump-to-captured t)
+          ("i" "instantly create this node" plain "%?"
+           :target (file+head "${slug}.org"
+                              ,(concat "#+title: ${title}"
+                                       "\n#+filetags: :noexport:stub:"
+                                       "\n#+date: "))
+           :immediate-finish t)
 
-          ("l" "Unsorted LW" entry "* ${title}%?"
+          ("l" "Unsorted LW" plain
+           ,(concat "* ${title}"
+                    "\n:PROPERTIES:"
+                    "\n:ID:       %(org-id-uuid)"
+                    "\n:CREATED:  [%<%F>]"
+                    "\n:ROAM_REFS: %^{ROAM_REFS}"
+                    "\n:END:"
+                    "\n%i%?")
            :target (node "87724b00-7083-4884-8f1d-6210868679ff")
            :immediate-finish t
            :jump-to-captured t)
 
-          ("i" "instantly create this node" plain "%?" :if-new
-           (file+head "${slug}.org"
-                      ,(lines "#+title: ${title}"
-                              "#+filetags: :noexport:stub:"
-                              "#+date: "))
-           :immediate-finish t)
-
-          ("a" "acquaintance" plain "%?" :if-new
-           (file+head "${slug}.org"
-                      ,(lines "#+title: ${title}"
-                              "#+filetags: :stub:acquaintance:shrink:"
-                              "#+date: "
-                              ":noexport:"
-                              "- Email :: "
-                              "- Phone :: "
-                              "- Address :: "
-                              ":end:"
-                              "- Location :: "
-                              "- Birthday :: "
-                              "- Interests :: "
-                              "- How we met :: "))
+          ("a" "acquaintance" plain "%?"
+           :if-new (file+head "${slug}.org"
+                              ,(lines "#+title: ${title}"
+                                      "#+filetags: :stub:acquaintance:shrink:"
+                                      "#+date: "
+                                      ":noexport:"
+                                      "- Email :: "
+                                      "- Phone :: "
+                                      "- Address :: "
+                                      ":end:"
+                                      "- Location :: "
+                                      "- Birthday :: "
+                                      "- Interests :: "
+                                      "- How we met :: "))
            :immediate-finish t
            :jump-to-captured t)))
 
