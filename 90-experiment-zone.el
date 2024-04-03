@@ -52,9 +52,8 @@
 
 ;; Aaanyway, probs not the origin of bugs so leave it.
 
-(after! org-roam-db
-  (defun org-roam-db-update-file (&optional file-path _)
-    "Update Org-roam cache for FILE-PATH.
+(defun my-org-roam-db-update-file (&optional file-path _)
+  "Update Org-roam cache for FILE-PATH.
 
 If the file does not exist anymore, remove it from the cache.
 
@@ -63,93 +62,112 @@ If the file exists, update the cache with information.
 If NO-REQUIRE, don't require optional libraries. Set NO-REQUIRE
 when the libraries are already required at some toplevel, e.g.
 in `org-roam-db-sync'."
-    (setq file-path (or file-path (buffer-file-name (buffer-base-buffer))))
-    (let ((content-hash (org-roam-db--file-hash file-path))
-          (db-hash (caar (org-roam-db-query [:select hash :from files
-                                             :where (= file $s1)] file-path)))
-          info)
-      (unless (string= content-hash db-hash)
-        ;; org-roam-require should be either removed or named
-        ;; org-roam-soft-require for clarity.
-        ;; anyway, it does not make the code easier to read.  DRY is taken too
-        ;; far if it's just an alias: thin wrappers over commonly known
-        ;; functions to call those functions with the same args every time.
-        ;; the fewer sexps in the codebase that start with "org-roam-", the
-        ;; easier it is to get into.
-        (require 'org-ref nil 'noerror)
-        (require 'oc nil 'noerror)
-        (org-roam-with-file file-path nil
-          (org-with-wide-buffer (run-hooks 'my-org-roam-pre-scan-hook))
-          (emacsql-with-transaction (org-roam-db)
-            (org-with-wide-buffer
-             ;; please comment why
-             (org-set-regexps-and-options 'tags-only)
-             ;; Maybe not necessary anymore
-             ;; 2021 https://github.com/org-roam/org-roam/issues/1844
-             ;; 2023 https://code.tecosaur.net/tec/org-mode/commit/5ed3e1dfc3e3bc6f88a4300a0bcb46d23cdb57fa
-             ;; (org-refresh-category-properties)
-             (org-roam-db-clear-file)
-             (org-roam-db-insert-file content-hash)
-             (org-roam-db-insert-file-node)
-             ;; please comment why
-             (setq org-outline-path-cache nil)
-             (org-roam-db-map-nodes
-              (list #'org-roam-db-insert-node-data
-                    #'org-roam-db-insert-aliases
-                    #'org-roam-db-insert-tags
-                    #'org-roam-db-insert-refs))
-             (setq org-outline-path-cache nil)
-             (setq info (org-element-parse-buffer))
-             (org-roam-db-map-links
-              (list #'org-roam-db-insert-link))
-             (when (featurep 'oc)
-               (org-roam-db-map-citations
-                info
-                (list #'org-roam-db-insert-citation)))))
-          ))))
+  (setq file-path (or file-path (buffer-file-name (buffer-base-buffer))))
+  (let ((content-hash (org-roam-db--file-hash file-path))
+        (db-hash (caar (org-roam-db-query [:select hash :from files
+                                           :where (= file $s1)] file-path)))
+        info)
+    (unless (string= content-hash db-hash)
+      (require 'org-ref nil 'noerror)
+      (require 'oc nil 'noerror)
+      (org-roam-with-file file-path nil
+        (org-with-wide-buffer (run-hooks 'my-org-roam-pre-scan-hook))
+        (emacsql-with-transaction (org-roam-db)
+          (org-with-wide-buffer
+           ;; please comment why
+           ;; (org-set-regexps-and-options 'tags-only)
+           ;; Maybe not necessary anymore
+           ;; 2021 https://github.com/org-roam/org-roam/issues/1844
+           ;; 2023 https://code.tecosaur.net/tec/org-mode/commit/5ed3e1dfc3e3bc6f88a4300a0bcb46d23cdb57fa
+           ;; (org-refresh-category-properties)
+           (org-roam-db-clear-file)
+           (org-roam-db-insert-file content-hash)
+           (org-roam-db-insert-file-node)
+           ;; please comment why
+           (setq org-outline-path-cache nil)
+           (goto-char (point-min))
+           (let ((end (point-max)))
+             (when (re-search-forward org-outline-regexp-bol nil t)
+               (while (progn
+                        (when (org-roam-db-node-p)
+                          (org-roam-db-insert-node-data)
+                          (org-roam-db-insert-aliases)
+                          (org-roam-db-insert-tags)
+                          (org-roam-db-insert-refs))
+                        (outline-next-heading)
+                        (< (point) end)))))
 
-  (defun org-roam-db-sync (&optional force)
-    "Synchronize the cache state with the current Org files on-disk.
+           ;;(let ((nodes ))
+           ;; (cl-loop for node in nodes
+           ;;          do (progn
+           ;;               (goto-char node)
+           ;;               (mapc #'funcall
+           ;;                     (list #'org-roam-db-insert-node-data
+           ;;                           #'org-roam-db-insert-aliases
+           ;;                           #'org-roam-db-insert-tags
+           ;;                           #'org-roam-db-insert-refs))))
+           ;; )
+           ;; (org-roam-db-map-nodes
+           ;;  (list #'org-roam-db-insert-node-data
+           ;;        #'org-roam-db-insert-aliases
+           ;;        #'org-roam-db-insert-tags
+           ;;        #'org-roam-db-insert-refs))
+           ;; (setq org-outline-path-cache nil)
+           ;; (setq info (org-element-parse-buffer))
+           ;; (org-roam-db-map-links
+           ;;  (list #'org-roam-db-insert-link))
+           ;; (when (featurep 'oc)
+           ;;   (org-roam-db-map-citations
+           ;;    info
+           ;;    (list #'org-roam-db-insert-citation)))
+           ))
+        ))))
+
+(defun my-org-roam-db-sync (&optional force)
+  "Synchronize the cache state with the current Org files on-disk.
 If FORCE, force a rebuild of the cache from scratch."
-    (interactive "P")
-    (org-roam-db--close) ;; Force a reconnect
-    (when force (delete-file org-roam-db-location))
-    (org-roam-db) ;; To initialize the database, no-op if already initialized
-    (org-roam-require '(org-ref oc))
-    (let* ((gc-cons-threshold org-roam-db-gc-threshold)
-           (org-agenda-files nil)
-           (org-roam-files (org-roam-list-files))
-           (current-files (org-roam-db--get-current-files))
-           (modified-files nil))
-      (dolist (file org-roam-files)
-        (let ((contents-hash (org-roam-db--file-hash file)))
-          (unless (string= (gethash file current-files)
-                           contents-hash)
-            (push file modified-files)))
-        (remhash file current-files))
-      (emacsql-with-transaction (org-roam-db)
-        ;; Bruh. Just load compat.
-        (org-roam-dolist-with-progress (file (hash-table-keys current-files))
-            "Clearing removed files..."
-          (org-roam-db-clear-file file))
-        ;; Unfortunately it's good for debugging to show which file you got
-        ;; stuck on. So we can't use the message log combination feature with
-        ;; the dolist with ...
-        ;; I've always felt that the "Processing modified files...38%" was too
-        ;; little information.
-        (let ((ctr 0))
-          (dolist (file modified-files)
-            (message "Processing modified files... (%d/%d) %s"
-                     (cl-incf ctr)
-                     (length modified-files)
-                     (file-name-nondirectory file))
-            (condition-case err
-                (org-roam-db-update-file file)
-              (error
-               (org-roam-db-clear-file file)
-               (lwarn 'org-roam :error "Failed to process %s with error %s, skipping..."
-                      file (error-message-string err)))))))))
-  )
+  (interactive "P")
+  (org-roam-db--close) ;; Force a reconnect
+  (when force (delete-file org-roam-db-location))
+  (org-roam-db) ;; To initialize the database, no-op if already initialized
+  (org-roam-require '(org-ref oc))
+  (let* ((gc-cons-threshold org-roam-db-gc-threshold)
+         (org-agenda-files nil)
+         (org-roam-files (org-roam-list-files))
+         (current-files (org-roam-db--get-current-files))
+         (modified-files nil))
+    (dolist (file org-roam-files)
+      (let ((contents-hash (org-roam-db--file-hash file)))
+        (unless (string= (gethash file current-files)
+                         contents-hash)
+          (push file modified-files)))
+      (remhash file current-files))
+    (emacsql-with-transaction (org-roam-db)
+      ;; Bruh. Just load compat.
+      (org-roam-dolist-with-progress (file (hash-table-keys current-files))
+          "Clearing removed files..."
+        (org-roam-db-clear-file file))
+      ;; Unfortunately it's good for debugging to show which file you got
+      ;; stuck on. So we can't use the message log combination feature with
+      ;; the dolist with ...
+      ;; I've always felt that the "Processing modified files...38%" was too
+      ;; little information.
+      (let ((ctr 0))
+        (dolist (file modified-files)
+          (message "Processing modified files... (%d/%d) %s"
+                   (cl-incf ctr)
+                   (length modified-files)
+                   (file-name-nondirectory file))
+          (condition-case err
+              (org-roam-db-update-file file)
+            (error
+             (org-roam-db-clear-file file)
+             (lwarn 'org-roam :error "Failed to process %s with error %s, skipping..."
+                    file (error-message-string err)))))))))
+
+(after! org-roam-db
+  (fset 'org-roam-db-update-file #'my-org-roam-db-update-file)
+  (fset 'org-roam-db-sync #'my-org-roam-db-sync))
 
 ;; (after! org-roam
 ;;   (defun org-roam-file-p (&optional file)

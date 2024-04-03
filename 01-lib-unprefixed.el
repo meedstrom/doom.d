@@ -13,6 +13,9 @@
   (defalias #'setopt #'general-setq)
   (defalias #'duplicate-dwim #'crux-duplicate-current-line-or-region))
 
+(defmacro while-progn (&rest body)
+  `(while (progn ,@body)))
+
 ;; So you can type (hookgen org-mode-hook (set-face-attribute ...) ...).
 ;; I'm split between this method and llama.el, leaning towards llama.el.
 (defmacro hookgen (hook &rest body)

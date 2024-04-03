@@ -68,19 +68,35 @@
   (org-roam-node-read--completions nil nil))
 ;; (my-roam-memo-refresh)
 
-(let ((timer (timer-create)))
+(let ((timer1 (timer-create))
+      (timer2 (timer-create)))
   (defun my-roam-memo-schedule (&rest _)
     "Schedule a re-caching for when the user is idle."
-    (cancel-timer timer)
-    (setq timer (run-with-idle-timer 10 nil #'my-roam-memo-refresh))))
+    (cancel-timer timer1)
+    (cancel-timer timer2)
+    (setq timer1 (run-with-idle-timer 7 nil #'org-roam-db-sync))
+    (setq timer2 (run-with-idle-timer 10 nil #'my-roam-memo-refresh))))
 
 (after! org-roam
-  (org-roam-db-autosync-mode)
   ;; Org-roam source ends up below recentf in consult-buffer, no me gusta.
   ;; (consult-org-roam-mode)
+
   (use-package memoize :demand)
   (memoize #'org-roam-node-read--completions)
-  (advice-add 'org-roam-db-update-file :after #'my-roam-memo-schedule))
+  
+  (org-roam-db-autosync-mode)
+  ;; (advice-add 'org-roam-db-update-file :after #'my-roam-memo-schedule)
+  (setopt org-roam-db-update-on-save nil)
+
+  ;; Because `org-roam-db-autosync-mode' is very slow saving large files,
+  ;; set up only the other relevant things that it would have set up.
+  (add-hook 'org-mode-hook
+            (defun my-roam-setup ()
+              (when (org-roam-file-p)
+                (org-roam--register-completion-functions-h)
+                (add-hook 'post-command-hook #'org-roam-buffer--redisplay-h 0 t)
+                (add-hook 'after-save-hook #'my-roam-memo-schedule 0 t)))))
+
 
 
 ;;; Stuff

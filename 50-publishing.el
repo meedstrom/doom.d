@@ -164,6 +164,8 @@ scanned."
                          t))
            do (delete-file path))
 
+
+
   (when (equal current-prefix-arg '(4))
     (shell-command "rm /tmp/roam/org-roam.db"))
   (when (equal current-prefix-arg '(16))
