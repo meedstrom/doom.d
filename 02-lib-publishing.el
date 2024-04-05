@@ -118,42 +118,6 @@ to me to do that."
                (replace-regexp-in-string "[][]" "" (org-roam-node-title node))
                "]]"))))))))
 
-(defun my-replace-web-links-with-ref-note-links (&rest _)
-  "For every URL found in this page, if there exists an Org-roam
-note elsewhere with the same exact URL in its :ROAM_REFS:
-property, then replace that URL in this page with an id-link to
-that Org-roam note.
-
-This visitor can still go find the original web link because I
-will expose it inside that note.  This just makes the visitor see
-my note first.
-
-Meant to run on `org-export-before-parsing-functions', where it
-will not modify the source file."
-  (when (ignore-errors (org-roam-node-at-point))
-    (save-excursion
-      ;; TODO: use org-link-any-re
-      (while (not (equal "No further link found" (quiet! (org-next-link))))
-        (let* ((elem (org-element-context))
-               (link (org-element-property :path elem))
-               (ref (assoc link my-refs-cache))
-               (end (org-element-property :end elem)))
-          (when (and ref
-                     ;; ignore if referring to same page we're on
-                     (not (equal (caddr ref) (org-get-title))))
-            ;; REVIEW: check if the link is already an org-link with a custom
-            ;; description.  Then just modify the url part into an id link,
-            ;; don't overwrite the description also.
-            (if (search-forward "][" end t)
-                ;; has a custom description
-                (progn
-                  (delete-region (match-beginning 0) (point))
-                  (insert "[[id:" (cadr ref) "]["))
-              (delete-region (point) end)
-              (insert "[[id:" (cadr ref) "]["
-                      (replace-regexp-in-string (rx (any "[]")) "" (caddr ref))
-                      "]]"))))))))
-
 (defun my-replace-datestamps-with-links (&rest _)
   (when (ignore-errors (org-roam-node-at-point))
     (save-excursion

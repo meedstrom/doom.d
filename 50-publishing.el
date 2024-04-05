@@ -184,12 +184,6 @@ scanned."
   (shell-command "rm -rf /tmp/roam/{html,json,atom}/")
   (shell-command "mkdir -p /tmp/roam/{html,json,atom}")
   (setq my-ids (clrhash my-ids))
-  ;; Used by `my-replace-web-links-with-ref-note-links'
-  (setq my-refs-cache (org-roam-db-query
-                       [:select [ref id title]
-                        :from refs
-                        :left-join nodes
-                        :on (= refs:node-id nodes:id)]))
 
   ;; Change some things about the Org files, before org-export does its thing.
   (add-hook 'org-export-before-parsing-functions #'my-add-backlinks 10)
@@ -198,7 +192,6 @@ scanned."
   (add-hook 'org-export-before-parsing-functions #'my-replace-datestamps-with-links)
   (add-hook 'org-export-before-parsing-functions #'my-strip-inline-anki-ids)
   (add-hook 'org-export-before-parsing-functions #'org-transclusion-mode)
-  ;; (add-hook 'org-export-before-parsing-functions #'my-replace-web-links-with-ref-note-links)
 
   ;; (org-publish "my-slipbox-blog-attachments" t)
   (org-publish "my-slipbox-blog" t)
