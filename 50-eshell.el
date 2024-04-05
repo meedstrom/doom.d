@@ -58,7 +58,7 @@
 ;;   :custom
 ;;   ((eshell-prompt-function
 ;;    (lambda ()
-;;      (concat "[--:--] " (if (>= my-eshell-backref-counter 35)
+;;      (concat "[--:--] " (if (>= my-esh-backref-counter 35)
 ;;                             "---"
 ;;                           "--") " λ ")))
 ;;    (eshell-prompt-regexp
@@ -80,7 +80,7 @@
                      (push sym commands))))
     commands))
 
-;; (my-syms-starting-with "my-eshell-")
+;; (my-syms-starting-with "my-esh-")
 
 ;; OK, so using a regexp is pretty unreliable.  The way shell-mode does it, it
 ;; has a shell-prompt-pattern, but won't use it by default for anything other
@@ -100,12 +100,12 @@
           '(cl-loop
             for cmd in
             (append
-             ;; (my-commands-starting-with "my-eshell-")
-             '(my-eshell-consult-history
-               my-eshell-switch
-               my-eshell-narrow-to-output
-               my-eshell-narrow-to-prompt
-               my-eshell-narrow-dwim
+             ;; (my-commands-starting-with "my-esh-")
+             '(my-esh-consult-history
+               my-esh-switch
+               my-esh-narrow-to-output
+               my-esh-narrow-to-prompt
+               my-esh-narrow-dwim
                my-copy-region-or-rest-of-line-to-other-window
                my-cycle-path-at-point-repeat
                my-dired-shell-cycle
@@ -131,28 +131,28 @@
 
 ;; Set up the hook `my-real-eshell-post-command-hook' as a reliable substitute
 ;; for eshell-post-command-hook.
-(add-hook 'eshell-pre-command-hook #'my-eshell-time-cmd-1)
-(add-hook 'eshell-post-command-hook #'my-eshell-time-cmd-2)
+(add-hook 'eshell-pre-command-hook #'my-esh-time-cmd-1)
+(add-hook 'eshell-post-command-hook #'my-esh-time-cmd-2)
 
 ;; Always time slow commands. No more rerunning just to prepend "time ..."
-(add-hook 'my-real-eshell-post-command-hook #'my-eshell-print-elapsed-maybe)
+(add-hook 'my-real-eshell-post-command-hook #'my-esh-print-elapsed-maybe)
 
 ;; Save all command outputs as variables! No more my-copy-region-into-variable.
-(add-hook 'my-real-eshell-post-command-hook #'my-eshell-save-output-into-backref)
+(add-hook 'my-real-eshell-post-command-hook #'my-esh-save-output-into-backref)
 
 ;; Sync history on every command, in case I powercycle the computer
 (add-hook 'my-real-eshell-post-command-hook #'eshell-write-history)
-(add-hook 'eshell-before-prompt-hook #'my-eshell-save-scrollback)
+(add-hook 'eshell-before-prompt-hook #'my-esh-save-scrollback)
 
 ;; Timestamp the exact time they command was executed
-(add-hook 'eshell-pre-command-hook #'my-eshell-timestamp-update)
+(add-hook 'eshell-pre-command-hook #'my-esh-timestamp-update)
 
 ;; Name the buffer so I can see the direetory in the minibuffer.
-(add-hook 'eshell-directory-change-hook #'my-eshell-rename)
-(add-hook 'eshell-mode-hook #'my-eshell-rename)
+(add-hook 'eshell-directory-change-hook #'my-esh-rename)
+(add-hook 'eshell-mode-hook #'my-esh-rename)
 
 ;; Misc
-;; (add-hook 'my-real-eshell-post-command-hook #'my-eshell-narrow-to-output 95)
+;; (add-hook 'my-real-eshell-post-command-hook #'my-esh-narrow-to-output 95)
 
 ;; The natural pager for shell.el/eshell, since they lack all terminal features.
 ;; Bear in mind the setting will also apply to programs spawned from Emacs,
@@ -172,15 +172,16 @@
   (add-to-list 'eshell-modules-list 'eshell-xtra))
 
 (after! em-hist
-  (define-key eshell-hist-mode-map [remap consult-history] #'my-eshell-consult-history))
+  (setopt eshell-hist-ignoredups t)
+  (define-key eshell-hist-mode-map [remap consult-history] #'my-esh-consult-history))
 
 (after! esh-mode
   ;; Automatically narrow/widen to output on point motion.  Damn, it's weird
   ;; and often not what I want, but that's me abusing point motion.
-  ;; (define-key eshell-mode-map [remap next-line] #'my-eshell-next-line)
-  ;; (define-key eshell-mode-map [remap previous-line] #'my-eshell-prev-line)
-  ;; (define-key eshell-mode-map [remap eshell-next-prompt] #'my-eshell-next-prompt)
-  ;; (define-key eshell-mode-map [remap eshell-previous-prompt] #'my-eshell-previous-prompt)
+  ;; (define-key eshell-mode-map [remap next-line] #'my-esh-next-line)
+  ;; (define-key eshell-mode-map [remap previous-line] #'my-esh-prev-line)
+  ;; (define-key eshell-mode-map [remap eshell-next-prompt] #'my-esh-next-prompt)
+  ;; (define-key eshell-mode-map [remap eshell-previous-prompt] #'my-esh-previous-prompt)
   )
 
 ;; Encourage idiomatic ways to work with Emacs
@@ -195,7 +196,7 @@
 ;;     (defun eshell/cd (&rest args)
 ;;       (if (null args)
 ;;           (let ((default-directory "~"))
-;;             (my-eshell-here))
+;;             (my-esh-here))
 ;;         (kill-new (apply #'concat args))
 ;;         ;; (my-hook-once 'my-real-eshell-post-command-hook
 ;;         ;;   (eshell-previous-prompt 1))
@@ -204,4 +205,4 @@
 ;; Emulate my Dired "b" key for going up one directory.
 (defun eshell/b (&optional _args)
   (let ((default-directory (file-name-parent-directory default-directory)))
-    (my-eshell-here)))
+    (my-esh-here)))

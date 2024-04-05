@@ -72,7 +72,7 @@ For all other uses, see `org-get-tags'."
 
 (defun my-add-backlinks (&rest _)
   "Add a \"What links here\" subtree at the end.
-Meant to run on `org-export-before-parsing-functions', where it
+Designed for `org-export-before-parsing-functions', where it
 will not modify the source file.
 
 Can probably be tested in a real org buffer... it never occurred
@@ -415,7 +415,7 @@ export block."
   "Regexp to match a line that isn't commented out or a property drawer.
 Useful for jumping past a file's front matter.")
 
-(defun my-add-refs-as-paragraphs (_)
+(defun my-add-refs-as-paragraphs (&rest _)
   (save-excursion
     (goto-char (point-min))
     (when (re-search-forward my-org-text-line-re nil t)
@@ -426,9 +426,40 @@ Useful for jumping past a file's front matter.")
                  (while (progn
                           (forward-line 1)
                           (or (looking-at-p "^[ \t]*:") (eobp))))
-                 (insert "\nSource " refs "\n\n"))
+                 ;; wrap in <div class="ref">
+                 ;; TODO: First fix the div cleaner in the publish code
+                 (insert "\n#+begin_ref\nSource " refs "\n#+end_ref\n\n")
+                 ;; (insert "\nSource " refs "\n\n")
+                 ;; (insert "\n" refs "\n\n")
+                 )
                (org-next-visible-heading 1)
                (not (eobp)))))))
+
+(defun my-ensure-section-containers (&rest _)
+  "Like setting `org-html-container-element' to \"section\",
+but apply to all subheadings, not only the top level."
+  (save-excursion
+    (goto-char (point-min))
+    (when (re-search-forward org-element-headline-re nil t)
+      (while (not (eobp))
+        (org-entry-put nil "HTML_CONTAINER" "section")
+        (outline-next-heading)))))
+
+(defun my-strip-inline-anki-ids (&rest _)
+  (require 'inline-anki)
+  (save-excursion
+    (dolist (re (list inline-anki-rx:eol
+                      inline-anki-rx:eol-new
+                      inline-anki-rx:item-start
+                      inline-anki-rx:item-start-new))
+      (goto-char (point-min))
+      (while (re-search-forward re nil t)
+        (let ((beg (match-beginning 0))
+              (end (point)))
+          (if (and (search-backward "@" (line-beginning-position) t)
+                   (> 18 (- end (point))))
+              (delete-region (point) end)
+            (delete-region beg end)))))))
 
 
 ;;; Patches

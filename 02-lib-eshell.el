@@ -1,18 +1,20 @@
 ;; Defuns used in Eshell config -*- lexical-binding: t; -*-
 
 ;; TODO: When one command output exceeded buffer scrollback, format a special
-;; message saying so inside the next prompt including the time-elapsed and
+;; message saying so inside the next prompt, mentioning time-elapsed and
 ;; backref, then emit a new prompt
+;; (As an alternative, send a command that's just a #comment, with said
+;; message)
 
 ;;; Stuff
 
-(defvar my-eshell-last-cmd-start nil)
-(defvar my-eshell-buffer-counter 0)
-(defvar my-eshell-backref-counter 1)
-(defvar my-eshell-id nil)
-(make-variable-buffer-local 'my-eshell-last-cmd-start)
-(make-variable-buffer-local 'my-eshell-backref-counter)
-(make-variable-buffer-local 'my-eshell-id)
+(defvar my-esh-last-cmd-start nil)
+(defvar my-esh-buffer-counter 0)
+(defvar my-esh-backref-counter 1)
+(defvar my-esh-id nil)
+(make-variable-buffer-local 'my-esh-last-cmd-start)
+(make-variable-buffer-local 'my-esh-backref-counter)
+(make-variable-buffer-local 'my-esh-id)
 
 (defun my-esh-re-propertize-prompt-at-point ()
   (interactive)
@@ -31,9 +33,7 @@
                                    front-sticky (font-lock-face read-only)
                                    rear-nonsticky (font-lock-face read-only)))))
 
-(defun my-eshell-timestamp-update ()
-  "When added to `eshell-pre-command-hook', the first string --:-- in the
-prompt becomes a timestamp like 13:59 after you run a command."
+(defun my-esh-timestamp-update ()
   (save-excursion
     (search-backward " 〉")
     (search-backward "／")
@@ -42,19 +42,27 @@ prompt becomes a timestamp like 13:59 after you run a command."
       (insert (format-time-string "ran at %H:%M"))
       (my-esh-re-propertize-prompt-at-point))))
 
-(defun my-eshell-save-output-into-backref ()
+
+;; TODO Save lisp return values as actual lisp, not a string.  See
+;; unintended result at c18:
+;;
+;; 〈 ran at 14:49／／result $c17 〉 echo {pwd} (+ 2 3) {cat /tmp/.X1-lock}
+;; ("/home/me/.doom.d" 5 1594)
+;; 〈 ran at 14:49／／result $c18 〉 -map 'eshell-stringify $c17
+;; ("40" "34" "47" "104" "111" "109" "101" "47" "109" "101" "47" "46" "100" "111" "111" "109" "46" "100" "34" "32" "53" "32" "49" "53" "57" "52" "41")
+(defun my-esh-save-output-into-backref ()
   "Save last output into a variable and echo its name in the prompt."
-  (when my-eshell-last-cmd-start
+  (when my-esh-last-cmd-start
     (let ((output (buffer-substring (eshell-beginning-of-output)
-                                    (eshell-end-of-output)))
-          (i my-eshell-backref-counter))
+                                    (1- (eshell-end-of-output))))
+          (i my-esh-backref-counter))
       (unless (string-blank-p output)
-        (cl-incf my-eshell-backref-counter)
-        (unless my-eshell-id
-          (setq-local my-eshell-id (my-alphabetic my-eshell-buffer-counter))
-          (cl-incf my-eshell-buffer-counter))
+        (cl-incf my-esh-backref-counter)
+        (unless my-esh-id
+          (setq-local my-esh-id (my-int-to-consonants my-esh-buffer-counter))
+          (cl-incf my-esh-buffer-counter))
         ;; Save the backref as a global Elisp variable
-        (set (intern (format "%s%d" my-eshell-id i)) output)
+        (set (intern (format "%s%d" my-esh-id i)) output)
         (eshell-previous-prompt 1)
         (if (search-backward "／" nil t)
             (progn
@@ -62,22 +70,22 @@ prompt becomes a timestamp like 13:59 after you run a command."
               (let ((inhibit-read-only t)
                     (query-replace-skip-read-only nil)
                     (inhibit-message t))
-                (insert "result " (format "$%s%d" my-eshell-id i))
+                (insert "result " (format "$%s%d" my-esh-id i))
                 (my-esh-re-propertize-prompt-at-point))
               (goto-char (point-max)))
           (warn "Eshell: Failed to find backref placeholder"))))))
 
-(defun my-eshell-time-cmd-1 ()
-  (setq my-eshell-last-cmd-start (time-to-seconds)))
+(defun my-esh-time-cmd-1 ()
+  (setq my-esh-last-cmd-start (time-to-seconds)))
 
 (defvar my-real-eshell-post-command-hook nil
   "Hook run after a non-blank command.
 Functions here have access to the variable
-`my-eshell-last-cmd-start', a time represented as seconds since
+`my-esh-last-cmd-start', a time represented as seconds since
 1970, which can be compared to the current output of
 `time-to-seconds', usually a somewhat higher number.")
 
-(defun my-eshell-time-cmd-2 ()
+(defun my-esh-time-cmd-2 ()
   "Run `my-real-eshell-post-command-hook'.
 Designed for `post-command-hook'."
   (run-hooks 'my-real-eshell-post-command-hook)
@@ -85,11 +93,11 @@ Designed for `post-command-hook'."
   ;; didn't beforehand.  By setting this variable at pre-command-hook, and
   ;; nulling it after post-command-hook, we can inspect the variable to know
   ;; if a real command did run.
-  (setq my-eshell-last-cmd-start nil))
+  (setq my-esh-last-cmd-start nil))
 
-(defun my-eshell-print-elapsed-maybe ()
-  (when my-eshell-last-cmd-start
-    (let ((n (- (time-to-seconds) my-eshell-last-cmd-start))
+(defun my-esh-print-elapsed-maybe ()
+  (when my-esh-last-cmd-start
+    (let ((n (- (time-to-seconds) my-esh-last-cmd-start))
           (inhibit-read-only t))
       (when (> n 1)
         (save-mark-and-excursion
@@ -99,48 +107,16 @@ Designed for `post-command-hook'."
             (search-backward " 〉")
             (search-backward "／")
             (insert "took " (if (> n 50)
-                                (format "%.0f s" n)
+                                (format "%.0fs" n)
                               (if (> n 5)
-                                  (format "%.1f s" n)
-                                (format "%.2f s" n))))
+                                  (format "%.1fs" n)
+                                (format "%.2fs" n))))
             (my-esh-re-propertize-prompt-at-point)))))))
-
-
-;;; Base encoding
-
-;; NOTE: see also `org-id-int-to-b36'
-(defun my-base36 (num)
-  "Encode NUM as base 36 string.
-This goes z (meaning 0) to a (meaning 25), then 9 (meaning 26) to
-0 (meaning 35).  After that, it's yz (meaning 36) to y0 (meaning
-71), then xz to x0, wz to w0 and so on.
-
-Why it's backwards?  Look up `message-number-base36' and reprogram
-it if you can, I couldn't."
-  (require 'message)
-  (message-number-base36 num (length (number-to-string (* 10 (/ num 36))))))
-
-(defun my-alphabetic (num)
-  "Encode NUM as base 26, represented by a string of letters.
-Useful where you don't want a numeric digit, e.g. the start of a
-variable name."
-  (my--base26 num (length (number-to-string (* 10 (/ num 26))))))
-
-(defun my--base26 (num len)
-  "Backend worker for `my-alphabetic'.
-NUM and LEN are as in `message-number-base36'."
-  (if (if (< len 0)
-          (<= num 0)
-        (= len 0))
-      ""
-    (concat (my--base26 (/ num 26) (1- len))
-            (char-to-string (aref "zyxwvutsrqponmlkjihgfedcba"
-                                  (% num 26))))))
 
 
 ;;; Narrowing shenanigans
 
-(defun my-eshell-prev-line (&optional arg)
+(defun my-esh-prev-line (&optional arg)
   "Like `previous-line', but auto-narrow if on Eshell output.
 If butting up against the edge of a narrow region, widen.
 
@@ -148,9 +124,9 @@ Meant to replace `previous-line'.  ARG is passed on."
   (interactive "p")
   (if (buffer-narrowed-p)
       (my-prev-line-maybe-widen arg)
-    (my-eshell-prev-line-maybe-narrow arg)))
+    (my-esh-prev-line-maybe-narrow arg)))
 
-(defun my-eshell-next-line (&optional arg)
+(defun my-esh-next-line (&optional arg)
   "Like `next-line', but auto-narrow if on Eshell output.
 If butting up against the edge of a narrow region, widen.
 
@@ -158,9 +134,9 @@ Meant to replace `next-line'.  ARG is passed on."
   (interactive "p")
   (if (buffer-narrowed-p)
       (my-next-line-maybe-widen arg)
-    (my-eshell-next-line-maybe-narrow arg)))
+    (my-esh-next-line-maybe-narrow arg)))
 
-(defun my-eshell-prev-line-maybe-narrow (&optional arg)
+(defun my-esh-prev-line-maybe-narrow (&optional arg)
   "Like `previous-line', but auto-narrow if on Eshell output.
 ARG is passed on."
   (interactive "p")
@@ -178,9 +154,9 @@ ARG is passed on."
       (when (= prev-prompt-from-above-this-line
                prev-prompt-from-end-of-this-line)
         ;; Not on a prompt, but in an output, so let's narrow.
-        (my-eshell-narrow-to-output)))))
+        (my-esh-narrow-to-output)))))
 
-(defun my-eshell-next-line-maybe-narrow (&optional arg)
+(defun my-esh-next-line-maybe-narrow (&optional arg)
   "Like `next-line', but auto-narrow if on Eshell output.
 ARG is passed on."
   (interactive "p")
@@ -200,7 +176,7 @@ ARG is passed on."
       (when (= next-prompt-from-below-this-line
                next-prompt-from-start-of-this-line)
         ;; Not on a prompt, but in an output, so let's narrow.
-        (my-eshell-narrow-to-output)))))
+        (my-esh-narrow-to-output)))))
 
 (defun my-prev-line-maybe-widen (&optional arg)
   "Like `previous-line', but break out of a narrowed region.
@@ -226,7 +202,7 @@ ARG is passed on."
     (recenter nil t))
   (next-line arg))
 
-(defun my-eshell-narrow-to-prompt ()
+(defun my-esh-narrow-to-prompt ()
   "Narrow buffer to prompt at point."
   (interactive)
   (forward-line)
@@ -239,7 +215,7 @@ ARG is passed on."
      (re-search-backward eshell-prompt-regexp nil t)
      (point))))
 
-(defun my-eshell-narrow-to-output ()
+(defun my-esh-narrow-to-output ()
   "Narrow buffer to output at point."
   (interactive)
   (forward-line)
@@ -253,27 +229,27 @@ ARG is passed on."
      (re-search-backward eshell-prompt-regexp nil t)
      (point))))
 
-(defun my-eshell-narrow-dwim ()
+(defun my-esh-narrow-dwim ()
   (interactive)
   (if (buffer-narrowed-p)
       (widen)
-    (my-eshell-narrow-to-output)))
+    (my-esh-narrow-to-output)))
 
-(defun my-eshell-next-prompt (n)
+(defun my-esh-next-prompt (n)
   (interactive "p")
   (if (buffer-narrowed-p)
       (widen))
   (eshell-next-prompt n))
 
-(defun my-eshell-previous-prompt (n)
+(defun my-esh-previous-prompt (n)
   (interactive "p")
   (if (buffer-narrowed-p)
       (widen))
   (eshell-previous-prompt n))
 
-(defun my-eshell-consult-history ()
+(defun my-esh-consult-history ()
   (interactive)
-  (consult-history (my-eshell-history)))
+  (consult-history (my-esh-history)))
 
 
 ;;; At-point magic
@@ -366,11 +342,11 @@ This may remove the directory component, use a path relative from
 
 ;; NOTE: This one just appends whole histories, so old commands in one buffer
 ;; can come before recent commands in another buffer.
-(defun my-eshell-history ()
+(defun my-esh-history ()
   "Return merged history for passing to `consult-history'.
 Takes histories of all currently open eshell buffers."
   (let* ((histories (->> (--map (buffer-local-value 'eshell-history-file-name it)
-                                (my-eshell-buffers))
+                                (my-esh-buffers))
                          (-filter #'f-exists-p)
                          (-filter #'f-readable-p)))
          (histories-oldest-first
@@ -385,11 +361,11 @@ Takes histories of all currently open eshell buffers."
                do (insert-file-contents f))
       (nreverse (s-split "\n" (buffer-string) t)))))
 
-(defun my-eshell-here (&optional dir)
+(defun my-esh-here (&optional dir)
   "Open or revisit a shell in DIR or the current directory.
 Note: doesn't scan for the shell buffers' `default-directory'
 values, but rather just looks at their names, expecting them to
-have been set by `my-eshell-rename' on
+have been set by `my-esh-rename' on
 `eshell-directory-change-hook' and `eshell-mode-hook'."
   (interactive)
   (let* ((dir (or dir default-directory))
@@ -398,13 +374,13 @@ have been set by `my-eshell-rename' on
         (switch-to-buffer name)
       (let ((default-directory dir))
         (eshell "new"))
-      (setq-local eshell-history-file-name (my-eshell-history-file dir))
-      (setq-local my-eshell-scrollback-file (my-eshell-scrollback-file dir))
+      (setq-local eshell-history-file-name (my-esh-history-file dir))
+      (setq-local my-esh-scrollback-file (my-esh-scrollback-file dir))
       (eshell-hist-initialize)
       ;; (my-restore-scrollback)
       )))
 
-(defun my-eshell-buffers ()
+(defun my-esh-buffers ()
   "Return a list of live eshell buffers."
   (cl-loop for buf in (buffer-list)
            when (eq (buffer-local-value 'major-mode buf) #'eshell-mode)
@@ -413,11 +389,11 @@ have been set by `my-eshell-rename' on
 ;; wip
 ;; TODO: test it
 ;; TODO: put setq-local etc on eshell mode hook and eshell change directory hook
-;; (defun my-eshell-here* ()
+;; (defun my-esh-here* ()
 ;;   "Open or revisit a shell in the current directory.
 ;; Attempts to scan all live eshell buffers."
 ;;   (interactive)
-;;   (let* ((bufs (my-eshell-buffers))
+;;   (let* ((bufs (my-esh-buffers))
 ;;          (dir default-directory)
 ;;          (dirs-bufs-alist
 ;;           (-zip (--map (buffer-local-value 'default-directory it) bufs)
@@ -426,34 +402,34 @@ have been set by `my-eshell-rename' on
 ;;         (switch-to-buffer (map-elt bufs-dirs-alist dir))
 ;;       (let ((default-directory dir))
 ;;         (eshell "new"))
-;;       (setq-local eshell-history-file-name (my-eshell-history-file dir))
-;;       (setq-local my-eshell-scrollback-file (my-eshell-scrollback-file dir))
+;;       (setq-local eshell-history-file-name (my-esh-history-file dir))
+;;       (setq-local my-esh-scrollback-file (my-esh-scrollback-file dir))
 ;;       (eshell-hist-initialize))
 ;;     ;; (my-restore-scrollback)
 ;;     ))
 
-(defun my-eshell-history-file (&optional dir)
+(defun my-esh-history-file (&optional dir)
   (expand-file-name ".eshell-command-history" (or dir default-directory)))
 
-(defun my-eshell-scrollback-file (&optional dir)
+(defun my-esh-scrollback-file (&optional dir)
   (expand-file-name ".eshell-scrollback" (or dir default-directory)))
 
 (defun my-restore-scrollback* ()
   (when (derived-mode-p 'eshell-mode)
     (insert
      (with-temp-buffer
-       (insert-file-contents-literally (or (bound-and-true-p my-eshell-scrollback-file)
-                                           (my-eshell-scrollback-file)))
+       (insert-file-contents-literally (or (bound-and-true-p my-esh-scrollback-file)
+                                           (my-esh-scrollback-file)))
        (princ (buffer-string))))))
 
 (defun my-restore-scrollback ()
   (when (derived-mode-p 'eshell-mode)
-    (insert-file-contents (or (bound-and-true-p my-eshell-scrollback-file)
-                              (my-eshell-scrollback-file)))))
+    (insert-file-contents (or (bound-and-true-p my-esh-scrollback-file)
+                              (my-esh-scrollback-file)))))
 
 (defun save-eshell-scrollback* ()
-  (let* ((file (or (bound-and-true-p my-eshell-scrollback-file)
-                   (my-eshell-scrollback-file)))
+  (let* ((file (or (bound-and-true-p my-esh-scrollback-file)
+                   (my-esh-scrollback-file)))
          (maybe (get-file-buffer file)))
     (when maybe (kill-buffer maybe))
     (save-mark-and-excursion
@@ -468,9 +444,9 @@ have been set by `my-eshell-rename' on
                           'append 'silently)
             ))))))
 
-(defun my-eshell-save-scrollback ()
-  (let* ((file (or (bound-and-true-p my-eshell-scrollback-file)
-                   (my-eshell-scrollback-file)))
+(defun my-esh-save-scrollback ()
+  (let* ((file (or (bound-and-true-p my-esh-scrollback-file)
+                   (my-esh-scrollback-file)))
          (maybe (get-file-buffer file)))
     (when (f-writable-p file)
       (when maybe (kill-buffer maybe))
@@ -514,7 +490,7 @@ MAX-LEN, not counting slashes."
 (defun my-generate-eshell-name (dir)
   (concat "*eshell " (my-fish-style-path dir 30) "*"))
 
-(defun my-eshell-rename ()
+(defun my-esh-rename ()
   (let ((newname (my-generate-eshell-name default-directory)))
     (if (get-buffer newname)
         (message "alrdy exist")

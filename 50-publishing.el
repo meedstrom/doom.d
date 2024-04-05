@@ -86,39 +86,38 @@ scanned."
   (advice-remove 'after-find-file #'doom--shut-up-autosave-a)
   (remove-hook 'org-export-before-parsing-functions #'org-attach-expand-links)
   (setq whitespace-global-modes nil)
-  (my-disable-modes-if-present
-   '(apheleia-global-mode
-     auto-encryption-mode
-     auto-save-mode
-     auto-save-visited-mode
-     awesome-tray-mode
-     beginend-global-mode
-     better-jumper-mode
-     context-menu-mode
-     diff-hl-flydiff-mode
-     dired-hist-mode
-     editorconfig-mode
-     electric-indent-mode
-     global-diff-hl-mode
-     global-eldoc-mode
-     global-emojify-mode
-     global-form-feed-mode
-     global-ligature-mode
-     global-prettify-symbols-mode
-     my-auto-commit-mode
-     nerd-icons-completion-mode
-     pixel-scroll-precision-mode
-     projectile-mode
-     recentf-mode
-     repeat-mode
-     save-place-mode
-     savehist-mode
-     show-paren-mode
-     smartparens-global-mode
-     solaire-global-mode
-     window-divider-mode
-     winner-mode
-     ws-butler-global-mode))
+  (my-disable-modes-if-present '(apheleia-global-mode
+                                 auto-encryption-mode
+                                 auto-save-mode
+                                 auto-save-visited-mode
+                                 awesome-tray-mode
+                                 beginend-global-mode
+                                 better-jumper-mode
+                                 context-menu-mode
+                                 diff-hl-flydiff-mode
+                                 dired-hist-mode
+                                 editorconfig-mode
+                                 electric-indent-mode
+                                 global-diff-hl-mode
+                                 global-eldoc-mode
+                                 global-emojify-mode
+                                 global-form-feed-mode
+                                 global-ligature-mode
+                                 global-prettify-symbols-mode
+                                 my-auto-commit-mode
+                                 nerd-icons-completion-mode
+                                 pixel-scroll-precision-mode
+                                 projectile-mode
+                                 recentf-mode
+                                 repeat-mode
+                                 save-place-mode
+                                 savehist-mode
+                                 show-paren-mode
+                                 smartparens-global-mode
+                                 solaire-global-mode
+                                 window-divider-mode
+                                 winner-mode
+                                 ws-butler-global-mode))
   ;; TODO: Review if I ever need these
   (when (modulep! :lang org)
     (undefadvice! '+org--fix-async-export-a :around '(org-export-to-file org-export-as))
@@ -141,6 +140,7 @@ scanned."
       (load-theme theme)))
 
   ;; Copy the files to /tmp to work from there
+  (mkdir "/tmp/roam" t)
   (shell-command "rm -rfv /tmp/roam/org/")
   (shell-command "cp -a /home/kept/roam /tmp/roam/org")
 
@@ -149,7 +149,7 @@ scanned."
 
   ;; Ensure that each post URL will contain a unique ID by now placing them in
   ;; subdirectories named by that ID, so org-export will translate all
-  ;; org-id links into these filesystem paths.
+  ;; org-id links into these relative filesystem paths.
   (cl-loop for path in (directory-files-recursively "/tmp/roam/org/" "\\.org$")
            unless (and (not (string-search ".sync-conflict-" path))
                        (not (string-search "/logseq/" path))
@@ -164,15 +164,13 @@ scanned."
                          t))
            do (delete-file path))
 
-
-
   (when (equal current-prefix-arg '(4))
     (shell-command "rm /tmp/roam/org-roam.db"))
   (when (equal current-prefix-arg '(16))
     (shell-command "rm /tmp/roam/org-roam.db")
     (add-hook 'my-org-roam-pre-scan-hook #'my-validate-org-buffer))
 
-  ;; Tell `org-id-locations' and the org-roam DB about the new work directory.
+  ;; Tell `org-id-locations' and the org-roam DB about the new work directory
   (setq org-roam-directory "/tmp/roam/org/")
   (setq org-roam-db-location "/tmp/roam/org-roam.db")
   (setq org-agenda-files '("/tmp/roam/org/"))
@@ -194,11 +192,13 @@ scanned."
                         :on (= refs:node-id nodes:id)]))
 
   ;; Change some things about the Org files, before org-export does its thing.
-  (add-hook 'org-export-before-parsing-functions #'my-add-backlinks)
+  (add-hook 'org-export-before-parsing-functions #'my-add-backlinks 10)
+  (add-hook 'org-export-before-parsing-functions #'my-ensure-section-containers 20)
+  (add-hook 'org-export-before-parsing-functions #'my-add-refs-as-paragraphs)
   (add-hook 'org-export-before-parsing-functions #'my-replace-datestamps-with-links)
+  (add-hook 'org-export-before-parsing-functions #'my-strip-inline-anki-ids)
   (add-hook 'org-export-before-parsing-functions #'org-transclusion-mode)
   ;; (add-hook 'org-export-before-parsing-functions #'my-replace-web-links-with-ref-note-links)
-  (add-hook 'org-export-before-parsing-functions #'my-add-refs-as-paragraphs)
 
   ;; (org-publish "my-slipbox-blog-attachments" t)
   (org-publish "my-slipbox-blog" t)
@@ -224,11 +224,10 @@ All arguments pass through to `org-publish-org-to'."
       (message "Found exclude-tag, excluding: %s" filename)
     (org-publish-org-to 'html filename "" plist pub-dir)
     ;; Begin postprocess
-    (when-let ((already-open (find-buffer-visiting filename)))
-      (cl-assert (not (buffer-modified-p already-open)))
-      (cl-assert (memq (buffer-local-value 'buffer-undo-list already-open)
-                       '(t nil)))
-      (kill-buffer already-open))
+    (when-let ((open (find-buffer-visiting filename)))
+      (cl-assert (not (buffer-modified-p open)))
+      (cl-assert (memq (buffer-local-value 'buffer-undo-list open) '(t nil)))
+      (kill-buffer open))
     (with-current-buffer (find-file-noselect filename)
       (goto-char (point-min))
       (let* ((html-path (org-export-output-file-name "" nil pub-dir))
@@ -390,13 +389,14 @@ All arguments pass through to `org-publish-org-to'."
             (when target-tags
               (dom-set-attribute anchor 'class (string-join target-tags " ")))))
 
-      ;; Format undescribed links more nicely
+      ;; Format undescribed links more nicely (less URL clutter)
       (cl-loop for anchor in (dom-by-tag dom 'a)
                as children = (dom-children anchor)
                as desc = (car children)
                as fixed-desc = (when (and desc (stringp desc))
                                  (->> desc
                                       (replace-regexp-in-string "^http.?://" "")
+                                      (replace-regexp-in-string "\?.*" "")
                                       (string-replace "%20" " ")))
                when fixed-desc
                unless (equal fixed-desc desc)
