@@ -53,15 +53,8 @@
 ;; Aaanyway, probs not the origin of bugs so leave it.
 
 (defun my-org-roam-db-update-file (&optional file-path _)
-  "Update Org-roam cache for FILE-PATH.
-
-If the file does not exist anymore, remove it from the cache.
-
-If the file exists, update the cache with information.
-
-If NO-REQUIRE, don't require optional libraries. Set NO-REQUIRE
-when the libraries are already required at some toplevel, e.g.
-in `org-roam-db-sync'."
+  "Lobotomized, faster version of `org-roam-db-update-file'.
+Also now with `my-org-roam-pre-scan-hook'."
   (setq file-path (or file-path (buffer-file-name (buffer-base-buffer))))
   (let ((content-hash (org-roam-db--file-hash file-path))
         (db-hash (caar (org-roam-db-query [:select hash :from files
@@ -92,26 +85,10 @@ in `org-roam-db-sync'."
                         (when (org-roam-db-node-p)
                           (org-roam-db-insert-node-data)
                           (org-roam-db-insert-aliases)
-                          (org-roam-db-insert-tags)
+                          ;; (org-roam-db-insert-tags)
                           (org-roam-db-insert-refs))
                         (outline-next-heading)
                         (< (point) end)))))
-
-           ;;(let ((nodes ))
-           ;; (cl-loop for node in nodes
-           ;;          do (progn
-           ;;               (goto-char node)
-           ;;               (mapc #'funcall
-           ;;                     (list #'org-roam-db-insert-node-data
-           ;;                           #'org-roam-db-insert-aliases
-           ;;                           #'org-roam-db-insert-tags
-           ;;                           #'org-roam-db-insert-refs))))
-           ;; )
-           ;; (org-roam-db-map-nodes
-           ;;  (list #'org-roam-db-insert-node-data
-           ;;        #'org-roam-db-insert-aliases
-           ;;        #'org-roam-db-insert-tags
-           ;;        #'org-roam-db-insert-refs))
            ;; (setq org-outline-path-cache nil)
            ;; (setq info (org-element-parse-buffer))
            ;; (org-roam-db-map-links

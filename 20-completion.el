@@ -11,7 +11,7 @@
 ;; wishlist: buffer preview
 (after! helm
   (setopt helm-ff-DEL-up-one-level-maybe t)
-  (when (modulep! helm)
+  (when (modulep! :completion helm)
     (define-key global-map [remap switch-to-buffer] #'helm-mini)))
 
 (advice-remove 'embark-completing-read-prompter

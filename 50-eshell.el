@@ -90,17 +90,12 @@
 ;; may become confused trying to distinguish prompt from input on lines which
 ;; don't start with a prompt.
 (after! eshell
-  (setopt eshell-prompt-function
-          (lambda ()
-            (concat "〈 [--:--] " (if (>= my-eshell-backref-counter 35)
-                                      "---"
-                                    "--") " 〉 ")))
-  (setopt eshell-prompt-regexp (rx "〈 " (*? anychar) " 〉 "))
+  (setopt eshell-prompt-function (lambda () "〈 ／／ 〉 "))
+  (setopt eshell-prompt-regexp "^〈 .*? 〉 ")
   (setopt eshell-scroll-show-maximum-output nil)
   (setopt eshell-show-lisp-completions t)
 
-  ;; TODO: instead of building a string to return all at once, insert text
-  ;; iteratively in the buffer so we can give it text properties.  But for what?
+  ;; TODO: give the different parts of the string different text properties
   (setopt eshell-banner-message
           '(cl-loop
             for cmd in
@@ -131,7 +126,7 @@
             finally return
             (concat
              "Welcome to the Emacs shell ⚘  \nCommands you may find nifty: \n\n"
-             (string-join hints "\n")
+             (string-join (cl-sort hints #'string-lessp) "\n")
              "\n"))))
 
 ;; Set up the hook `my-real-eshell-post-command-hook' as a reliable substitute
@@ -143,7 +138,6 @@
 (add-hook 'my-real-eshell-post-command-hook #'my-eshell-print-elapsed-maybe)
 
 ;; Save all command outputs as variables! No more my-copy-region-into-variable.
-(add-hook 'eshell-mode-hook #'my-eshell-assign-id) ;; used in naming variables
 (add-hook 'my-real-eshell-post-command-hook #'my-eshell-save-output-into-backref)
 
 ;; Sync history on every command, in case I powercycle the computer

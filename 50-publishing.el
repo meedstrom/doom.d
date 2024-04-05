@@ -120,7 +120,7 @@ scanned."
      winner-mode
      ws-butler-global-mode))
   ;; TODO: Review if I ever need these
-  (when (modulep! org)
+  (when (modulep! :lang org)
     (undefadvice! '+org--fix-async-export-a :around '(org-export-to-file org-export-as))
     (undefadvice! '+org-babel-disable-async-maybe-a :around #'ob-async-org-babel-execute-src-block))
 

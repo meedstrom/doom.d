@@ -12,6 +12,7 @@
 (package! asyncloop :type 'local :recipe (:host github :repo "meedstrom/asyncloop" :depth full))
 (package! massmapper :type 'local :recipe (:host github :repo "meedstrom/massmapper" :depth full))
 (package! deianira :type 'local :recipe (:host github :repo "meedstrom/deianira" :depth full))
+(package! eager-state :type 'local :recipe (:host github :repo "meedstrom/eager-state" :depth full))
 (package! inline-anki :type 'local :recipe (:host github :repo "meedstrom/inline-anki" :depth full))
 (package! eva
   :type 'local

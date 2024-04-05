@@ -1,70 +1,71 @@
 ;; Defuns used in Eshell config -*- lexical-binding: t; -*-
 
+;; TODO: When one command output exceeded buffer scrollback, format a special
+;; message saying so inside the next prompt including the time-elapsed and
+;; backref, then emit a new prompt
+
 ;;; Stuff
 
 (defvar my-eshell-last-cmd-start nil)
 (defvar my-eshell-buffer-counter 0)
-(defvar my-eshell-backref-counter 0)
+(defvar my-eshell-backref-counter 1)
 (defvar my-eshell-id nil)
 (make-variable-buffer-local 'my-eshell-last-cmd-start)
 (make-variable-buffer-local 'my-eshell-backref-counter)
 (make-variable-buffer-local 'my-eshell-id)
 
-
-
-(defun my-eshell-assign-id ()
-  (setq-local my-eshell-id (my-alphabetic my-eshell-buffer-counter))
-  (cl-incf my-eshell-buffer-counter))
+(defun my-esh-re-propertize-prompt-at-point ()
+  (interactive)
+  (when (< (- (point) (line-beginning-position)) 2)
+    (forward-char 2))
+  (let ((beg (search-backward "〈 "))
+        (end (search-forward " 〉 "))
+        (inhibit-read-only t))
+    ;; Use exactly the same properties as `eshell-emit-prompt'
+    (remove-text-properties beg end '(read-only
+                                      font-lock-face
+                                      front-sticky
+                                      rear-nonsticky))
+    (add-text-properties beg end '(read-only t
+                                   font-lock-face eshell-prompt
+                                   front-sticky (font-lock-face read-only)
+                                   rear-nonsticky (font-lock-face read-only)))))
 
 (defun my-eshell-timestamp-update ()
   "When added to `eshell-pre-command-hook', the first string --:-- in the
 prompt becomes a timestamp like 13:59 after you run a command."
   (save-excursion
-    (forward-line -1)
-    (when-let* ((unfilled-timestamp "--:--")
-                (end (search-forward unfilled-timestamp nil t))
-                (beg (- end (length unfilled-timestamp)))
-                (inhibit-read-only t))
-      (delete-region beg end)
-      (insert (format-time-string "%H:%M"))
-      (add-text-properties beg (point) '(font-lock-face eshell-prompt)))))
-
-;; TODO: maybe use a variable like this instead of hardcoding.  but the
-;; characters inside have to be unique compared to the rest of the prompt
-(defvar my-eshell-prompt-backref-placeholder-string "--")
+    (search-backward " 〉")
+    (search-backward "／")
+    (search-backward "／")
+    (let ((inhibit-read-only t))
+      (insert (format-time-string "ran at %H:%M"))
+      (my-esh-re-propertize-prompt-at-point))))
 
 (defun my-eshell-save-output-into-backref ()
   "Save last output into a variable and echo its name in the prompt."
   (when my-eshell-last-cmd-start
     (let ((output (buffer-substring (eshell-beginning-of-output)
                                     (eshell-end-of-output)))
-          (i (my-base36 (prog1 my-eshell-backref-counter
-                          (cl-incf my-eshell-backref-counter)))))
+          (i my-eshell-backref-counter))
       (unless (string-blank-p output)
+        (cl-incf my-eshell-backref-counter)
         (unless my-eshell-id
-          (my-eshell-assign-id))
-        ;; Save the backref, buffer-locally.
-        ;; (set (make-local-variable (intern (concat my-eshell-id i))) output)
-        ;; Save the backref, globally.
-        (set (intern (concat my-eshell-id i)) output)
+          (setq-local my-eshell-id (my-alphabetic my-eshell-buffer-counter))
+          (cl-incf my-eshell-buffer-counter))
+        ;; Save the backref as a global Elisp variable
+        (set (intern (format "%s%d" my-eshell-id i)) output)
         (eshell-previous-prompt 1)
-        ;; NOTE: makes assumption about eshell-prompt-function, and that the
-        ;; placeholder is in the last line in case of a multiline prompt.
-        (if (search-backward "] --" ;;(line-beginning-position)
-                             nil t)
+        (if (search-backward "／" nil t)
             (progn
-              (forward-char 2)
-              (let ((beg (point))
-                    (inhibit-read-only t)
+              (forward-char 1)
+              (let ((inhibit-read-only t)
                     (query-replace-skip-read-only nil)
                     (inhibit-message t))
-                (replace-regexp (rx (** 2 3 "-")) "" nil (point) (+ 4 (point)))
-                (insert (concat my-eshell-id i))
-                (add-text-properties beg (point) '(font-lock-face eshell-prompt
-                                                   ;; read-only t
-                                                   )))
+                (insert "result " (format "$%s%d" my-eshell-id i))
+                (my-esh-re-propertize-prompt-at-point))
               (goto-char (point-max)))
-          (message "Eshell: Failed to find backref placeholder"))))))
+          (warn "Eshell: Failed to find backref placeholder"))))))
 
 (defun my-eshell-time-cmd-1 ()
   (setq my-eshell-last-cmd-start (time-to-seconds)))
@@ -77,30 +78,32 @@ Functions here have access to the variable
 `time-to-seconds', usually a somewhat higher number.")
 
 (defun my-eshell-time-cmd-2 ()
+  "Run `my-real-eshell-post-command-hook'.
+Designed for `post-command-hook'."
   (run-hooks 'my-real-eshell-post-command-hook)
-  ;; Possible bug(?) makes post-command-hook run after no-ops, but pre-command
-  ;; hook didn't beforehand.  By setting this variable at pre-command-hook, and
-  ;; nulling it now, we know next time if a real command did run.
+  ;; Possible bug(?) runs post-command-hook after no-ops, but pre-command-hook
+  ;; didn't beforehand.  By setting this variable at pre-command-hook, and
+  ;; nulling it after post-command-hook, we can inspect the variable to know
+  ;; if a real command did run.
   (setq my-eshell-last-cmd-start nil))
 
 (defun my-eshell-print-elapsed-maybe ()
   (when my-eshell-last-cmd-start
-    (let ((n (- (time-to-seconds) my-eshell-last-cmd-start)))
+    (let ((n (- (time-to-seconds) my-eshell-last-cmd-start))
+          (inhibit-read-only t))
       (when (> n 1)
-        (let ((inhibit-read-only t))
-          (save-mark-and-excursion
-            (eshell-next-prompt 1) ;; b/c other post-command hooks may have run
-            (let ((beg (search-backward "〈 ")))
-              (forward-char 1)
-              (insert
-               " Last command took: "
-               (if (> n 100)
-                   (number-to-string (round n))
-                 (substring (number-to-string n) 0 4))
-               " s\n ")
-              (add-text-properties beg (point) '(font-lock-face eshell-prompt
-                                                 ;; read-only t
-                                                 )))))))))
+        (save-mark-and-excursion
+          (save-match-data
+            (eshell-previous-prompt 1)
+            ;; (eshell-next-prompt 1) ;; b/c other post-command hooks may have run
+            (search-backward " 〉")
+            (search-backward "／")
+            (insert "took " (if (> n 50)
+                                (format "%.0f s" n)
+                              (if (> n 5)
+                                  (format "%.1f s" n)
+                                (format "%.2f s" n))))
+            (my-esh-re-propertize-prompt-at-point)))))))
 
 
 ;;; Base encoding
@@ -564,7 +567,7 @@ MAX-LEN, not counting slashes."
       (insert "Emacs Uptime: ")
       (add-text-properties
        (line-beginning-position) (point)
-       `(face (list :foreground ,(seq-elt ansi-color-names-vector 3)
+       `(face (list :foreground ,(seq-elt ansi-color-names-vector 1)
                     :weight bold)))
       (insert (emacs-uptime))
       (open-line 1))
@@ -573,7 +576,7 @@ MAX-LEN, not counting slashes."
     (insert "Emacs: ")
     (add-text-properties
      (line-beginning-position) (point)
-     `(face (list :foreground ,(seq-elt ansi-color-names-vector 3)
+     `(face (list :foreground ,(seq-elt ansi-color-names-vector 1)
                   :weight bold)))
     (insert emacs-version)
     (open-line 1)

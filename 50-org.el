@@ -44,7 +44,7 @@
 (setopt org-use-speed-commands t)
 (setopt org-clock-x11idle-program-name (or (executable-find "xprintidle") "x11idle"))
 (setopt org-replace-disputed-keys t)
-(setopt org-tags-column -75)
+(setopt org-tags-column 0)
 
 ;; (setq-default org-display-custom-times t) ;; could it cause org-element bugs due to daily page titles?
 (setopt org-agenda-files
@@ -95,29 +95,27 @@
 (add-hook 'org-clock-out-hook #'bh/clock-out-maybe 90)
 (add-hook 'text-mode-hook #'turn-off-smartparens-mode)
 
-(setopt my-org-prettify-alist
-        '(;; Still waiting for the Year of AsciiMath on Org-mode...
-          ("\\vdots" . "⋮")
-          ("\\implies" . "⟹")
-          ("\\sqrt" . "√")
-          ("\\ldots" . "…")))
-
 (defun my-org-setup-prettify ()
   (setq prettify-symbols-alist
-        (cl-union prettify-symbols-alist my-org-prettify-alist)))
+        (cl-union prettify-symbols-alist
+                  '(;; Still waiting for the Year of AsciiMath on Org-mode...
+                    ("\\vdots" . "⋮")
+                    ("\\implies" . "⟹")
+                    ("\\sqrt" . "√")
+                    ("\\ldots" . "…")))))
 
 (after! org
   (unless after-init-time
     (setq debug-on-error t)
     (error (message "Org loaded during init, I don't want this")))
-  (require 'named-timer) ;; indispensable 50-line library
+  (require 'named-timer)
   (named-timer-run :my-clock-reminder nil 600
                    (defun my-clock-remind ()
                      (when (org-clock-is-active)
                        (message (concat "Currently working on: "
                                         org-clock-current-task)))))
   ;; If using Doom's Org
-  (if (fboundp '+org-init-org-directory-h)
+  (if (modulep! :lang org)
       ;; fix interference with org-transclusion
       (advice-remove 'org-link-search '+org--recenter-after-follow-link-a)
     ;; if not using Doom's org
