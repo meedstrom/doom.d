@@ -32,29 +32,14 @@
 
 
 
-;;; Saner db stuff
+;;; roam db
 
-;; At first, I didn't like that there's an `emacsql-with-transaction' at such a
-;; high level in `org-roam-db-sync' since the emacsql docstring says there
-;; should be no side effects and that's harder to ensure with such deeply
-;; nested code.  Then I read the source and I see why.  It's a beautiful
-;; algorithm.  Anyway there's no problem running a lot of sanity checks in BODY
-;; that gets re-tried when the database is busy, it's just slow.
-;;
-;; Come to think.  Since org-roam-db-sync can take minutes, it's still a bad
-;; idea to use `emacsql-with-transaction'.  We don't want to re-run for
-;; minutes!  Tho it's never happened to me so not really an issue, but it
-;; would be ideal to find a way to do all the heavy calculations only once.
-;;
-;; Say org-roam builds a big list of stuff to push to sql, then attempts one
-;; tiny emacsql-with-transaction sexp at the end.  Might not be hard to hack.
-;; Just override org-roam-db-query so it pushes its arguments onto a list.
-
-;; Aaanyway, probs not the origin of bugs so leave it.
+(after! org-roam-db
+  (fset 'org-roam-db-update-file #'my-org-roam-db-update-file)
+  (fset 'org-roam-db-sync #'my-org-roam-db-sync))
 
 (defun my-org-roam-db-update-file (&optional file-path _)
-  "Lobotomized, faster version of `org-roam-db-update-file'.
-Also now with `my-org-roam-pre-scan-hook'."
+  "Version of `org-roam-db-update-file' calling `my-org-roam-pre-scan-hook'."
   (setq file-path (or file-path (buffer-file-name (buffer-base-buffer))))
   (let ((content-hash (org-roam-db--file-hash file-path))
         (db-hash (caar (org-roam-db-query [:select hash :from files
@@ -68,11 +53,11 @@ Also now with `my-org-roam-pre-scan-hook'."
         (emacsql-with-transaction (org-roam-db)
           (org-with-wide-buffer
            ;; please comment why
-           ;; (org-set-regexps-and-options 'tags-only)
+           (org-set-regexps-and-options 'tags-only)
            ;; Maybe not necessary anymore
            ;; 2021 https://github.com/org-roam/org-roam/issues/1844
            ;; 2023 https://code.tecosaur.net/tec/org-mode/commit/5ed3e1dfc3e3bc6f88a4300a0bcb46d23cdb57fa
-           ;; (org-refresh-category-properties)
+           (org-refresh-category-properties)
            (org-roam-db-clear-file)
            (org-roam-db-insert-file content-hash)
            (org-roam-db-insert-file-node)
@@ -85,21 +70,22 @@ Also now with `my-org-roam-pre-scan-hook'."
                         (when (org-roam-db-node-p)
                           (org-roam-db-insert-node-data)
                           (org-roam-db-insert-aliases)
-                          ;; (org-roam-db-insert-tags)
+                          (org-roam-db-insert-tags)
                           (org-roam-db-insert-refs))
                         (outline-next-heading)
                         (< (point) end)))))
-           ;; (setq org-outline-path-cache nil)
-           ;; (setq info (org-element-parse-buffer))
-           ;; (org-roam-db-map-links
-           ;;  (list #'org-roam-db-insert-link))
-           ;; (when (featurep 'oc)
-           ;;   (org-roam-db-map-citations
-           ;;    info
-           ;;    (list #'org-roam-db-insert-citation)))
+           (setq org-outline-path-cache nil)
+           (setq info (org-element-parse-buffer))
+           (org-roam-db-map-links
+            (list #'org-roam-db-insert-link))
+           (when (featurep 'oc)
+             (org-roam-db-map-citations
+              info
+              (list #'org-roam-db-insert-citation)))
            ))
         ))))
 
+;; Make the processing message more informative
 (defun my-org-roam-db-sync (&optional force)
   "Synchronize the cache state with the current Org files on-disk.
 If FORCE, force a rebuild of the cache from scratch."
@@ -142,9 +128,7 @@ If FORCE, force a rebuild of the cache from scratch."
              (lwarn 'org-roam :error "Failed to process %s with error %s, skipping..."
                     file (error-message-string err)))))))))
 
-(after! org-roam-db
-  (fset 'org-roam-db-update-file #'my-org-roam-db-update-file)
-  (fset 'org-roam-db-sync #'my-org-roam-db-sync))
+;; Try to implement a timeout
 
 ;; (after! org-roam
 ;;   (defun org-roam-file-p (&optional file)
@@ -253,6 +237,7 @@ If FORCE, force a rebuild of the cache from scratch."
 ;;                              directory))))
 
 
+;; Fix: don't publish files that have a #+FILETAGS matching :exclude-tags
 (after! ox-publish
   (defun org-publish-get-base-files (project)
     "Return a list of all files in PROJECT."

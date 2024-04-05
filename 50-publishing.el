@@ -74,13 +74,13 @@ scanned."
   (setopt save-silently t)
   (setq debug-on-error t)
   ;; (setq debug-on-quit t)
-  (my-remove-all-advice 'org-roam-db-update-file) ;; disable vulpea
+  (my-remove-all-advice 'org-roam-db-update-file) ;; disable my hacks
 
   ;; Speed up publishing
-  (setq org-mode-hook nil)
   (gcmh-mode 0)
   (setq gc-cons-threshold (* 4 1000 1000 1000))
-  (fset 'org-publish-write-cache-file #'ignore) ;; huge effect!
+  (setq org-mode-hook nil)
+  (fset 'org-publish-write-cache-file #'ignore) ;; mega speedup!
 
   ;; Attempt to speed up publishing, not sure these help much
   (advice-remove 'after-find-file #'doom--shut-up-autosave-a)
@@ -118,14 +118,16 @@ scanned."
                                  window-divider-mode
                                  winner-mode
                                  ws-butler-global-mode))
-  ;; TODO: Review if I ever need these
+
+  ;; Doom's org module tries too hard. Such a large delta from upstream
+  ;; complicates hacking.
   (when (modulep! :lang org)
-    (undefadvice! '+org--fix-async-export-a :around '(org-export-to-file org-export-as))
-    (undefadvice! '+org-babel-disable-async-maybe-a :around #'ob-async-org-babel-execute-src-block))
+    (undefadvice! +org--fix-async-export-a :around '(org-export-to-file org-export-as))
+    (undefadvice! +org-babel-disable-async-maybe-a :around #'ob-async-org-babel-execute-src-block))
 
   ;; For hygiene, ensure that this subordinate emacs syncs nothing to disk
   (my-state-sync-mode 0)
-  ;; (preempt-kill-emacs-hook-mode 0)
+  ;; (eager-state-preempt-kill-emacs-hook-mode 0)
   (setq kill-emacs-hook nil)
 
   ;; Switch theme for 2 reasons
@@ -144,8 +146,9 @@ scanned."
   (shell-command "rm -rfv /tmp/roam/org/")
   (shell-command "cp -a /home/kept/roam /tmp/roam/org")
 
-  ;; Make a pretty post of recent completed todos
-  (my-generate-todo-log-from "/tmp/roam/org/noagenda/archive.org")
+  ;; Pretty-print a post of recent completed todos
+  (cl-letf ((org-agenda-files '("/tmp/roam/org/noagenda/archive.org")))
+    (my-generate-todo-log "/tmp/roam/org/todo-log.org"))
 
   ;; Ensure that each post URL will contain a unique ID by now placing them in
   ;; subdirectories named by that ID, so org-export will translate all
@@ -154,13 +157,13 @@ scanned."
            unless (and (not (string-search ".sync-conflict-" path))
                        (not (string-search "/logseq/" path))
                        (let* ((uuid (my-org-file-id path))
-                              (new (concat "/tmp/roam/org/"
-                                           (my-uuid-to-short uuid)
-                                           "/")))
-                         (mkdir new t)
-                         (rename-file path new)
-                         (make-symbolic-link "../attachments"
-                                             (concat new "attachments"))
+                              (newdir (concat "/tmp/roam/org/"
+                                              (my-uuid-to-short uuid)
+                                              "/")))
+                         (mkdir newdir t)
+                         (rename-file path newdir)
+                         ;; (make-symbolic-link "../attachments"
+                         ;;                     (concat new "attachments"))
                          t))
            do (delete-file path))
 
@@ -193,14 +196,10 @@ scanned."
   (add-hook 'org-export-before-parsing-functions #'my-strip-inline-anki-ids)
   (add-hook 'org-export-before-parsing-functions #'org-transclusion-mode)
 
-  ;; (org-publish "my-slipbox-blog-attachments" t)
   (org-publish "my-slipbox-blog" t)
-
-  ;; (shell-command "rm -r /tmp/roam/org/") ;; so recentf won't take me there
   (my-check-id-collisions)
   (my-make-atom-feed "/tmp/roam/posts.atom" "/tmp/roam/atom/")
   (find-file "/home/kept/pub/")
-  (message "Prepping website")
   (async-shell-command "./encrypt-rebuild.sh")
   (start-process "chromium" nil "chromium-browser" "--app=http://localhost:5173"))
 
@@ -209,7 +208,7 @@ scanned."
 Also wrap that same html in a json file and an atom entry.
 
 All arguments pass through to `org-publish-org-to'."
-  (redisplay) ;; I like watching it work
+  (redisplay) ;; Let me watch it work
   (if (-intersection (my-org-file-tags filename) my-tags-to-avoid-uploading)
       ;; If we already know we won't publish it, don't export the file at all.
       ;; Saves so much time.  Some other issues can also disqualify the file,
@@ -224,14 +223,14 @@ All arguments pass through to `org-publish-org-to'."
     (with-current-buffer (find-file-noselect filename)
       (goto-char (point-min))
       (let* ((html-path (org-export-output-file-name "" nil pub-dir))
-             (keywords (org-collect-keywords '("date" "subtitle")))
+             (keywords (org-collect-keywords '("date" "subtitle" "title")))
              (uuid (org-id-get))
              (tags (-flatten (org-get-tags)))
              (created (substring (org-entry-get nil "CREATED") 1 -1))
              (updated (let ((value (map-elt keywords "DATE")))
                         (when (and value (not (string-blank-p (car value))))
                           (substring (car value) 1 -1))))
-             ;; underscore bc of js
+             ;; underscore b/c of JS
              (created_fancy
               (format-time-string (car org-timestamp-custom-formats)
                                   (date-to-time created)))
@@ -240,28 +239,30 @@ All arguments pass through to `org-publish-org-to'."
                 (format-time-string (car org-timestamp-custom-formats)
                                     (date-to-time updated))))
              (pageid (-last-item (split-string pub-dir "/" t)))
-             (hidden (car (-intersection my-tags-for-hiding tags)))
+             (hidden (not (null (-intersection my-tags-for-hiding tags))))
+             ;; (hidden (car (-intersection my-tags-for-hiding tags)))
              (metadata
               `((pageid . ,pageid)
                 (slug . ,(string-replace pub-dir "" html-path))
-                (hidden . ,hidden)
                 (created . ,created)
                 (created_fancy . ,created_fancy)
                 (updated . ,updated)
                 (updated_fancy . ,updated_fancy)
                 (title .  ,(if (member "daily" tags)
                                created_fancy
-                             (->> (org-get-title)
+                             (->> (car (map-elt keywords "TITLE"))
+                                  ;; (org-get-title)
                                   (string-replace "---" "—")
                                   (string-replace "--" "–"))))
+                (description . ,(car (map-elt keywords "SUBTITLE")))
                 (tags . ,tags)
-                (description . ,(car (map-elt keywords "SUBTITLE")))))
+                (hidden . ,hidden)))
              (post (-snoc metadata
                           `(content . ,(my-customize-the-html metadata html-path)))))
         ;; Write JSON object
         (with-temp-file (concat "/tmp/roam/json/" pageid)
           (insert (json-encode post)))
-        ;; Write Atom entry if it's an ok one for the feed
+        ;; Write Atom entry if it's an okay post for the feed
         (when (and (not hidden)
                    (not (-intersection tags '("tag" "daily" "stub")))
                    (string-lessp "2023" (or updated created)))
@@ -270,134 +271,145 @@ All arguments pass through to `org-publish-org-to'."
       (kill-buffer (current-buffer)))))
 
 (defun my-customize-the-html (metadata html-path)
-  (let-alist metadata
-    (let ((dom nil)
-          (after-toc (make-marker)))
-      (with-temp-buffer
-        (buffer-disable-undo)
-        (insert-file-contents html-path)
+  "Take contents of HTML-PATH and return a customized string."
+  ;; Do some standard text munging before properly parsing the DOM because it's
+  ;; easier for some things
+  (let ((dom (with-temp-buffer
+               (buffer-disable-undo)
+               (insert-file-contents html-path)
 
-        ;; Give the ToC div a class and remove its pointless inner div
-        ;; (This part seems easy to do with dom.el, but first have to figure out
-        ;; how do the rest in dom.el)
-        (when (re-search-forward "^<div id=\"table-of-contents\".*?>" nil t)
-          (replace-match "<nav class=\"toc\">")
-          (re-search-forward "<div id=\"text-table-of-contents\".*?>")
-          (replace-match "")
-          (search-forward "</div>\n</div>")
-          (replace-match "</nav>"))
-        (set-marker after-toc (point))
+               ;; Give the ToC div a class and remove its pointless inner div
+               ;; (Trying to do this via dom.el ran into a strange error, and
+               ;; it's plenty safe anyway)
+               (when (re-search-forward "^<div id=\"table-of-contents\".*?>" nil t)
+                 (replace-match "<nav class=\"toc\" role=\"doc-toc\">")
+                 (re-search-forward "<div id=\"text-table-of-contents\".*?>")
+                 (replace-match "")
+                 (search-forward "</div>\n</div>")
+                 (replace-match "</nav>"))
 
-        ;; Edit the .outline-2, .outline-3... divs that Org generated.
-        ;; First, strip all divs that aren't .outline-N.  That way we'll
-        ;; know the only closing tags that remain will be the correct ones
-        ;; to turn into </section> tags.
-        (while (search-forward "\n<div" nil t)
-          (let ((beg (match-beginning 0)))
-            (unless (re-search-forward
-                     " id=\".*?\" class=\"outline-[123456]\"" (line-end-position) t)
-              (delete-region beg (search-forward ">"))
-              ;; Note that this may not be the corresponding closing tag.
-              ;; That's why we goto-char (1+ beg) below, to make sure the
-              ;; loop catches them all.
-              (search-forward "\n</div>")
-              (replace-match "")
-              (goto-char (1+ beg)))))
-        ;; Now turn all remaining <div> into <section>
-        (goto-char (marker-position after-toc))
-        (while (re-search-forward "^<div .*?class=\"outline-\\([123456]\\).*?>" nil t)
-          (if (cl-evenp (string-to-number (match-string 1)))
-              (replace-match "<section class=\"even\">")
-            (replace-match "<section class=\"odd\">")))
-        (goto-char (marker-position after-toc))
-        (while (search-forward "\n</div>" nil t)
-          (replace-match "\n</section>"))
-        ;; Now add something like the .outline-text-N divs again.  By
-        ;; default, Org didn't always generate them, if there was no body
-        ;; text under a heading, but I need it always for my CSS padding
-        ;; rules.  Also unlike Org, I'll let headings sit inside so they
-        ;; line up with the body text.
-        (goto-char (marker-position after-toc))
-        (while (re-search-forward "^<section .*?>" nil t)
-          (insert "\n<div class=\"text-in-section\">")
-          (re-search-forward "^</?section")
-          (goto-char (match-beginning 0))
-          (insert "</div>\n"))
+               ;; Add .text-in-section divs, like Org's .outline-text-N divs
+               ;; but Org didn't always generate them, if there was no body
+               ;; text under a heading.  I need them always for my CSS padding
+               ;; rules.  Also unlike Org, I'll let headings sit inside so they
+               ;; line up with the body text.
 
-        ;; Since Org didn't add any wrapper div before first headline (and I want
-        ;; the wrapper to swallow the table of contents too), do it manually.
-        (goto-char (point-min))
-        (insert "\n<div class=\"text-in-section\">\n")
-        (goto-char (point-min))
-        (if (search-forward "\n<section" nil t)
-            (goto-char (match-beginning 0))
-          ;; No subsections in this file
-          (goto-char (point-max)))
-        (insert "\n</div>\n")
+               ;; TODO: Try to make my CSS work with Org's default divs after
+               ;; all, so I can get rid of this code. There is an advantage to
+               ;; not wrapping the heading element, and it's that I won't have
+               ;; to use an aria-labelledby for the enclosing section.  (And I
+               ;; emight be able to test other people's Org CSS, maybe even add
+               ;; a theme selector between all of them)
+               (goto-char (point-min))
+               (while (re-search-forward "^<section .*?>" nil t)
+                 (insert "\n<div class=\"text-in-section\">")
+                 (re-search-forward "^</?section")
+                 (goto-char (match-beginning 0))
+                 (insert "</div>\n"))
+               ;; Same as above, for before first headline
+               (goto-char (point-min))
+               (insert "\n<div class=\"text-in-section\">\n")
+               (goto-char (point-min))
+               (if (search-forward "\n<section" nil t)
+                   (goto-char (match-beginning 0))
+                 ;; No subsections in this file
+                 (goto-char (point-max)))
+               (insert "\n</div>\n")
 
-        ;; Now parse HTML because most things are easier & safer to do to a
-        ;; parsed tree than to a text buffer
-        (setq dom (libxml-parse-html-region)))
+               ;; declutter
+               ;; (goto-char (point-min))
+               ;; (while (re-search-forward "^\(<.*?\) id=[^ >]*?" nil t)
+               ;;   (replace-match "\1"))
+               (goto-char (point-min))
+               (while (search-forward "\n<ul class=\"org-ul\">\n" nil t)
+                 (replace-match "\n<ul>\n"))
+               (while (search-forward "\n<ol class=\"org-ol\">\n" nil t)
+                 (replace-match "\n<ol>\n"))
 
-      ;; New version
-      ;; (when-let ((toc (dom-by-id dom "table-of-contents")))
-      ;;   (let ((new-toc (dom-node 'nav ((class . "toc")) (dom-children toc))))
-      ;;     (dom-add-child-before dom new-toc toc)
-      ;;     (dom-remove-node dom toc)))
+               (libxml-parse-html-region))))
 
-      ;; (cl-loop
-      ;;  for div in (dom-by-class dom "^outline-.$")
-      ;;  as parity = (if (string-match-p "[246]" (dom-attr div 'class))
-      ;;                  "even"
-      ;;                "odd")
-      ;;  as new = (dom-node 'section `((class . ,parity)) (dom-children div))
-      ;;  )
+    ;; (setq dom '(html nil (body nil (span nil "sdfsf" "sdfsdfg") (p nil "sdfgfg"))))
+    ;; (setq p (car (dom-by-tag dom 'p)))
+    ;; (dom-parent dom p)
+    ;; (dom-add-child-before (dom-parent dom p) '(a nil "baz") p)
+    ;; (dom-remove-node (dom-parent dom p) p)
+    ;; dom
 
-      ;; (cl-loop for section in (dom-by-tag dom 'section)
-      ;;          as children = (dom-children section)
-      ;;          do (--find-index (eq 'section (dom-tag it)) children)
-      ;;          )
+    ;; Edit the .outline-2, .outline-3... divs that Org generated.  It's
+    ;; pleasant writing CSS for the selectors section.even and section.odd.
+    (cl-loop
+     for section in (dom-by-tag dom 'section)
+     as parity = (if (string-match-p "[246]" (dom-attr section 'class))
+                     "even"
+                   "odd")
+     do (progn
+          (dom-set-attribute section 'class parity)
+          ;; TODO: wrap outline-5's non-section children in a text-in-section
+          ;; div, repeat for outline-4, then -3, etc.
+          ;; Urrrgh it's so complex, maybe just cope with the org default?
+          ;; (dom-add-child-before section )
+          ))
 
-      ;; Mess with internal links
-      (cl-loop
-       for anchor in (dom-by-tag dom 'a)
-       as href = (dom-attr anchor 'href)
-       as hash = (when href (cadr (split-string href "#")))
-       as uuid? = (when hash (->> hash
-                                  (string-replace "ID-" "")
-                                  (string-replace "id:" "")))
-       when (and uuid? (org-uuidgen-p uuid?))
-       do (let ((shortid (my-uuid-to-short uuid?))
-                (target-tags (-flatten (org-roam-db-query
-                                        `[:select [tag]
-                                          :from tags
-                                          :where (= node-id ,uuid?)]))))
-            ;; Replace all UUID with my shortened form, and strip the #HEADING-ID
-            ;; if it matches /PAGE-ID.
-            (dom-set-attribute anchor 'href (my-strip-hash-if-matches-base
-                                             (string-replace hash shortid href)))
-            ;; Associate short-ID with original UUID to check for collisions
-            (push uuid? (gethash shortid my-ids))
-            ;; Style the link based on target tag
-            (when target-tags
-              (dom-set-attribute anchor 'class (string-join target-tags " ")))))
+    ;; ;; Wrap section text
+    ;; (cl-loop
+    ;;  for section in (dom-by-tag dom 'section)
+    ;;  as children = (dom-children section)
+    ;;  as len = (--find-index (eq 'section (dom-tag it)) children)
+    ;;  as subset = (if len (take len children) children)
+    ;;  as wrapped-children =
+    ;;  (apply #'dom-node 'div '((class . "text-in-section"))
+    ;;         (copy-sequence subset))
+    ;;  do (progn
+    ;;       (dolist (child subset)
+    ;;         (dom-remove-node section child))
+    ;;       (dom-add-child-before section wrapped-children)))
 
-      ;; Format undescribed links more nicely (less URL clutter)
-      (cl-loop for anchor in (dom-by-tag dom 'a)
-               as children = (dom-children anchor)
-               as desc = (car children)
-               as fixed-desc = (when (and desc (stringp desc))
-                                 (->> desc
-                                      (replace-regexp-in-string "^http.?://" "")
-                                      (replace-regexp-in-string "\?.*" "")
-                                      (string-replace "%20" " ")))
-               when fixed-desc
-               unless (equal fixed-desc desc)
-               do (progn
-                    (dom-add-child-before anchor fixed-desc desc)
-                    (dom-remove-node anchor desc)))
+    ;; Mess with internal links
+    (cl-loop
+     for anchor in (dom-by-tag dom 'a)
+     as href = (dom-attr anchor 'href)
+     as hash = (when href (cadr (split-string href "#")))
+     as uuid? = (when hash (->> hash
+                                (string-replace "ID-" "")
+                                (string-replace "id:" "")))
+     when (and uuid? (org-uuidgen-p uuid?))
+     do (let ((shortid (my-uuid-to-short uuid?))
+              (target-tags (-flatten (org-roam-db-query
+                                      `[:select [tag]
+                                        :from tags
+                                        :where (= node-id ,uuid?)]))))
+          ;; Replace all UUID with my shortened form, and strip the #HEADING-ID
+          ;; if it matches /PAGE-ID.
+          (dom-set-attribute anchor 'href (my-strip-hash-if-matches-base
+                                           (string-replace hash shortid href)))
+          ;; https://www.w3.org/TR/dpub-aria-1.0/#doc-backlink
+          (let-alist metadata
+            (when (equal shortid .slug)
+              (dom-set-attribute anchor 'role "doc-backlink")))
+          ;; Associate short-ID with original UUID to check for collisions later
+          (push uuid? (gethash shortid my-ids))
+          ;; Style the link based on tags of target document
+          (when target-tags
+            (dom-set-attribute anchor 'class (string-join target-tags " ")))))
 
-      ;; Mess with headings
+    ;; Format undescribed links more nicely (less URL clutter)
+    (cl-loop for anchor in (dom-by-tag dom 'a)
+             as children = (dom-children anchor)
+             as desc = (car children)
+             as fixed-desc = (when (and desc (stringp desc))
+                               (->> desc
+                                    (replace-regexp-in-string "^http.?://" "")
+                                    (replace-regexp-in-string "\?.*" "")
+                                    (string-replace "%20" " ")))
+             when fixed-desc
+             unless (equal fixed-desc desc)
+             do (progn
+                  (dom-add-child-before anchor fixed-desc desc)
+                  (dom-remove-node anchor desc)))
+
+    ;; Mess with headings
+    ;; TODO: Actually, let the sections keep their IDs and erase the heading ID
+    (let-alist metadata
       (cl-loop for heading in (--mapcat (dom-by-tag dom it) '(h2 h3 h4 h5 h6))
                as id = (dom-attr heading 'id)
                when (and id (stringp id)) do
@@ -407,77 +419,87 @@ All arguments pass through to `org-publish-org-to'."
                           ;; Since my blog's Note component may appear on other
                           ;; routes than the canonical one (like /recent/400 or
                           ;; /unlocked/...), hardcode the full URL
-                          (selflink (dom-node 'a
-                                              `((href . ,(concat "/" .pageid "/" .slug "#" hashid))
-                                                (class . "heading-permalink")
-                                                (rel . "bookmark"))
-                                              "🔗")))
+                          (selflink
+                           (dom-node 'a
+                                     `((href . ,(concat "/" .pageid "/" .slug "#" hashid))
+                                       (class . "heading-permalink")
+                                       (rel . "bookmark"))
+                                     "🔗")))
                      (dom-set-attribute heading 'id hashid)
-                     (dom-append-child heading selflink)))))
+                     (dom-append-child heading selflink))))))
 
-      ;; Org-export doesn't replace double/triple-dash in all situations (like
-      ;; in a heading or when it butts up against a link on a newline), so
-      ;; force it
-      (cl-labels ((fix-text-nodes-except-code-blocks (dom)
-                    (cl-loop
-                     for child in (dom-children dom)
-                     if (stringp child)
-                     do (let ((fixed-child (->> child
-                                                (string-replace "---" "—")
-                                                (string-replace "--" "–"))))
-                          (unless (equal fixed-child child)
-                            (dom-add-child-before dom fixed-child child)
-                            (dom-remove-node dom child)))
-                     else if (not (member (dom-tag child) '(code pre kbd samp)))
-                     do (fix-text-nodes-except-code-blocks child))))
-        (fix-text-nodes-except-code-blocks dom))
 
-      ;; Wrap tables in divs that can be scrolled left-right
-      (cl-loop for tbl in (dom-by-tag dom 'table)
-               as parent = (dom-parent dom tbl)
-               as wrapped-tbl = (dom-node 'div
-                                          '((class . "table-container"))
-                                          (copy-sequence tbl))
-               do (progn
-                    (dom-add-child-before parent wrapped-tbl tbl)
-                    (dom-remove-node parent tbl)))
+    ;; Org-export doesn't replace double/triple-dash in all situations (like
+    ;; in a heading or when it butts up against a link on a newline), so
+    ;; force it
+    (cl-labels ((strip-id-attribute (node)
+                  (dom-remove-attribute node 'id))
+                (fix-nodes-except-code-blocks (dom)
+                  (cl-loop
+                   for child in (dom-children dom)
+                   if (stringp child)
+                   do (let ((fixed-child (->> child
+                                              (string-replace "---" "—")
+                                              (string-replace "--" "–"))))
+                        (unless (equal fixed-child child)
+                          (dom-add-child-before dom fixed-child child)
+                          (dom-remove-node dom child)))
+                   else if (not (member (dom-tag child) '(code pre kbd samp)))
+                   do (progn
+                        ;; Bonus, strip IDs everywhere in the DOM
+                        (unless (member (dom-tag child) '(h2 h3 h4 h5 h6 li))
+                          (dom-remove-attribute child 'id))
+                        (fix-nodes-except-code-blocks child)))))
+      (fix-nodes-except-code-blocks dom))
 
-      ;; Mess with img elements
-      (cl-loop for img in (dom-by-tag dom 'img)
-               as path = (dom-attr img 'src)
-               as alt = (dom-attr img 'alt)
-               when (string-prefix-p "attach" path)
-               ;; Fix paths
-               do (dom-set-attribute img 'src (concat "/" path))
-               ;; Org exports an image alt-text that is just the image
-               ;; basename.  Interesting idea, since the alt-text becomes
-               ;; portable if that's where you put the alt-text!  Go with it
-               ;; and just strip .jpg/.png extension.
-               and when (string-search alt path)
-               do (dom-set-attribute img 'alt (->> alt
-                                                   (file-name-sans-extension)
-                                                   (string-replace "_" " "))))
+    ;; Wrap tables in divs that can be scrolled left-right
+    (cl-loop for tbl in (dom-by-tag dom 'table)
+             as parent = (dom-parent dom tbl)
+             as wrapped-tbl = (dom-node 'div
+                                        '((class . "table-container"))
+                                        (copy-sequence tbl))
+             do (progn
+                  (dom-add-child-before parent wrapped-tbl tbl)
+                  (dom-remove-node parent tbl)))
 
-      ;; FIXME: I think it actually replaces all image links
-      ;; Let images that aren't links become self-links.  Such links also need
-      ;; rel="external" in order to prevent SvelteKit from interpreting the URL
-      ;; as a route and executing the route.
-      (cl-loop for img in (dom-by-tag dom 'img)
-               as parent = (dom-parent dom img)
-               unless (eq 'a (dom-tag parent))
-               do (let ((linkified-img
-                         (dom-node 'a `((href . ,(dom-attr img 'src))
-                                        (rel . "external"))
-                                   (copy-sequence img))))
-                    (dom-add-child-before parent linkified-img img)
-                    (dom-remove-node parent img)))
+    ;; Mess with img elements
+    (cl-loop for img in (dom-by-tag dom 'img)
+             as path = (dom-attr img 'src)
+             as alt = (dom-attr img 'alt)
+             when (string-prefix-p "attach" path)
+             ;; Fix paths
+             do (dom-set-attribute img 'src (concat "/" path))
+             ;; Org exports an image alt-text that is just the image
+             ;; basename.  Interesting idea, since the alt-text becomes
+             ;; portable if that's where you put the alt-text!  Go with it
+             ;; and just strip .jpg/.png extension.
+             and when (string-search alt path)
+             do (dom-set-attribute img 'alt (->> alt
+                                                 (file-name-sans-extension)
+                                                 (string-replace "_" " "))))
 
-      ;; Return final HTML.  Phew!
-      (with-temp-buffer
-        (dom-print dom)
-        (search-backward "</body></html>")
-        (replace-match "")
-        (goto-char (point-min))
-        (search-forward "<html><body>")
-        (replace-match "")
-        (buffer-string)))))
+    ;; Let images that aren't links become self-links.  Such links also need
+    ;; rel="external" in order to prevent SvelteKit from interpreting the URL
+    ;; as a route and executing the route.
+    (cl-loop for img in (dom-by-tag dom 'img)
+             as parent = (dom-parent dom img)
+             unless (eq 'a (dom-tag parent))
+             do (let ((linkified-img
+                       (dom-node 'a `((href . ,(dom-attr img 'src))
+                                      (rel . "external"))
+                                 (copy-sequence img))))
+                  (dom-add-child-before parent linkified-img img)
+                  (dom-remove-node parent img)))
+
+    ;; (let ((x (dom-by-class "backlinks")))
+    ;;   (dom-set-attribute x 'role "dom-endnotes"))
+
+    ;; Return final HTML.  Phew!
+    (with-temp-buffer
+      (dom-print dom)
+      (search-backward "</body></html>")
+      (replace-match "")
+      (goto-char (point-min))
+      (search-forward "<html><body>")
+      (replace-match "")
+      (buffer-string))))

@@ -155,23 +155,14 @@ matches PAGE-ID anyway (i.e. it's a file-level id)"
         base
       link)))
 
-(defun my-generate-todo-log-from (src)
+(defun my-generate-todo-log (path)
   "Generate a log of completed tasks using `org-agenda-write'.
-Wrap that function's HTML output in an Org file that has a HTML
+Wrap that function's HTML output in an Org file that has an HTML
 export block."
-  (cl-letf ((org-agenda-files (list src))
-            (org-agenda-span 'fortnight)
-            (org-agenda-prefix-format
-             '((agenda . " %i %?-12t") (todo . "") (tags . "") (search . "")))
-            (org-agenda-show-inherited-tags nil)
-            (path (concat (file-name-directory src) "todo-log.org")))
-
-    ;; TODO: verify it works with cl-letf
-    ;; (setopt org-agenda-files '("/home/kept/roam/noagenda/archive.org"))
-    ;; (setopt org-agenda-span 'fortnight)
-    ;; (setopt org-agenda-prefix-format '((agenda . " %i %?-12t") (todo . "") (tags . "") (search . "")))
-    ;; (setopt org-agenda-show-inherited-tags nil)
-
+  (let ((org-agenda-span 'fortnight)
+        (org-agenda-prefix-format
+         '((agenda . " %i %?-12t") (todo . "") (tags . "") (search . "")))
+        (org-agenda-show-inherited-tags nil))
     (org-agenda-list)
     (org-agenda-log-mode)
     (org-agenda-archives-mode)
@@ -211,8 +202,8 @@ export block."
       (search-forward "-today")
       (replace-match "")
       (save-buffer)
-      (kill-buffer))
-    (view-echo-area-messages)))
+      (kill-buffer)))
+  (view-echo-area-messages))
 
 (defun my-make-atom-feed (path entries-dir)
   (when (file-exists-p path)
@@ -391,11 +382,9 @@ Useful for jumping past a file's front matter.")
                           (forward-line 1)
                           (or (looking-at-p "^[ \t]*:") (eobp))))
                  ;; wrap in <div class="ref">
-                 ;; TODO: First fix the div cleaner in the publish code
-                 (insert "\n#+begin_ref\nSource " refs "\n#+end_ref\n\n")
-                 ;; (insert "\nSource " refs "\n\n")
+                 ;; (insert "\n#+begin_ref\nSource " refs "\n#+end_ref\n\n")
                  ;; (insert "\n" refs "\n\n")
-                 )
+                 (insert "\nGoing off " refs "\n\n"))
                (org-next-visible-heading 1)
                (not (eobp)))))))
 
