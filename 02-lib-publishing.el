@@ -36,6 +36,7 @@ For all other uses, see `org-get-tags'."
       (substring (my-int-to-consonants decimal 5) -5))))
 
 (defun my-int-to-consonants (integer &optional length)
+  "Convert INTEGER to a base-21 number represented as non-vowel letters."
   (let ((result "")
         (remainder integer))
     (while (> remainder 0)
@@ -144,6 +145,60 @@ to me to do that."
                               (date-to-time datestamp))))
                   (insert (concat "[[id:" (caar daily-id) "][<" fancy ">]]")))))))))))
 
+
+;; FIXME The first body text could be a #+begin_quote or #+TOC, which gets
+;; skipped too.  It could also be the beginning of an :aside:.
+(defvar my-org-text-line-re "^[ \t]*[^#:\n]"
+  "Regexp to match a line that isn't a comment, a keyword or a property drawer.
+Useful for jumping past a file's front matter.")
+
+(defun my-add-refs-as-paragraphs (&rest _)
+  (save-excursion
+    (goto-char (point-min))
+    (when (re-search-forward my-org-text-line-re nil t)
+      ;; (goto-char (line-beginning-position))
+      (forward-line -1)
+      (unless (or (looking-at-p "#\\+toc") (looking-at-p "#\\+begin_"))
+        (forward-line 1))
+      (open-line 2)
+      (while (progn
+               (when-let ((refs (org-entry-get nil "roam_refs")))
+                 (while (progn
+                          (forward-line 1)
+                          (or (looking-at-p "^[ \t]*:") (eobp))))
+                 ;; wrap in <div class="ref">
+                 ;; (insert "\n#+begin_ref\nSource " refs "\n#+end_ref\n\n")
+                 ;; (insert "\n" refs "\n\n")
+                 (insert "\nGoing off " refs "\n\n"))
+               (org-next-visible-heading 1)
+               (not (eobp)))))))
+
+(defun my-ensure-section-containers (&rest _)
+  "Like setting `org-html-container-element' to \"section\",
+but apply to all subheadings, not only the top level."
+  (save-excursion
+    (goto-char (point-min))
+    (when (re-search-forward org-element-headline-re nil t)
+      (while (not (eobp))
+        (org-entry-put nil "HTML_CONTAINER" "section")
+        (outline-next-heading)))))
+
+(defun my-strip-inline-anki-ids (&rest _)
+  (require 'inline-anki)
+  (save-excursion
+    (dolist (re (list inline-anki-rx:eol
+                      inline-anki-rx:eol-new
+                      inline-anki-rx:item-start
+                      inline-anki-rx:item-start-new))
+      (goto-char (point-min))
+      (while (re-search-forward re nil t)
+        (let ((beg (match-beginning 0))
+              (end (point)))
+          (if (and (search-backward "@" (line-beginning-position) t)
+                   (> 18 (- end (point))))
+              (delete-region (point) end)
+            (delete-region beg end)))))))
+
 (defun my-strip-hash-if-matches-base (link)
   "Remove the hash-part of the link (i.e. the bit after the #
 character in domain.com/PAGE-ID/slug#HEADING-ID) if the HEADING-ID
@@ -205,7 +260,7 @@ export block."
       (kill-buffer)))
   (view-echo-area-messages))
 
-(defun my-make-atom-feed (path entries-dir)
+(defun my-compile-atom-feed (path entries-dir)
   (when (file-exists-p path)
     (move-file-to-trash path))
   (with-temp-file path
@@ -366,53 +421,6 @@ export block."
                             title)
         (my-locate-err "Possible broken tag")))))
 
-(defvar my-org-text-line-re "^[ \t]*[^#:\n]"
-  "Regexp to match a line that isn't commented out or a property drawer.
-Useful for jumping past a file's front matter.")
-
-(defun my-add-refs-as-paragraphs (&rest _)
-  (save-excursion
-    (goto-char (point-min))
-    (when (re-search-forward my-org-text-line-re nil t)
-      (goto-char (line-beginning-position))
-      (open-line 2)
-      (while (progn
-               (when-let ((refs (org-entry-get nil "roam_refs")))
-                 (while (progn
-                          (forward-line 1)
-                          (or (looking-at-p "^[ \t]*:") (eobp))))
-                 ;; wrap in <div class="ref">
-                 ;; (insert "\n#+begin_ref\nSource " refs "\n#+end_ref\n\n")
-                 ;; (insert "\n" refs "\n\n")
-                 (insert "\nGoing off " refs "\n\n"))
-               (org-next-visible-heading 1)
-               (not (eobp)))))))
-
-(defun my-ensure-section-containers (&rest _)
-  "Like setting `org-html-container-element' to \"section\",
-but apply to all subheadings, not only the top level."
-  (save-excursion
-    (goto-char (point-min))
-    (when (re-search-forward org-element-headline-re nil t)
-      (while (not (eobp))
-        (org-entry-put nil "HTML_CONTAINER" "section")
-        (outline-next-heading)))))
-
-(defun my-strip-inline-anki-ids (&rest _)
-  (require 'inline-anki)
-  (save-excursion
-    (dolist (re (list inline-anki-rx:eol
-                      inline-anki-rx:eol-new
-                      inline-anki-rx:item-start
-                      inline-anki-rx:item-start-new))
-      (goto-char (point-min))
-      (while (re-search-forward re nil t)
-        (let ((beg (match-beginning 0))
-              (end (point)))
-          (if (and (search-backward "@" (line-beginning-position) t)
-                   (> 18 (- end (point))))
-              (delete-region (point) end)
-            (delete-region beg end)))))))
 
 
 ;;; Patches

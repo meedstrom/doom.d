@@ -16,6 +16,9 @@
 (apheleia-global-mode)
 (setopt apheleia-log-debug-info t)
 
+(require 'eager-state)
+(eager-state-preempt-kill-emacs-hook-mode)
+
 (use-package circadian
   :disabled
   :config
