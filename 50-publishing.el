@@ -262,34 +262,6 @@ through to `org-html-publish-to-html'."
                         else count t)))
                (cons 'tags tags)
                (cons 'hidden hidden)))
-             ;; `((pageid . ,pageid)
-             ;;   (slug . ,(string-replace pub-dir "" html-path))
-             ;;   (created . ,created)
-             ;;   (createdFancy . ,created-fancy) ;; JS camelCase
-             ;;   (updated . ,updated)
-             ;;   (updatedFancy . ,updated-fancy)
-             ;;   (title .  ,(if (member "daily" tags)
-             ;;                  created-fancy
-             ;;                (->> (org-get-title)
-             ;;                     (string-replace "---" "—")
-             ;;                     (string-replace "--" "–"))))
-             ;;   (description . ,(car (map-elt keywords "SUBTITLE")))
-             ;;   (wordcount . ,(save-excursion
-             ;;                   (cl-loop
-             ;;                    while (re-search-forward my-org-text-line-re nil t)
-             ;;                    if (and (eq (preceding-char) ?*)
-             ;;                            (member "noexport" (org-get-tags)))
-             ;;                    ;; Don't count words under hidden subtrees
-             ;;                    do (org-next-visible-heading 1)
-             ;;                    else sum (count-words (point) (line-end-position)))))
-             ;;   (linkcount . ,(save-excursion
-             ;;                   (cl-loop
-             ;;                    while (re-search-forward org-link-bracket-re nil t)
-             ;;                    if (member "noexport" (org-get-tags))
-             ;;                    do (org-next-visible-heading 1)
-             ;;                    else count t)))
-             ;;  (tags . ,tags)
-             ;;  (hidden . ,hidden)))
              ;; Final "post object" for use by blog
              (post
               (-snoc metadata
