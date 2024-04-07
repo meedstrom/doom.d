@@ -95,6 +95,7 @@ to me to do that."
           (if (bobp)
               (progn
                 (goto-char (point-max))
+                (insert "\n\n#+ATTR_HTML: :role doc-endnotes") ;;testing
                 (insert "\n* What links here  :backlinks:")
                 ;; If this page is a pseudo-tag such as #emacs, make it clear
                 ;; that the backlinks can be used by link aggregators.  IDK
@@ -180,6 +181,8 @@ but apply to all subheadings, not only the top level."
     (goto-char (point-min))
     (when (re-search-forward org-element-headline-re nil t)
       (while (not (eobp))
+        ;; Testing to add role=
+
         (org-entry-put nil "HTML_CONTAINER" "section")
         (outline-next-heading)))))
 

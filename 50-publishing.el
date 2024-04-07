@@ -30,13 +30,14 @@
            :recursive t
            :body-only t
            :section-numbers nil
-           :headline-levels 5
+           :headline-levels 5  ;; Go all the way to <h6> before making <li>
            :with-toc nil
            :with-tags nil
            :with-todo-keywords nil
            :with-smart-quotes nil
+           :with-latex 'html ;; Use `org-latex-to-html-convert-command'
            :with-drawers '(not "logbook" "noexport") ;; (case-insensitive FYI)
-           ;; NOTE: this works only for subtrees, so we also check file-level
+           ;; NOTE: This only excludes subtrees, so we also check file-level
            ;; tag in `my-publish-to-blog'.  Maybe upstream a patch?
            :exclude-tags ,my-tags-to-avoid-uploading)))
 
@@ -59,29 +60,16 @@ scanned."
   (require 'prism)
   (require 'dash)
   (view-echo-area-messages) ;; for watching it work
-  (setopt org-export-use-babel nil)
-  (setopt org-export-with-broken-links nil) ;; links would disappear quietly!
-  ;; (setopt org-export-with-drawers '(not "logbook" "noexport")) ;; case-insensitive
-  ;; (setopt org-export-exclude-tags my-tags-to-avoid-uploading)
-  ;; (setopt org-export-with-smart-quotes nil)
-  ;; (setopt org-export-with-tags nil)
-  ;; (setopt org-export-with-todo-keywords nil)
-  ;; (setopt org-export-headline-levels 5) ;; go all the way to <h6> before making <li>
-
-  ;; BUG If we don't set this to "", there will be .html inside some links even
-  ;; though I set "" in the `org-publish-org-to' call.
-  (setopt org-html-extension "")
-  (setopt org-html-checkbox-type 'unicode)
-  (setopt org-html-html5-fancy t)
-  ;; why does it skip envs like \begin{align}?
-  ;; (setopt org-html-with-latex 'verbatim)
-  (setopt org-html-with-latex 'html) ;; use `org-latex-to-html-convert-command'
+  (setq org-export-use-babel nil)
+  (setq org-export-with-broken-links nil) ;; links would disappear quietly!
+  (setq org-html-extension "")
+  (setq org-html-checkbox-type 'unicode)
+  (setq org-html-html5-fancy t)
   ;; TODO: upstream as an option for `org-preview-latex-process-alist'
-  (setopt org-latex-to-html-convert-command "node /home/kept/pub/texToMathML.js %i")
+  (setq org-latex-to-html-convert-command "node /home/kept/pub/texToMathML.js %i")
   (setq save-silently t)
   (setq org-inhibit-startup t) ;; from org-publish-org-to
   (setq debug-on-error t)
-  ;; (setq debug-on-quit t)
   (my-remove-all-advice 'org-roam-db-update-file) ;; disable my hacks
 
   ;; Speed up publishing
@@ -132,9 +120,9 @@ scanned."
   (setq kill-emacs-hook nil)
 
   ;; Switch theme for 2 reasons
-  ;; 1. Show me that this is not my normal Emacs
+  ;; 1. Remind me that this is not my normal Emacs
   ;; 2. The theme carries over to code blocks, so ensure it's a theme that
-  ;;    suits both light and dark mode
+  ;;    looks okay in both light and dark mode
   (let ((theme 'doom-monokai-machine))
     ;; (let ((theme 'ef-rosa))
     ;; (let ((theme 'doom-zenburn))
@@ -201,64 +189,112 @@ scanned."
   (my-compile-atom-feed "/tmp/roam/posts.atom" "/tmp/roam/atom/")
   (find-file "/home/kept/pub/")
   (async-shell-command "./encrypt-rebuild.sh")
-  (start-process "chromium" nil "chromium-browser" "http://localhost:5173"))
+  (start-process "firefox" nil "firefox" "http://localhost:5173"))
 
 (defun my-publish-to-blog (plist filename pub-dir)
   "Take org file FILENAME and make html file in PUB-DIR.
-Also wrap that same html in a json file and an atom entry.
+Then postprocess that same html into a json file and maybe an
+atom entry.
 
-All arguments pass through to `org-publish-org-to'."
+Designed to be called by `org-publish', all arguments pass
+through to `org-html-publish-to-html'."
   (redisplay) ;; Let me watch it work
   (if (-intersection (my-org-file-tags filename) my-tags-to-avoid-uploading)
       ;; If we already know we won't publish it, don't export the file at all.
       ;; Saves so much time.  Some other issues can also disqualify the file,
       ;; but I take care of them in `my-validate-org-buffer'.
       (message "Found exclude-tag, excluding: %s" filename)
-    (org-publish-org-to 'html filename "" plist pub-dir)
-    ;; Begin postprocess
     (when-let ((open (find-buffer-visiting filename)))
       (cl-assert (not (buffer-modified-p open)))
       (cl-assert (memq (buffer-local-value 'buffer-undo-list open) '(t nil)))
       (kill-buffer open))
     (with-current-buffer (find-file-noselect filename)
       (goto-char (point-min))
-      (let* ((html-path (org-export-output-file-name "" nil pub-dir))
-             (keywords (org-collect-keywords '("date" "subtitle" "title")))
-             (uuid (org-id-get))
-             (tags (-flatten (org-get-tags)))
+      (let* (;; Black box by the grace of Bastien, Carsten &c
+             (html-path (org-html-publish-to-html plist filename pub-dir))
+             ;; (html-path (org-export-output-file-name org-html-extension nil pub-dir))
+             ;; Collect metadata from Org source
+             (keywords (org-collect-keywords '("DATE" "SUBTITLE")))
+             (tags (mapcar #'downcase (org-get-tags)))
+             
              (created (substring (org-entry-get nil "CREATED") 1 -1))
              (updated (let ((value (map-elt keywords "DATE")))
                         (when (and value (not (string-blank-p (car value))))
                           (substring (car value) 1 -1))))
-             ;; underscore b/c of JS
-             (created_fancy
+             (created-fancy
               (format-time-string (car org-timestamp-custom-formats)
                                   (date-to-time created)))
-             (updated_fancy
+             (updated-fancy
               (when updated
                 (format-time-string (car org-timestamp-custom-formats)
                                     (date-to-time updated))))
              (pageid (-last-item (split-string pub-dir "/" t)))
              (hidden (not (null (-intersection my-tags-for-hiding tags))))
-             ;; (hidden (car (-intersection my-tags-for-hiding tags)))
              (metadata
-              `((pageid . ,pageid)
-                (slug . ,(string-replace pub-dir "" html-path))
-                (created . ,created)
-                (created_fancy . ,created_fancy)
-                (updated . ,updated)
-                (updated_fancy . ,updated_fancy)
-                (title .  ,(if (member "daily" tags)
-                               created_fancy
-                             (->> (car (map-elt keywords "TITLE"))
-                                  ;; (org-get-title)
-                                  (string-replace "---" "—")
-                                  (string-replace "--" "–"))))
-                (description . ,(car (map-elt keywords "SUBTITLE")))
-                (tags . ,tags)
-                (hidden . ,hidden)))
-             (post (-snoc metadata
-                          `(content . ,(my-customize-the-html metadata html-path)))))
+              (list
+               (cons 'pageid pageid)
+               (cons 'slug (string-replace pub-dir "" html-path))
+               (cons 'created created)
+               (cons 'createdFancy created-fancy) ;; JS camelCase
+               (cons 'updated updated)
+               (cons 'updatedFancy updated-fancy)
+               (cons 'title (if (member "daily" tags)
+                                created-fancy
+                              (->> (org-get-title)
+                                   (string-replace "---" "—")
+                                   (string-replace "--" "–"))))
+               (cons 'description (car (map-elt keywords "SUBTITLE")))
+               (cons 'wordcount
+                     (save-excursion
+                       (cl-loop
+                        while (re-search-forward my-org-text-line-re nil t)
+                        if (and (eq (preceding-char) ?*)
+                                (member "noexport" (org-get-tags)))
+                        ;; Don't count words under hidden subtrees
+                        do (org-next-visible-heading 1)
+                        else sum (count-words (point) (line-end-position)))))
+               (cons 'linkcount
+                     (save-excursion
+                       (cl-loop
+                        while (re-search-forward org-link-bracket-re nil t)
+                        if (member "noexport" (org-get-tags))
+                        do (org-next-visible-heading 1)
+                        else count t)))
+               (cons 'tags tags)
+               (cons 'hidden hidden)))
+             ;; `((pageid . ,pageid)
+             ;;   (slug . ,(string-replace pub-dir "" html-path))
+             ;;   (created . ,created)
+             ;;   (createdFancy . ,created-fancy) ;; JS camelCase
+             ;;   (updated . ,updated)
+             ;;   (updatedFancy . ,updated-fancy)
+             ;;   (title .  ,(if (member "daily" tags)
+             ;;                  created-fancy
+             ;;                (->> (org-get-title)
+             ;;                     (string-replace "---" "—")
+             ;;                     (string-replace "--" "–"))))
+             ;;   (description . ,(car (map-elt keywords "SUBTITLE")))
+             ;;   (wordcount . ,(save-excursion
+             ;;                   (cl-loop
+             ;;                    while (re-search-forward my-org-text-line-re nil t)
+             ;;                    if (and (eq (preceding-char) ?*)
+             ;;                            (member "noexport" (org-get-tags)))
+             ;;                    ;; Don't count words under hidden subtrees
+             ;;                    do (org-next-visible-heading 1)
+             ;;                    else sum (count-words (point) (line-end-position)))))
+             ;;   (linkcount . ,(save-excursion
+             ;;                   (cl-loop
+             ;;                    while (re-search-forward org-link-bracket-re nil t)
+             ;;                    if (member "noexport" (org-get-tags))
+             ;;                    do (org-next-visible-heading 1)
+             ;;                    else count t)))
+             ;;  (tags . ,tags)
+             ;;  (hidden . ,hidden)))
+             ;; Final "post object" for use by blog
+             (post
+              (-snoc metadata
+                     `(content . ,(my-customize-the-html html-path metadata))))
+             (uuid (org-id-get)))
         ;; Write JSON object
         (with-temp-file (concat "/tmp/roam/json/" pageid)
           (insert (json-encode post)))
@@ -270,45 +306,36 @@ All arguments pass through to `org-publish-org-to'."
             (insert (my-make-atom-entry post uuid)))))
       (kill-buffer (current-buffer)))))
 
-(defun my-customize-the-html (metadata html-path)
-  "Take contents of HTML-PATH and return a customized string."
-  ;; Do some standard text munging before properly parsing the DOM because it's
-  ;; easier for some things
+(defun my-customize-the-html (html-path metadata)
+  "Take contents of HTML-PATH and return customized content."
   (if (f-empty-p html-path)
       ""
     (let ((dom (with-temp-buffer
                  (buffer-disable-undo)
                  (insert-file-contents html-path)
-
                  ;; Give the ToC div a class and remove its pointless inner div
-                 ;; (Trying to do this via dom.el, I hit a strange error, and
-                 ;; it's plenty safe in this method anyway)
                  (when (re-search-forward "^<div id=\"table-of-contents\".*?>" nil t)
                    (replace-match "<nav class=\"toc\" role=\"doc-toc\">")
                    (re-search-forward "^<div id=\"text-table-of-contents\".*?>")
                    (replace-match "")
                    (search-forward "</div>\n</div>")
                    (replace-match "</nav>"))
-
-                 ;; declutter
-                 (goto-char (point-min))
-                 (while (search-forward "\n<ul class=\"org-ul\">\n" nil t)
-                   (replace-match "\n<ul>\n"))
-                 (goto-char (point-min))
-                 (while (search-forward "\n<ol class=\"org-ol\">\n" nil t)
-                   (replace-match "\n<ol>\n"))
-
-                 (goto-char (point-min))
-                 (when (re-search-forward "^<h2 id.*>What links here" nil t)
-                   (forward-line -1)
-                   (search-forward " class=\"outline-2\"" (line-end-position))
-                   (insert " role=\"doc-endnotes\""))
+                 ;; Add role="doc-endnotes"
+                 ;; (goto-char (point-min))
+                 ;; (when (re-search-forward "^<h2 id.*>What links here" nil t)
+                 ;;   (forward-line -1)
+                 ;;   (search-forward " class=\"outline-2\"" (line-end-position))
+                 ;;   (insert " role=\"doc-endnotes\""))
 
                  (libxml-parse-html-region))))
 
+      ;; Declutter unused classes
+      (cl-loop for node in (--mapcat (dom-by-class dom it) '("org-ul" "org-ol"))
+               do (dom-remove-attribute node 'class))
+
       ;; Edit the .outline-2, .outline-3... divs that Org generated to enable
-      ;; the selectors "section.even" and "section.odd".
-      ;; (Already converted from div in `my-ensure-section-containers').
+      ;; the CSS selectors "section.even" and "section.odd".
+      ;; (Already converted div->section in `my-ensure-section-containers').
       (cl-loop
        for section in (dom-by-tag dom 'section)
        as class = (dom-attr section 'class)
@@ -350,7 +377,7 @@ All arguments pass through to `org-publish-org-to'."
                as fixed-desc = (when (and desc (stringp desc))
                                  (->> desc
                                       (replace-regexp-in-string "^http.?://" "")
-                                      (replace-regexp-in-string "\?.*" "")
+                                      ;; (replace-regexp-in-string "\?.*" "")
                                       (string-replace "%20" " ")))
                when fixed-desc
                unless (equal fixed-desc desc)
@@ -358,6 +385,7 @@ All arguments pass through to `org-publish-org-to'."
                     (dom-add-child-before anchor fixed-desc desc)
                     (dom-remove-node anchor desc)))
 
+      ;; Fix IDs for sections and add self-links next to headings
       (let-alist metadata
         (cl-loop
          for section in (dom-by-tag dom 'section)
@@ -370,7 +398,7 @@ All arguments pass through to `org-publish-org-to'."
                 (let ((hashid (my-uuid-to-short uuid?)))
                   (dom-set-attribute section 'id hashid)
                   ;; Add a self-link.  Hardcode the canonical URL, because my
-                  ;; blog may display the same post on other paths.
+                  ;; blog may display the same post on several paths.
                   (dom-append-child heading
                                     (dom-node 'a
                                               `((href . ,(concat "/" .pageid
@@ -380,7 +408,7 @@ All arguments pass through to `org-publish-org-to'."
                                                 (rel . "bookmark"))
                                               "🔗")))
               ;; The id= looked like:
-              ;; "outline-container-org3428962"
+              ;; "outline-container-org1234567"
               (dom-set-attribute section 'id id))))
 
       ;; Org-export doesn't replace double/triple-dash in all situations (like
