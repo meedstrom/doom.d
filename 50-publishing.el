@@ -35,7 +35,6 @@
            :with-tags nil
            :with-todo-keywords nil
            :with-smart-quotes nil
-           :with-latex 'html ;; Use `org-latex-to-html-convert-command'
            :with-drawers '(not "logbook" "noexport") ;; (case-insensitive FYI)
            ;; NOTE: This only excludes subtrees, so we also check file-level
            ;; tag in `my-publish-to-blog'.  Maybe upstream a patch?
@@ -65,6 +64,7 @@ scanned."
   (setq org-html-extension "")
   (setq org-html-checkbox-type 'unicode)
   (setq org-html-html5-fancy t)
+  (setq org-html-with-latex 'html)  ;; Use `org-latex-to-html-convert-command'
   ;; TODO: upstream as an option for `org-preview-latex-process-alist'
   (setq org-latex-to-html-convert-command "node /home/kept/pub/texToMathML.js %i")
   (setq save-silently t)
@@ -74,7 +74,7 @@ scanned."
 
   ;; Speed up publishing
   (gcmh-mode 0)
-  (setq gc-cons-threshold (* 4 1000 1000 1000))
+  (setq gc-cons-threshold (* 5 1000 1000 1000))
   (setq org-mode-hook nil)
   (fset 'org-publish-write-cache-file #'ignore) ;; mega speedup!
 
@@ -210,13 +210,9 @@ through to `org-html-publish-to-html'."
       (kill-buffer open))
     (with-current-buffer (find-file-noselect filename)
       (goto-char (point-min))
-      (let* (;; Black box by the grace of Bastien, Carsten &c
-             (html-path (org-html-publish-to-html plist filename pub-dir))
-             ;; (html-path (org-export-output-file-name org-html-extension nil pub-dir))
-             ;; Collect metadata from Org source
+      (let* ((html-path (org-html-publish-to-html plist filename pub-dir))
              (keywords (org-collect-keywords '("DATE" "SUBTITLE")))
              (tags (mapcar #'downcase (org-get-tags)))
-             
              (created (substring (org-entry-get nil "CREATED") 1 -1))
              (updated (let ((value (map-elt keywords "DATE")))
                         (when (and value (not (string-blank-p (car value))))
@@ -233,17 +229,19 @@ through to `org-html-publish-to-html'."
              (metadata
               (list
                (cons 'pageid pageid)
-               (cons 'slug (string-replace pub-dir "" html-path))
+               (cons 'tags tags)
+               (cons 'hidden hidden)
                (cons 'created created)
                (cons 'createdFancy created-fancy) ;; JS camelCase
                (cons 'updated updated)
                (cons 'updatedFancy updated-fancy)
+               (cons 'slug (string-replace pub-dir "" html-path))
+               (cons 'description (car (map-elt keywords "SUBTITLE")))
                (cons 'title (if (member "daily" tags)
                                 created-fancy
                               (->> (org-get-title)
                                    (string-replace "---" "—")
                                    (string-replace "--" "–"))))
-               (cons 'description (car (map-elt keywords "SUBTITLE")))
                (cons 'wordcount
                      (save-excursion
                        (cl-loop
@@ -259,13 +257,11 @@ through to `org-html-publish-to-html'."
                         while (re-search-forward org-link-bracket-re nil t)
                         if (member "noexport" (org-get-tags))
                         do (org-next-visible-heading 1)
-                        else count t)))
-               (cons 'tags tags)
-               (cons 'hidden hidden)))
+                        else count t)))))
              ;; Final "post object" for use by blog
-             (post
-              (-snoc metadata
-                     `(content . ,(my-customize-the-html html-path metadata))))
+             (post (append metadata
+                           (list
+                            (cons 'content (my-customize-the-html html-path metadata)))))
              (uuid (org-id-get)))
         ;; Write JSON object
         (with-temp-file (concat "/tmp/roam/json/" pageid)
@@ -293,11 +289,11 @@ through to `org-html-publish-to-html'."
                    (search-forward "</div>\n</div>")
                    (replace-match "</nav>"))
                  ;; Add role="doc-endnotes"
-                 ;; (goto-char (point-min))
-                 ;; (when (re-search-forward "^<h2 id.*>What links here" nil t)
-                 ;;   (forward-line -1)
-                 ;;   (search-forward " class=\"outline-2\"" (line-end-position))
-                 ;;   (insert " role=\"doc-endnotes\""))
+                 (goto-char (point-min))
+                 (when (re-search-forward "^<h2 id.*>What links here" nil t)
+                   (forward-line -1)
+                   (search-forward " class=\"outline-2\"" (line-end-position))
+                   (insert " role=\"doc-endnotes\""))
 
                  (libxml-parse-html-region))))
 

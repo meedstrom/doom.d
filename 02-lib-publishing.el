@@ -95,7 +95,6 @@ to me to do that."
           (if (bobp)
               (progn
                 (goto-char (point-max))
-                (insert "\n\n#+ATTR_HTML: :role doc-endnotes") ;;testing
                 (insert "\n* What links here  :backlinks:")
                 ;; If this page is a pseudo-tag such as #emacs, make it clear
                 ;; that the backlinks can be used by link aggregators.  IDK

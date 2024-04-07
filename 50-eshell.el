@@ -92,8 +92,9 @@
 (after! eshell
   (setopt eshell-prompt-function (lambda () "〈 ／／ 〉 "))
   (setopt eshell-prompt-regexp "^〈 .*? 〉 ")
-  (setopt eshell-scroll-show-maximum-output nil)
   (setopt eshell-show-lisp-completions t)
+  (setopt eshell-scroll-show-maximum-output nil) ;; ??
+  (setopt eshell-scroll-to-bottom-on-output 'this)
 
   ;; TODO: give the different parts of the string different text properties
   (setopt eshell-banner-message
@@ -133,6 +134,10 @@
 ;; for eshell-post-command-hook.
 (add-hook 'eshell-pre-command-hook #'my-esh-time-cmd-1)
 (add-hook 'eshell-post-command-hook #'my-esh-time-cmd-2)
+;; (add-hook 'eshell-post-command-hook #'end-of-buffer)
+
+(hookgen eshell-mode-hook
+  (add-hook 'post-command-hook #'scroll-right nil t))
 
 ;; Always time slow commands. No more rerunning just to prepend "time ..."
 (add-hook 'my-real-eshell-post-command-hook #'my-esh-print-elapsed-maybe)

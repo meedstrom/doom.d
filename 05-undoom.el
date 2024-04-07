@@ -42,7 +42,6 @@
 (after! eshell
   (setopt eshell-input-filter #'eshell-input-filter-default)
   (setopt eshell-scroll-to-bottom-on-input nil)
-  (setopt eshell-scroll-to-bottom-on-output nil)
   ;; Give me access to emacs --help
   (fmakunbound #'eshell/emacs)
   ;; I prefer it pick a recent buffer
