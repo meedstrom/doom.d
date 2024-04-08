@@ -162,7 +162,7 @@ Useful for jumping past a file's front matter.")
                           (forward-line 1)
                           (or (looking-at-p "^[ \t]*:") (eobp))))
                  (insert "\nGoing off " refs "\n\n"))
-               (org-next-visible-heading 1)
+               (outline-next-heading)
                (not (eobp)))))))
 
 (defun my-ensure-section-containers (&rest _)
@@ -310,19 +310,8 @@ matches PAGE-ID anyway (i.e. it's a file-level id)"
               "\n</content>"
               "\n</entry>"))))
 
-;; TODO Scan thru all the body text for line that looks like e.g. ^:end:$
-;; but is "off by one".
-(defun my-not-own-line (str)
-  (or
-   ;; Match ^:end: that has more text on the same line
-   (and (goto-char (point-min))
-        (re-search-forward (concat "^" str) nil t)
-        (looking-at-p "."))
-   ;; Match :end:$ that isn't on its own line
-   (and (goto-char (point-min))
-        (re-search-forward (concat str "$") nil t)
-        (goto-char (match-beginning 0))
-        (looking-back "[^ \n]"))))
+
+;;; Validator
 
 (defun my-locate-warn (problem)
   (warn "%s in %s:%d" problem (buffer-file-name) (line-number-at-pos)))
@@ -349,19 +338,17 @@ matches PAGE-ID anyway (i.e. it's a file-level id)"
                "\\(?:id:\\|http://\\|https://\\|file:\\|ftp://\\|info:\\)"
                (match-string 0))
         (my-locate-warn "disallowed link type")))
-    ;; WIP
-    (when (or (my-not-own-line ":end:")
-              (my-not-own-line ":properties:")
-              (my-not-own-line "#\\+end_src")
-              (my-not-own-line "#\\+end_quote"))
-      (my-locate-warn "possible mistake"))
+    (my-assert-own-line ":end:")
+    (my-assert-own-line ":properties:")
+    (my-assert-own-line "#\\+end_src")
+    (my-assert-own-line "#\\+end_quote")
     ;; check file-level metadata
     (goto-char (point-min))
     (my-validate-org-entry bufdata)
     ;; check each subtree that is its own roam node
     (goto-char (point-min))
     (while (not (eobp))
-      (org-next-visible-heading 1)
+      (outline-next-heading)
       (when (org-id-get)
         (my-validate-org-entry bufdata)))
     (goto-char (point-min))
@@ -376,7 +363,7 @@ matches PAGE-ID anyway (i.e. it's a file-level id)"
 (defun my-validate-org-entry (bufdata)
   "Validate entry at point, or file-level metadata if point is
  not under a heading."
-  (let ((file-level-entry (not (org-get-heading)))
+  (let ((is-file-level-entry (not (org-get-heading)))
         (id (org-id-get))
         (title (or (org-get-heading) (org-get-title)))
         (created (org-entry-get nil "created"))
@@ -406,7 +393,7 @@ matches PAGE-ID anyway (i.e. it's a file-level id)"
                           (goto-char (point-min))
                           (search-forward "#+filetags")
                           (buffer-substring (line-beginning-position) (line-end-position)))))
-      (when file-level-entry
+      (when is-file-level-entry
         (setq title filetag-line))
       ;; try to catch broken tags like "noexport:"
       (when (string-match-p (rx " " alnum (+? (not " ")) ":" eol)
@@ -417,6 +404,16 @@ matches PAGE-ID anyway (i.e. it's a file-level id)"
                             title)
         (my-locate-warn "Possible broken tag")))))
 
+;; TODO Scan thru all the body text for line that looks like e.g. ^:end:$
+;; but is "off by one".
+(defun my-assert-own-line (str)
+  ;; Match ^:end: that has more text on the same line
+  ;; Match :end:$ that isn't on its own line
+  (while (search-forward str nil t)
+    (when (xor (looking-at-p ".")
+               (progn (goto-char (match-beginning 0))
+                      (looking-back "[^ \n]")))
+      (my-locate-warn (concat str " not on own line")))))
 
 
 ;;; Patches

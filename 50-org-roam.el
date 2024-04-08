@@ -74,7 +74,7 @@
     "Schedule a re-caching for when the user is idle."
     (cancel-timer timer1)
     (cancel-timer timer2)
-    (setq timer1 (run-with-idle-timer 7 nil #'org-roam-db-sync))
+    ;; (setq timer1 (run-with-idle-timer 7 nil #'org-roam-db-sync))
     (setq timer2 (run-with-idle-timer 10 nil #'my-roam-memo-refresh))))
 
 (after! org-roam
