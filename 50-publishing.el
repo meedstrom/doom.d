@@ -22,24 +22,6 @@
 (after! ox
   (require 'org-roam-export))
 
-(setopt org-publish-project-alist
-        `(("my-slipbox-blog"
-           :base-directory "/tmp/roam/org/"
-           :publishing-directory "/tmp/roam/html/"
-           :publishing-function my-publish-to-blog
-           :recursive t
-           :body-only t
-           :section-numbers nil
-           :headline-levels 5  ;; Go all the way to <h6> before making <li>
-           :with-toc nil
-           :with-tags nil
-           :with-todo-keywords nil
-           :with-smart-quotes nil
-           :with-drawers '(not "logbook" "noexport") ;; (case-insensitive FYI)
-           ;; NOTE: This only excludes subtrees, so we also check file-level
-           ;; tag in `my-publish-to-blog'.  Maybe upstream a patch?
-           :exclude-tags ,my-tags-to-avoid-uploading)))
-
 ;; This function is where I can make destructive env changes that I
 ;; don't want in my main Emacs.
 (defun my-publish ()
@@ -64,9 +46,9 @@ scanned."
   (setq org-html-extension "")
   (setq org-html-checkbox-type 'unicode)
   (setq org-html-html5-fancy t)
-  (setq org-html-with-latex 'html)  ;; Use `org-latex-to-html-convert-command'
-  ;; TODO: upstream as an option for `org-preview-latex-process-alist'
-  (setq org-latex-to-html-convert-command "node /home/kept/pub/texToMathML.js %i")
+  (setq org-html-with-latex 'html) ;; Use `org-latex-to-html-convert-command'
+  ;; TODO: upstream as an option for `org-html-with-latex'. this is very fast
+  (setq org-latex-to-html-convert-command "node ~/.doom.d/texToMathML.js %i")
   (setq save-silently t)
   (setq org-inhibit-startup t) ;; from org-publish-org-to
   (setq debug-on-error t)
@@ -136,7 +118,6 @@ scanned."
   (shell-command "cp -a /home/kept/roam /tmp/roam/org")
 
   ;; Pretty-print a post of recent completed todos
-  ;; (cl-letf ((org-agenda-files '("/tmp/roam/org/noagenda/archive.org")))
   (let ((org-agenda-files '("/tmp/roam/org/noagenda/archive.org")))
     (my-generate-todo-log "/tmp/roam/org/todo-log.org"))
 
@@ -144,17 +125,17 @@ scanned."
   ;; subdirectories named by that ID, so org-export will translate all
   ;; org-id links into these relative filesystem paths.
   (cl-loop for path in (directory-files-recursively "/tmp/roam/org/" "\\.org$")
-           unless (and (not (string-search ".sync-conflict-" path))
-                       (not (string-search "/logseq/" path))
-                       (let* ((uuid (my-org-file-id path))
-                              (newdir (concat "/tmp/roam/org/"
-                                              (my-uuid-to-short uuid)
-                                              "/")))
-                         (mkdir newdir t)
-                         (rename-file path newdir)
-                         t))
-           do (delete-file path))
+           do (if (and (not (string-search ".sync-conflict-" path))
+                       (not (string-search "/logseq/" path)))
+                  (let* ((uuid (my-org-file-id path))
+                         (newdir (concat "/tmp/roam/org/"
+                                         (my-uuid-to-short uuid)
+                                         "/")))
+                    (mkdir newdir t)
+                    (rename-file path newdir))
+                (delete-file path)))
 
+  ;; Handle C-u
   (when (equal current-prefix-arg '(4))
     (shell-command "rm /tmp/roam/org-roam.db"))
   (when (equal current-prefix-arg '(16))
@@ -191,12 +172,29 @@ scanned."
   (async-shell-command "./encrypt-rebuild.sh")
   (start-process "firefox" nil "firefox" "http://localhost:5173"))
 
+(setopt org-publish-project-alist
+        `(("my-slipbox-blog"
+           :base-directory "/tmp/roam/org/"
+           :publishing-directory "/tmp/roam/html/"
+           :publishing-function my-publish-to-blog
+           :recursive t
+           :body-only t
+           :section-numbers nil
+           :headline-levels 5  ;; Go all the way to <h6> before making <li>
+           :with-toc nil
+           :with-tags nil
+           :with-todo-keywords nil
+           :with-smart-quotes nil
+           :with-drawers '(not "logbook" "noexport") ;; (case-insensitive FYI)
+           ;; NOTE: This only excludes subtrees, so we also check file-level
+           ;; tag in `my-publish-to-blog'.  Maybe upstream a patch?
+           :exclude-tags ,my-tags-to-avoid-uploading)))
+
 (defun my-publish-to-blog (plist filename pub-dir)
   "Take org file FILENAME and make html file in PUB-DIR.
-Then postprocess that same html into a json file and maybe an
-atom entry.
+Then postprocess that same html into json and atom files.
 
-Designed to be called by `org-publish', all arguments pass
+Designed to be called by `org-publish'.  All arguments pass
 through to `org-html-publish-to-html'."
   (redisplay) ;; Let me watch it work
   (if (-intersection (my-org-file-tags filename) my-tags-to-avoid-uploading)
@@ -212,7 +210,7 @@ through to `org-html-publish-to-html'."
       (goto-char (point-min))
       (let* ((html-path (org-html-publish-to-html plist filename pub-dir))
              (keywords (org-collect-keywords '("DATE" "SUBTITLE")))
-             (tags (mapcar #'downcase (org-get-tags)))
+             (tags (org-get-tags))
              (created (substring (org-entry-get nil "CREATED") 1 -1))
              (updated (let ((value (map-elt keywords "DATE")))
                         (when (and value (not (string-blank-p (car value))))
@@ -261,14 +259,15 @@ through to `org-html-publish-to-html'."
              ;; Final "post object" for use by blog
              (post (append metadata
                            (list
-                            (cons 'content (my-customize-the-html html-path metadata)))))
+                            (cons 'content (my-customize-the-html
+                                            html-path metadata)))))
              (uuid (org-id-get)))
         ;; Write JSON object
         (with-temp-file (concat "/tmp/roam/json/" pageid)
           (insert (json-encode post)))
         ;; Write Atom entry if it's an okay post for the feed
         (when (and (not hidden)
-                   (not (-intersection tags '("tag" "daily" "stub")))
+                   (not (-intersection tags '("tag" "daily" "stub" "unwashed")))
                    (string-lessp "2023" (or updated created)))
           (with-temp-file (concat "/tmp/roam/atom/" pageid)
             (insert (my-make-atom-entry post uuid)))))
@@ -324,40 +323,41 @@ through to `org-html-publish-to-html'."
                                         `[:select [tag]
                                           :from tags
                                           :where (= node-id ,uuid?)]))))
-            ;; Replace all UUID with my shortened form, and strip the #HEADING-ID
-            ;; if it matches /PAGE-ID.
+            ;; Replace all UUID with my shortened form, and strip the
+            ;; #HEADING-ID if it matches /PAGE-ID.
             (dom-set-attribute anchor 'href (my-strip-hash-if-matches-base
                                              (string-replace hash shortid href)))
-            ;; https://www.w3.org/TR/dpub-aria-1.0/#doc-backlink
-            (let-alist metadata
-              (when (equal shortid .slug)
-                (dom-set-attribute anchor 'role "doc-backlink")))
-            ;; Associate short-ID with original UUID to check for collisions later
-            (push uuid? (gethash shortid my-ids))
             ;; Style the link based on tags of target document
             (when target-tags
-              (dom-set-attribute anchor 'class (string-join target-tags " ")))))
+              (dom-set-attribute anchor 'class (string-join target-tags " ")))
+            ;; https://www.w3.org/TR/dpub-aria-1.0/#doc-backlink
+            (let-alist metadata
+              (when (string-blank-p (car (split-string href "#")))
+                (dom-set-attribute anchor 'role "doc-backlink")))
+            ;; Remember the short-ID for a collision-check later on
+            (push uuid? (gethash shortid my-ids))))
 
-      ;; Format undescribed links more nicely
-      (cl-loop for anchor in (dom-by-tag dom 'a)
-               as children = (dom-children anchor)
-               as desc = (car children)
-               as fixed-desc = (when (and desc (stringp desc))
-                                 (->> desc
-                                      (replace-regexp-in-string "^http.?://" "")
-                                      ;; (replace-regexp-in-string "\?.*" "")
-                                      (string-replace "%20" " ")))
-               when fixed-desc
-               unless (equal fixed-desc desc)
-               do (progn
-                    (dom-add-child-before anchor fixed-desc desc)
-                    (dom-remove-node anchor desc)))
+      ;; Format nondescript links more nicely
+      (cl-loop
+       for anchor in (dom-by-tag dom 'a)
+       as children = (dom-children anchor)
+       as desc = (car children)
+       as fixed-desc = (when (and desc (stringp desc))
+                         (->> desc
+                              (replace-regexp-in-string "^http.?://" "")
+                              (string-replace "%20" " ")))
+       when fixed-desc
+       unless (equal fixed-desc desc)
+       do (progn
+            (dom-add-child-before anchor fixed-desc desc)
+            (dom-remove-node anchor desc)))
 
-      ;; Fix IDs for sections and add self-links next to headings
+      ;; Fix IDs for sections and add self-links next to their headings
       (let-alist metadata
         (cl-loop
          for section in (dom-by-tag dom 'section)
-         as id = (string-replace "outline-container-" "" (dom-attr section 'id))
+         as id = (string-replace "outline-container-" ""
+                                 (dom-attr section 'id))
          as heading = (car (dom-non-text-children section))
          as uuid? = (string-replace "ID-" "" id)
          do (if (org-uuidgen-p uuid?)

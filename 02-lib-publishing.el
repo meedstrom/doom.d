@@ -95,11 +95,7 @@ to me to do that."
           (if (bobp)
               (progn
                 (goto-char (point-max))
-                (insert "\n* What links here  :backlinks:")
-                ;; If this page is a pseudo-tag such as #emacs, make it clear
-                ;; that the backlinks can be used by link aggregators.  IDK
-                ;; if something like Planet Emacslife is looking for a
-                ;; programmatic marker or if they just do things manually.
+                (insert "\n* What links here")
                 (when (string-prefix-p "#" (org-roam-node-title this-node))
                   (insert "\n (Sorted by recent first)")))
             (org-insert-subheading nil)
@@ -111,9 +107,8 @@ to me to do that."
                           (map-elt (org-roam-node-properties it) "CREATED"))
                          linked-nodes)))
             (dolist (node sorted-nodes)
-              (newline)
               (insert
-               "- [[id:"
+               "\n- [[id:"
                (org-roam-node-id node)
                "]["
                (replace-regexp-in-string "[][]" "" (org-roam-node-title node))
@@ -145,18 +140,18 @@ to me to do that."
                               (date-to-time datestamp))))
                   (insert (concat "[[id:" (caar daily-id) "][<" fancy ">]]")))))))))))
 
-
-;; FIXME The first body text could be a #+begin_quote or #+TOC, which gets
-;; skipped too.  It could also be the beginning of an :aside:.
+;; FIXME The first "body text" could be a #+begin_quote or #+TOC, which gets
+;; skipped too.  It could also be the beginning of a :drawer:.
 (defvar my-org-text-line-re "^[ \t]*[^#:\n]"
   "Regexp to match a line that isn't a comment, a keyword or a property drawer.
 Useful for jumping past a file's front matter.")
 
 (defun my-add-refs-as-paragraphs (&rest _)
+  "Print out the roam-ref under each heading that has one."
   (save-excursion
     (goto-char (point-min))
     (when (re-search-forward my-org-text-line-re nil t)
-      ;; (goto-char (line-beginning-position))
+      ;; Workaround inexact regexp
       (forward-line -1)
       (unless (or (looking-at-p "#\\+toc") (looking-at-p "#\\+begin_"))
         (forward-line 1))
@@ -166,9 +161,6 @@ Useful for jumping past a file's front matter.")
                  (while (progn
                           (forward-line 1)
                           (or (looking-at-p "^[ \t]*:") (eobp))))
-                 ;; wrap in <div class="ref">
-                 ;; (insert "\n#+begin_ref\nSource " refs "\n#+end_ref\n\n")
-                 ;; (insert "\n" refs "\n\n")
                  (insert "\nGoing off " refs "\n\n"))
                (org-next-visible-heading 1)
                (not (eobp)))))))
@@ -180,26 +172,29 @@ but apply to all subheadings, not only the top level."
     (goto-char (point-min))
     (when (re-search-forward org-element-headline-re nil t)
       (while (not (eobp))
-        ;; Testing to add role=
-
         (org-entry-put nil "HTML_CONTAINER" "section")
         (outline-next-heading)))))
 
 (defun my-strip-inline-anki-ids (&rest _)
-  (require 'inline-anki)
+  "Clean the little inline-anki superscript numbers."
   (save-excursion
-    (dolist (re (list inline-anki-rx:eol
-                      inline-anki-rx:eol-new
-                      inline-anki-rx:item-start
-                      inline-anki-rx:item-start-new))
-      (goto-char (point-min))
-      (while (re-search-forward re nil t)
-        (let ((beg (match-beginning 0))
-              (end (point)))
-          (if (and (search-backward "@" (line-beginning-position) t)
-                   (> 18 (- end (point))))
-              (delete-region (point) end)
-            (delete-region beg end)))))))
+    (while (re-search-forward (rx (? "@") "^{" (= 13 digit) "}") nil t)
+      (replace-match "")))
+  ;; (require 'inline-anki)
+  ;; (save-excursion
+  ;;   (dolist (re (list inline-anki-rx:eol
+  ;;                     inline-anki-rx:eol-new
+  ;;                     inline-anki-rx:item-start
+  ;;                     inline-anki-rx:item-start-new))
+  ;;     (goto-char (point-min))
+  ;;     (while (re-search-forward re nil t)
+  ;;       (let ((beg (match-beginning 0))
+  ;;             (end (point)))
+  ;;         (if (and (search-backward "@" (line-beginning-position) t)
+  ;;                  (> 18 (- end (point))))
+  ;;             (delete-region (point) end)
+  ;;           (delete-region beg end))))))
+  )
 
 (defun my-strip-hash-if-matches-base (link)
   "Remove the hash-part of the link (i.e. the bit after the #
@@ -213,9 +208,7 @@ matches PAGE-ID anyway (i.e. it's a file-level id)"
       link)))
 
 (defun my-generate-todo-log (path)
-  "Generate a log of completed tasks using `org-agenda-write'.
-Wrap that function's HTML output in an Org file that has an HTML
-export block."
+  "Generate a new Org file showcasing recent completed TODOs."
   (let ((org-agenda-span 'fortnight)
         (org-agenda-prefix-format
          '((agenda . " %i %?-12t") (todo . "") (tags . "") (search . "")))
@@ -229,37 +222,38 @@ export block."
     (shell-command "rm /tmp/roam/todo-log-last-week.html")
     (org-agenda-write "/tmp/roam/todo-log-last-week.html")
     (org-agenda-quit)
-    (with-current-buffer (or (find-buffer-visiting path)
-                             (find-file path))
-      (delete-region (point-min) (point-max))
-      (insert ":PROPERTIES:"
-              "\n:ID: e4c5ea8b-5b06-43c4-8948-3bfe84e8d5e8"
-              "\n:CREATED:  " (format-time-string "[%F]")
-              "\n:END:"
-              "\n#+title: Completed tasks"
-              "\n#+filetags: :fren:"
-              "\n#+date: "
-              "\n#+begin_export html"
-              "\n")
-      (insert-file-contents "/tmp/roam/todo-log-last-week.html")
-      (delete-region (point) (search-forward "<pre>"))
-      (insert "<pre class=\"agenda\">")
-      (forward-line)
-      (delete-region (1- (line-beginning-position)) (line-end-position))
-      (search-forward "</pre>")
-      (delete-region (1- (line-beginning-position)) (point-max))
-      (insert-file-contents "/tmp/roam/todo-log-now.html")
-      (delete-region (point) (search-forward "<pre>"))
-      (forward-line)
-      (delete-region (1- (line-beginning-position)) (line-end-position))
-      (delete-region (search-forward "</pre>") (point-max))
-      (insert "\n#+end_export")
-      ;; remove special face for today (css class "org-agenda-date-weekend-today")
-      (goto-char (point-min))
-      (search-forward "-today")
-      (replace-match "")
-      (save-buffer)
-      (kill-buffer)))
+    (find-file path)
+    ;; with-current-buffer (or (find-buffer-visiting path)
+    ;;                         )
+    (delete-region (point-min) (point-max))
+    (insert ":PROPERTIES:"
+            "\n:ID: e4c5ea8b-5b06-43c4-8948-3bfe84e8d5e8"
+            "\n:CREATED:  " (format-time-string "[%F]")
+            "\n:END:"
+            "\n#+title: Completed tasks"
+            "\n#+filetags: :fren:"
+            "\n#+date: "
+            "\n#+begin_export html"
+            "\n")
+    (insert-file-contents "/tmp/roam/todo-log-last-week.html")
+    (delete-region (point) (search-forward "<pre>"))
+    (insert "<pre class=\"agenda\">")
+    (forward-line)
+    (delete-region (1- (line-beginning-position)) (line-end-position))
+    (search-forward "</pre>")
+    (delete-region (1- (line-beginning-position)) (point-max))
+    (insert-file-contents "/tmp/roam/todo-log-now.html")
+    (delete-region (point) (search-forward "<pre>"))
+    (forward-line)
+    (delete-region (1- (line-beginning-position)) (line-end-position))
+    (delete-region (search-forward "</pre>") (point-max))
+    (insert "\n#+end_export")
+    ;; remove special face for today (css .org-agenda-date-weekend-today)
+    (goto-char (point-min))
+    (search-forward "-today")
+    (replace-match "")
+    (save-buffer)
+    (kill-buffer))
   (view-echo-area-messages))
 
 (defun my-compile-atom-feed (path entries-dir)
@@ -274,9 +268,10 @@ export block."
 <author><name>Martin Edström</name></author>
 <rights> © 2023-" (format-time-string "%Y") " Martin Edström </rights>
 <id>https://edstrom.dev</id>")
-    (dolist (entry (directory-files entries-dir t "[[:alpha:]]"))
+    ;; (dolist (entry (directory-files entries-dir t "[[:alpha:]]"))
+    (dolist (entry (directory-files entries-dir t))
       (insert-file-contents entry))
-    (goto-char (point-max))
+    ;; (goto-char (point-max))
     (insert "
 </feed>")))
 
@@ -287,10 +282,11 @@ export block."
              (buffer-disable-undo)
              (insert .content)
              (goto-char (point-min))
-             (let* ((locked (regexp-opt (append my-tags-to-avoid-uploading
-                                                my-tags-for-hiding)))
+             ;; De-linkify links to non-public URLs
+             (let* ((forbidden (regexp-opt (append my-tags-to-avoid-uploading
+                                                   my-tags-for-hiding)))
                     (re (rx "<a " (*? nonl) "class=\"" (*? nonl)
-                            (regexp locked)
+                            (regexp forbidden)
                             (*? nonl) ">" (group (*? anychar)) "</a>")))
                (while (re-search-forward re nil t)
                  (replace-match (match-string 1)))
@@ -305,21 +301,19 @@ export block."
               (if .updated
                   (concat "\n<updated>" .updated "T12:00:00Z</updated>")
                 "")
-              ;; This type="xhtml" lets us skip entity-escaping unicode
-              ;; https://validator.w3.org/feed/docs/atom.html#text
+              ;; With type="xhtml", we don't have to entity-escape unicode
+              ;; (https://validator.w3.org/feed/docs/atom.html#text)
               "\n<content type=\"xhtml\">"
               "\n<div xmlns=\"http://www.w3.org/1999/xhtml\">\n"
-              ;; FYI, never pretty-print html, indentation ruins <pre>!
               content-for-feed
               "\n</div>"
               "\n</content>"
               "\n</entry>"))))
 
-(defun my-find-misplaced-syntax (str)
+;; TODO Scan thru all the body text for line that looks like e.g. ^:end:$
+;; but is "off by one".
+(defun my-not-own-line (str)
   (or
-   ;; TODO Scan thru all the body text for line that looks like ^:end:$ but is
-   ;; "off by one".
-
    ;; Match ^:end: that has more text on the same line
    (and (goto-char (point-min))
         (re-search-forward (concat "^" str) nil t)
@@ -332,9 +326,6 @@ export block."
 
 (defun my-locate-warn (problem)
   (warn "%s in %s:%d" problem (buffer-file-name) (line-number-at-pos)))
-
-(defun my-locate-err (problem)
-  (error "%s in %s:%d" problem (buffer-file-name) (line-number-at-pos)))
 
 (defun my-validate-org-buffer ()
   (interactive)
@@ -350,7 +341,7 @@ export block."
       (goto-char pos)
       (unless (re-search-forward (rx (*? (not (any "[]"))) "]["
                                      (*? (not (any "[]"))) "]]")
-                                 nil t)
+                                 (line-end-position) t)
         (my-locate-warn "weird brackets")))
     (goto-char (point-min))
     (while (re-search-forward org-link-any-re nil t)
@@ -358,9 +349,12 @@ export block."
                "\\(?:id:\\|http://\\|https://\\|file:\\|ftp://\\|info:\\)"
                (match-string 0))
         (my-locate-warn "disallowed link type")))
-    (when (my-find-misplaced-syntax ":end:") (my-locate-err "Possible mistake"))
-    (when (my-find-misplaced-syntax "#\\+end_src") (my-locate-err "Possible mistake"))
-    (when (my-find-misplaced-syntax "#\\+end_quote") (my-locate-err "Possible mistake"))
+    ;; WIP
+    (when (or (my-not-own-line ":end:")
+              (my-not-own-line ":properties:")
+              (my-not-own-line "#\\+end_src")
+              (my-not-own-line "#\\+end_quote"))
+      (my-locate-warn "possible mistake"))
     ;; check file-level metadata
     (goto-char (point-min))
     (my-validate-org-entry bufdata)
@@ -373,11 +367,11 @@ export block."
     (goto-char (point-min))
     (unless (progn (re-search-forward (rx bol "#+filetags:"))
                    (re-search-forward " +:.+?:$" (line-end-position)))
-      (my-locate-err "Tags may not be correctly wrapped in colons"))
+      (my-locate-warn "Tags may not be correctly wrapped in colons"))
     (unless (-intersection (org-get-tags) (append '("pub")
                                                   my-tags-for-hiding
                                                   my-tags-to-avoid-uploading))
-      (my-locate-err "No tag that indicates publishability"))))
+      (my-locate-warn "No tag that indicates publishability"))))
 
 (defun my-validate-org-entry (bufdata)
   "Validate entry at point, or file-level metadata if point is
@@ -389,25 +383,25 @@ export block."
         (refs (org-entry-get nil "roam_refs"))
         (tags (org-get-tags))
         (buftags (alist-get 'buftags bufdata)))
-    (unless id (my-locate-err "No id"))
-    (unless (org-uuidgen-p id) (my-locate-err "Org-id is not an UUID"))
-    (unless title (my-locate-err "No title"))
-    (unless created (my-locate-err "No CREATED property"))
-    (unless tags (my-locate-err "No tags"))
+    (unless id (my-locate-warn "No id"))
+    (unless (org-uuidgen-p id) (my-locate-warn "Org-id is not an UUID"))
+    (unless title (my-locate-warn "No title"))
+    (unless created (my-locate-warn "No CREATED property"))
+    (unless tags (my-locate-warn "No tags"))
     (let ((case-fold-search nil))
       (unless (not (string-match-p "[[:upper:]]" (string-join tags)))
-        (my-locate-err "Uppercase in tag found")))
+        (my-locate-warn "Uppercase in tag found")))
     (dolist (tag tags)
       (when (--any-p (and (not (= (length it) (length tag)))
                           (or (string-search it tag)
                               (string-search tag it)))
                      buftags)
-        (my-locate-err "A tag is a substring of another tag (lost colon?)")))
+        (my-locate-warn "A tag is a substring of another tag (lost colon?)")))
     (when (and created (not (string-blank-p created)))
       (unless (my-iso-datestamp-p (substring created 1 -1))
-        (my-locate-err "Property CREATED is not proper datestamp")))
+        (my-locate-warn "Property CREATED is not proper datestamp")))
     (when (and refs (string-search "\"" refs))
-      (my-locate-err "Quote-sign in roam_refs"))
+      (my-locate-warn "Quote-sign in roam_refs"))
     (let ((filetag-line (save-excursion
                           (goto-char (point-min))
                           (search-forward "#+filetags")
@@ -417,11 +411,11 @@ export block."
       ;; try to catch broken tags like "noexport:"
       (when (string-match-p (rx " " alnum (+? (not " ")) ":" eol)
                             title)
-        (my-locate-err "Possible broken tag"))
+        (my-locate-warn "Possible broken tag"))
       ;; try to catch broken tags like ":noexport"
       (when (string-match-p (rx " :" (+? (not " ")) (not ":") (*? space) eol)
                             title)
-        (my-locate-err "Possible broken tag")))))
+        (my-locate-warn "Possible broken tag")))))
 
 
 

@@ -5,9 +5,12 @@
 *.bak
 
 /*-priv*.el
+/package.json
+/package-lock.json
 
-mothball/
-wip/
-subed/
-mail/
-elfeed/
+/mothball/
+/wip/
+/subed/
+/mail/
+/elfeed/
+/node_modules/
