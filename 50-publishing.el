@@ -40,6 +40,7 @@ scanned."
   (require 'f)
   (require 'prism)
   (require 'dash)
+  (require 'kv)
   (view-echo-area-messages) ;; for watching it work
   (setq org-export-use-babel nil)
   (setq org-export-with-broken-links nil) ;; links would disappear quietly!
@@ -97,24 +98,24 @@ scanned."
                                  winner-mode
                                  ws-butler-global-mode))
 
-  (require 'lintorg)
-  (setq lintorg-buffer-hook '(lintorg-buffer/check-link-brackets
-                              lintorg-buffer/check-link-types
-                              lintorg-buffer/assert-uuid-ids
-                              lintorg-buffer/seek-broken-syntax
-                              lintorg-buffer/seek-broken-tags))
-  (setq lintorg-subtree-hook '(lintorg-subtree/seek-broken-tags
-                               lintorg-assert-lowercase-tags
-                               lintorg-assert-roam-refs-all-unquoted
-                               lintorg-assert-created
-                               lintorg-assert-created-is-proper-timestamp))
-  (add-hook 'lintorg-front-matter-hook
-            (defun my-ensure-publishability-info ()
-              (unless (-intersection (org-get-tags)
-                                     (append '("pub")
-                                             my-tags-for-hiding
-                                             my-tags-to-avoid-uploading))
-                (lintorg-warn "No tag that indicates publishability"))))
+  ;; (require 'lintorg)
+  ;; (setq lintorg-buffer-hook '(lintorg-buffer/check-link-brackets
+  ;;                             lintorg-buffer/check-link-types
+  ;;                             lintorg-buffer/assert-uuid-ids
+  ;;                             lintorg-buffer/seek-broken-syntax
+  ;;                             lintorg-buffer/seek-broken-tags))
+  ;; (setq lintorg-subtree-hook '(lintorg-subtree/seek-broken-tags
+  ;;                              lintorg-assert-lowercase-tags
+  ;;                              lintorg-assert-roam-refs-all-unquoted
+  ;;                              lintorg-assert-created
+  ;;                              lintorg-assert-created-is-proper-timestamp))
+  ;; (add-hook 'lintorg-front-matter-hook
+  ;;           (defun my-ensure-publishability-info ()
+  ;;             (unless (-intersection (org-get-tags)
+  ;;                                    (append '("pub")
+  ;;                                            my-tags-for-hiding
+  ;;                                            my-tags-to-avoid-uploading))
+  ;;               (lintorg-warn "No tag that indicates publishability"))))
 
   ;; For hygiene, ensure that this subordinate emacs syncs nothing to disk
   (eager-state-preempt-kill-emacs-hook-mode 0)
@@ -171,7 +172,7 @@ scanned."
     (org-roam-update-org-id-locations)
     (org-roam-db-sync 'force))
 
-  ;; Reset
+  ;; Reset the work output
   (shell-command "rm -rf /tmp/roam/{html,json,atom}/")
   (shell-command "mkdir -p /tmp/roam/{html,json,atom}")
   (setq my-ids (clrhash my-ids))

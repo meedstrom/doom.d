@@ -95,7 +95,8 @@
               (when (org-roam-file-p)
                 (org-roam--register-completion-functions-h)
                 (add-hook 'post-command-hook #'org-roam-buffer--redisplay-h 0 t)
-                (add-hook 'after-save-hook #'my-roam-memo-schedule 0 t)))))
+                ;; (add-hook 'after-save-hook #'my-roam-memo-schedule 0 t)
+                ))))
 
 
 

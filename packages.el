@@ -13,7 +13,7 @@
 (package! massmapper :type 'local :recipe (:host github :repo "meedstrom/massmapper" :depth full))
 (package! deianira :type 'local :recipe (:host github :repo "meedstrom/deianira" :depth full))
 (package! eager-state :type 'local :recipe (:host github :repo "meedstrom/eager-state" :depth full))
-;; (package! quickroam :type 'local :recipe (:host github :repo "meedstrom/quickroam" :depth full))
+(package! quickroam :type 'local :recipe (:host github :repo "meedstrom/quickroam" :depth full))
 ;; (package! lintorg :type 'local :recipe (:host github :repo "meedstrom/lintorg" :depth full))
 (package! inline-anki :type 'local :recipe (:host github :repo "meedstrom/inline-anki" :depth full))
 (package! eva
@@ -37,6 +37,7 @@
 (package! artbollocks-mode)
 (package! backup-walker)
 (package! beginend)
+(package! kv)
 (package! bm)
 (package! chatgpt-shell)
 (package! bui)

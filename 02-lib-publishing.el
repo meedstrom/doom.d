@@ -175,26 +175,12 @@ but apply to all subheadings, not only the top level."
         (org-entry-put nil "HTML_CONTAINER" "section")
         (outline-next-heading)))))
 
-(defun my-strip-inline-anki-ids (&rest _)
-  "Clean the little inline-anki superscript numbers."
-  (save-excursion
-    (while (re-search-forward (rx (? "@") "^{" (= 13 digit) "}") nil t)
-      (replace-match "")))
-  ;; (require 'inline-anki)
-  ;; (save-excursion
-  ;;   (dolist (re (list inline-anki-rx:eol
-  ;;                     inline-anki-rx:eol-new
-  ;;                     inline-anki-rx:item-start
-  ;;                     inline-anki-rx:item-start-new))
-  ;;     (goto-char (point-min))
-  ;;     (while (re-search-forward re nil t)
-  ;;       (let ((beg (match-beginning 0))
-  ;;             (end (point)))
-  ;;         (if (and (search-backward "@" (line-beginning-position) t)
-  ;;                  (> 18 (- end (point))))
-  ;;             (delete-region (point) end)
-  ;;           (delete-region beg end))))))
-  )
+(let ((rx (rx (? "@") "^{" (= 13 digit) "}")))
+  (defun my-strip-inline-anki-ids (&rest _)
+    "Clean the little inline-anki superscript numbers."
+    (save-excursion
+      (while (re-search-forward rx nil t)
+        (replace-match "")))))
 
 (defun my-strip-hash-if-matches-base (link)
   "Remove the hash-part of the link (i.e. the bit after the #
@@ -268,10 +254,9 @@ matches PAGE-ID anyway (i.e. it's a file-level id)"
 <author><name>Martin Edström</name></author>
 <rights> © 2023-" (format-time-string "%Y") " Martin Edström </rights>
 <id>https://edstrom.dev</id>")
-    ;; (dolist (entry (directory-files entries-dir t "[[:alpha:]]"))
-    (dolist (entry (directory-files entries-dir t))
+    (dolist (entry (directory-files entries-dir t "^[^\\.]"))
       (insert-file-contents entry))
-    ;; (goto-char (point-max))
+    (goto-char (point-max))
     (insert "
 </feed>")))
 

@@ -20,6 +20,17 @@
 (setopt calibredb-db-dir (expand-file-name "metadata.db" calibredb-root-dir))
 (setopt calibredb-format-width 8)
 
+(use-package quickroam
+  :hook (org-mode-hook . quickroam-enable))
+
+;; (after! quickroam
+;;   (setopt quickroam-extra-rg-args
+;;           '("--glob" "**/*.org"
+;;             "--glob" "!logseq/**"
+;;             "--glob" "!*.sync-conflict-*"
+;;             "--glob" "!noagenda/**"
+;;             "--glob" "!*archive*")))
+
 (after! multiple-cursors
   ;; auto-save every 5 seconds destroys what youre doing!
   ;; should make a PR

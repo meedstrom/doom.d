@@ -5,13 +5,17 @@
 (require 'cl-lib)
 (require 'subr-x)
 
-;; Backports for when I'm on an old Emacs
-(when (> 29 emacs-major-version)
-  (require 'compat)
-  (require 'general)
-  (require 'crux)
-  (defalias #'setopt #'general-setq)
-  (defalias #'duplicate-dwim #'crux-duplicate-current-line-or-region))
+;; ;; Backports for when I'm on an old Emacs
+;; (when (> 29 emacs-major-version)
+;;   (require 'compat)
+;;   (require 'general)
+;;   (require 'crux)
+;;   (defalias #'setopt #'general-setq)
+;;   (defalias #'duplicate-dwim #'crux-duplicate-current-line-or-region))
+
+(defun buffer-has-undo-history-p ()
+  (and (not (eq t buffer-undo-list))
+       (not (null buffer-undo-list))))
 
 (defmacro while-progn (&rest body)
   `(while (progn ,@body)))

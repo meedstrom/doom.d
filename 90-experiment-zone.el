@@ -1,14 +1,5 @@
 ;; Experiment zone -*- lexical-binding: t; -*-
 
-(use-package! quickroam
-  :disabled
-  :config
-  (setopt quickroam-extra-rg-args
-          '("--glob" "**/*.org"
-            "--glob" "!logseq/**"
-            "--glob" "!noagenda/**"
-            "--glob" "!*archive*")))
-
 (hookgen doom-after-init-hook
   (setq my-stim-collection (my-stim-collection-generate)))
 
