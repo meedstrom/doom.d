@@ -97,6 +97,25 @@ scanned."
                                  winner-mode
                                  ws-butler-global-mode))
 
+  (require 'lintorg)
+  (setq lintorg-buffer-hook '(lintorg-buffer/check-link-brackets
+                              lintorg-buffer/check-link-types
+                              lintorg-buffer/assert-uuid-ids
+                              lintorg-buffer/seek-broken-syntax
+                              lintorg-buffer/seek-broken-tags))
+  (setq lintorg-subtree-hook '(lintorg-subtree/seek-broken-tags
+                               lintorg-assert-lowercase-tags
+                               lintorg-assert-roam-refs-all-unquoted
+                               lintorg-assert-created
+                               lintorg-assert-created-is-proper-timestamp))
+  (add-hook 'lintorg-front-matter-hook
+            (defun my-ensure-publishability-info ()
+              (unless (-intersection (org-get-tags)
+                                     (append '("pub")
+                                             my-tags-for-hiding
+                                             my-tags-to-avoid-uploading))
+                (lintorg-warn "No tag that indicates publishability"))))
+
   ;; For hygiene, ensure that this subordinate emacs syncs nothing to disk
   (eager-state-preempt-kill-emacs-hook-mode 0)
   (setq kill-emacs-hook nil)
@@ -225,42 +244,40 @@ through to `org-html-publish-to-html'."
              (pageid (-last-item (split-string pub-dir "/" t)))
              (hidden (not (null (-intersection my-tags-for-hiding tags))))
              (metadata
-              (list
-               (cons 'pageid pageid)
-               (cons 'tags tags)
-               (cons 'hidden hidden)
-               (cons 'created created)
-               (cons 'createdFancy created-fancy) ;; JS camelCase
-               (cons 'updated updated)
-               (cons 'updatedFancy updated-fancy)
-               (cons 'slug (string-replace pub-dir "" html-path))
-               (cons 'description (car (map-elt keywords "SUBTITLE")))
-               (cons 'title (if (member "daily" tags)
-                                created-fancy
-                              (->> (org-get-title)
-                                   (string-replace "---" "—")
-                                   (string-replace "--" "–"))))
-               (cons 'wordcount
-                     (save-excursion
-                       (cl-loop
-                        while (re-search-forward my-org-text-line-re nil t)
-                        if (and (eq (preceding-char) ?*)
-                                (member "noexport" (org-get-tags)))
-                        ;; Don't count words under hidden subtrees
-                        do (org-next-visible-heading 1)
-                        else sum (count-words (point) (line-end-position)))))
-               (cons 'linkcount
-                     (save-excursion
-                       (cl-loop
-                        while (re-search-forward org-link-bracket-re nil t)
-                        if (member "noexport" (org-get-tags))
-                        do (org-next-visible-heading 1)
-                        else count t)))))
+              (list :pageid pageid
+                    :tags tags
+                    :hidden hidden
+                    :created created
+                    :createdFancy created-fancy ;; JS camelCase
+                    :updated updated
+                    :updatedFancy updated-fancy
+                    :slug (string-replace pub-dir "" html-path)
+                    :description (car (map-elt keywords "SUBTITLE"))
+                    :title (if (member "daily" tags)
+                               created-fancy
+                             (->> (org-get-title)
+                                  (string-replace "---" "—")
+                                  (string-replace "--" "–")))
+                    :wordcount
+                    (save-excursion
+                      (cl-loop
+                       while (re-search-forward my-org-text-line-re nil t)
+                       if (and (eq (preceding-char) ?*)
+                               (member "noexport" (org-get-tags)))
+                       ;; Don't count words under hidden subtrees
+                       do (org-next-visible-heading 1)
+                       else sum (count-words (point) (line-end-position))))
+                    :linkcount
+                    (save-excursion
+                      (cl-loop
+                       while (re-search-forward org-link-bracket-re nil t)
+                       if (member "noexport" (org-get-tags))
+                       do (org-next-visible-heading 1)
+                       else count t))))
              ;; Final "post object" for use by blog
              (post (append metadata
-                           (list
-                            (cons 'content (my-customize-the-html
-                                            html-path metadata)))))
+                           (list :content (my-customize-the-html
+                                           html-path metadata))))
              (uuid (org-id-get)))
         ;; Write JSON object
         (with-temp-file (concat "/tmp/roam/json/" pageid)
@@ -278,7 +295,6 @@ through to `org-html-publish-to-html'."
   (if (f-empty-p html-path)
       ""
     (let ((dom (with-temp-buffer
-                 (buffer-disable-undo)
                  (insert-file-contents html-path)
                  ;; Give the ToC div a class and remove its pointless inner div
                  (when (re-search-forward "^<div id=\"table-of-contents\".*?>" nil t)
@@ -331,9 +347,8 @@ through to `org-html-publish-to-html'."
             (when target-tags
               (dom-set-attribute anchor 'class (string-join target-tags " ")))
             ;; https://www.w3.org/TR/dpub-aria-1.0/#doc-backlink
-            (let-alist metadata
-              (when (string-blank-p (car (split-string href "#")))
-                (dom-set-attribute anchor 'role "doc-backlink")))
+            (when (string-blank-p (car (split-string href "#")))
+              (dom-set-attribute anchor 'role "doc-backlink"))
             ;; Remember the short-ID for a collision-check later on
             (push uuid? (gethash shortid my-ids))))
 
@@ -353,7 +368,7 @@ through to `org-html-publish-to-html'."
             (dom-remove-node anchor desc)))
 
       ;; Fix IDs for sections and add self-links next to their headings
-      (let-alist metadata
+      (let-alist (kvplist->alist metadata)
         (cl-loop
          for section in (dom-by-tag dom 'section)
          as id = (string-replace "outline-container-" ""

@@ -276,7 +276,7 @@ matches PAGE-ID anyway (i.e. it's a file-level id)"
 </feed>")))
 
 (defun my-make-atom-entry (post uuid)
-  (let-alist post
+  (let-alist (kvplist->alist post)
     (let ((content-for-feed
            (with-temp-buffer
              (buffer-disable-undo)
@@ -291,129 +291,28 @@ matches PAGE-ID anyway (i.e. it's a file-level id)"
                (while (re-search-forward re nil t)
                  (replace-match (match-string 1)))
                (buffer-string)))))
-      (concat "\n<entry>"
-              "\n<title>" .title "</title>"
-              "\n<link href=\""
-              "https://edstrom.dev/" .pageid "/" .slug
-              "\" />"
-              "\n<id>urn:uuid:" uuid "</id>"
-              "\n<published>" .created "T12:00:00Z</published>"
-              (if .updated
-                  (concat "\n<updated>" .updated "T12:00:00Z</updated>")
-                "")
-              ;; With type="xhtml", we don't have to entity-escape unicode
-              ;; (https://validator.w3.org/feed/docs/atom.html#text)
-              "\n<content type=\"xhtml\">"
-              "\n<div xmlns=\"http://www.w3.org/1999/xhtml\">\n"
-              content-for-feed
-              "\n</div>"
-              "\n</content>"
-              "\n</entry>"))))
+      (concat
+       "\n<entry>"
+       "\n<title>" .title "</title>"
+       "\n<link href=\"" "https://edstrom.dev/" .pageid "/" .slug "\" />"
+       "\n<id>urn:uuid:" uuid "</id>"
+       "\n<published>" .created "T12:00:00Z</published>"
+       (if .updated
+           (concat "\n<updated>" .updated "T12:00:00Z</updated>")
+         "")
+       ;; With type="xhtml", we don't have to entity-escape unicode
+       ;; (https://validator.w3.org/feed/docs/atom.html#text)
+       "\n<content type=\"xhtml\">"
+       "\n<div xmlns=\"http://www.w3.org/1999/xhtml\">\n"
+       content-for-feed
+       "\n</div>"
+       "\n</content>"
+       "\n</entry>"))))
 
 
 ;;; Validator
 
-(defun my-locate-warn (problem)
-  (warn "%s in %s:%d" problem (buffer-file-name) (line-number-at-pos)))
 
-(defun my-validate-org-buffer ()
-  (interactive)
-  (let ((file (buffer-file-name))
-        (bufdata (list `((buftags . ,(-flatten (org-get-buffer-tags)))))))
-    ;; Look for wrong amounts of brackets
-    (goto-char (point-min))
-    (while-let ((pos (search-forward "[[id:" nil t)))
-      (when (looking-back (rx (literal "[[[id:")))
-        (my-locate-warn "triple brackets"))
-      (unless (org-uuidgen-p (buffer-substring pos (1- (search-forward "]"))))
-        (my-locate-warn "not proper UUID"))
-      (goto-char pos)
-      (unless (re-search-forward (rx (*? (not (any "[]"))) "]["
-                                     (*? (not (any "[]"))) "]]")
-                                 (line-end-position) t)
-        (my-locate-warn "weird brackets")))
-    (goto-char (point-min))
-    (while (re-search-forward org-link-any-re nil t)
-      (unless (string-match-p
-               "\\(?:id:\\|http://\\|https://\\|file:\\|ftp://\\|info:\\)"
-               (match-string 0))
-        (my-locate-warn "disallowed link type")))
-    (my-assert-own-line ":end:")
-    (my-assert-own-line ":properties:")
-    (my-assert-own-line "#\\+end_src")
-    (my-assert-own-line "#\\+end_quote")
-    ;; check file-level metadata
-    (goto-char (point-min))
-    (my-validate-org-entry bufdata)
-    ;; check each subtree that is its own roam node
-    (goto-char (point-min))
-    (while (not (eobp))
-      (outline-next-heading)
-      (when (org-id-get)
-        (my-validate-org-entry bufdata)))
-    (goto-char (point-min))
-    (unless (progn (re-search-forward (rx bol "#+filetags:"))
-                   (re-search-forward " +:.+?:$" (line-end-position)))
-      (my-locate-warn "Tags may not be correctly wrapped in colons"))
-    (unless (-intersection (org-get-tags) (append '("pub")
-                                                  my-tags-for-hiding
-                                                  my-tags-to-avoid-uploading))
-      (my-locate-warn "No tag that indicates publishability"))))
-
-(defun my-validate-org-entry (bufdata)
-  "Validate entry at point, or file-level metadata if point is
- not under a heading."
-  (let ((is-file-level-entry (not (org-get-heading)))
-        (id (org-id-get))
-        (title (or (org-get-heading) (org-get-title)))
-        (created (org-entry-get nil "created"))
-        (refs (org-entry-get nil "roam_refs"))
-        (tags (org-get-tags))
-        (buftags (alist-get 'buftags bufdata)))
-    (unless id (my-locate-warn "No id"))
-    (unless (org-uuidgen-p id) (my-locate-warn "Org-id is not an UUID"))
-    (unless title (my-locate-warn "No title"))
-    (unless created (my-locate-warn "No CREATED property"))
-    (unless tags (my-locate-warn "No tags"))
-    (let ((case-fold-search nil))
-      (unless (not (string-match-p "[[:upper:]]" (string-join tags)))
-        (my-locate-warn "Uppercase in tag found")))
-    (dolist (tag tags)
-      (when (--any-p (and (not (= (length it) (length tag)))
-                          (or (string-search it tag)
-                              (string-search tag it)))
-                     buftags)
-        (my-locate-warn "A tag is a substring of another tag (lost colon?)")))
-    (when (and created (not (string-blank-p created)))
-      (unless (my-iso-datestamp-p (substring created 1 -1))
-        (my-locate-warn "Property CREATED is not proper datestamp")))
-    (when (and refs (string-search "\"" refs))
-      (my-locate-warn "Quote-sign in roam_refs"))
-    (let ((filetag-line (save-excursion
-                          (goto-char (point-min))
-                          (search-forward "#+filetags")
-                          (buffer-substring (line-beginning-position) (line-end-position)))))
-      (when is-file-level-entry
-        (setq title filetag-line))
-      ;; try to catch broken tags like "noexport:"
-      (when (string-match-p (rx " " alnum (+? (not " ")) ":" eol)
-                            title)
-        (my-locate-warn "Possible broken tag"))
-      ;; try to catch broken tags like ":noexport"
-      (when (string-match-p (rx " :" (+? (not " ")) (not ":") (*? space) eol)
-                            title)
-        (my-locate-warn "Possible broken tag")))))
-
-;; TODO Scan thru all the body text for line that looks like e.g. ^:end:$
-;; but is "off by one".
-(defun my-assert-own-line (str)
-  ;; Match ^:end: that has more text on the same line
-  ;; Match :end:$ that isn't on its own line
-  (while (search-forward str nil t)
-    (when (xor (looking-at-p ".")
-               (progn (goto-char (match-beginning 0))
-                      (looking-back "[^ \n]")))
-      (my-locate-warn (concat str " not on own line")))))
 
 
 ;;; Patches

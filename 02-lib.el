@@ -355,6 +355,16 @@ so the result is always that long or longer."
   (org-id-get-create)
   (org-set-property "CREATED" (format-time-string "[%F]")))
 
+
+;; (defun lintorg--num-and-positive-p (num?)
+;;   (and (numberp num?) (> num? 0)))
+
+;; (defun lintorg--parseable-as-timestamp-p (str)
+;;   "I think this works, but I haven't verified all cases."
+;;   (if (stringp str)
+;;       (seq-find #'lintorg--num-and-positive-p (parse-time-string str))
+;;     (error "Expected time string, but got not even a string: %s" str)))
+
 (defun my-positive-number-p (num?)
   (and (numberp num?)
        (> num? 0)))
@@ -1261,6 +1271,7 @@ until the program finishes."
   `(with-temp-buffer
      (call-process ,program nil (current-buffer) nil ,@args)
      (buffer-string)))
+
 
 (defvar my-spawn-process-hook nil)
 (defun my-spawn-process (command)

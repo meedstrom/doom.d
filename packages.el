@@ -13,6 +13,8 @@
 (package! massmapper :type 'local :recipe (:host github :repo "meedstrom/massmapper" :depth full))
 (package! deianira :type 'local :recipe (:host github :repo "meedstrom/deianira" :depth full))
 (package! eager-state :type 'local :recipe (:host github :repo "meedstrom/eager-state" :depth full))
+;; (package! quickroam :type 'local :recipe (:host github :repo "meedstrom/quickroam" :depth full))
+;; (package! lintorg :type 'local :recipe (:host github :repo "meedstrom/lintorg" :depth full))
 (package! inline-anki :type 'local :recipe (:host github :repo "meedstrom/inline-anki" :depth full))
 (package! eva
   :type 'local
@@ -27,6 +29,8 @@
 (package! doom-snippets :disable t) ;; doom's yasnippets
 
 ;; The rest
+(package! org-super-links :recipe (:host github :repo "toshism/org-super-links"))
+(package! orgrr :recipe (:host github :repo "rtrppl/orgrr"))
 (package! academic-phrases)
 (package! apheleia)
 (package! app-launcher :recipe (:host github :repo "SebastienWae/app-launcher"))
