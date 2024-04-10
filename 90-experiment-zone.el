@@ -1,5 +1,101 @@
 ;; Experiment zone -*- lexical-binding: t; -*-
 
+;; BUG with subtree-re in progymnasmata.org: reports wrong line numbers
+;; https://github.com/BurntSushi/ripgrep/issues/2420
+
+(defun quickroam-node-by-id (id)
+  (cl-loop for node being the hash-values of quickroam-cache
+           when (equal id (plist-get node :id))
+           return node))
+
+:properties:
+:id: 2396483274129083
+:end:
+
+:properties:
+:id: 4353405235235253
+:end:
+
+:properties:
+:id: 1353405235235250
+:end:
+
+:properties:
+:id: 0353405235235251
+:end:
+
+;; Should probably use org-ql, not ripgrep directly.
+;;
+;; Anyway, this proof of concept shows that a naive ripgrep approach would
+;; limit me to just storing the line-number where a link was found.  Can't
+;; detect the local subtree.
+(defun quickroam-seek-backlinks ()
+  (interactive)
+  (cl-letf ((cache-keyed-by-id
+             (cl-loop for v being the hash-values of quickroam-cache
+                      
+                      ))))
+  (let ((results (apply #'quickroam--program-output "rg"
+                        `("--line-number"
+                          "--only-matching"
+                          "--replace" "$1"
+                          ,@quickroam-extra-rg-args
+                          "\\[\\[id:(.+?)\\]"))))
+    (dolist (line (string-split results "\n" t))
+      (let* ((splits (string-split line ":"))
+             (file (pop splits))
+             (lnum (pop splits))
+             (id (string-join splits)))
+        (cl-letf ((node (gethash id quickroam-cache)))
+          (push (list :id id
+                      :file file
+                      :line-number lnum
+                      :heading nil)
+                (plist-get node :backlinks)))))))
+
+(defvar quickroam-subtree-ids)
+
+(defvar quickroam-subtree)
+
+(defun quickroam-resolve-backlinks ()
+  (interactive)
+  (require 'kv)
+  ;; let-alist (kvplist->alist node)
+  (dolist ((node (hash-table-values quickroam-cache)))
+    (cl-loop
+     for (file . backlinks) in (--group-by (plist-get it :file)
+                                           (plist-get node :backlinks))
+     do (org-roam-with-file (expand-file-name file org-roam-directory) nil
+          (cl-loop
+           for backlink in backlinks
+           do (progn
+                (goto-line (plist-get backlink :line-number))
+                (if-let ((localmost-node (org-roam-node-at-point)))
+                    (progn
+                      (goto-char (org-roam-node-point localmost-node))
+                      (org-heading-components)
+                      )
+
+                  )
+                )
+           )
+          )
+     )
+    ))
+
+;; To find:
+;; file-level nodes
+;; subtree nodes
+;; links and the "surrounding" node
+;; - 3 sorts of links: id-links, non-id links, and citations
+;;
+;; and for nodes, see the struct type `org-roam-node'.
+;;  should get tags, todo state, all properties, scheduled, olp, level...
+;;
+;; See `org-roam-db-table-schemata'!.
+(org-ql)
+
+
 (hookgen doom-after-init-hook
   (setq my-stim-collection (my-stim-collection-generate)))
 

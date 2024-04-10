@@ -10,6 +10,8 @@
   :hook ((text-mode elfeed-show-mode eww-mode shr-mode) . iscroll-mode))
 (use-package! nov
   :mode ("\\.epub\\'" . nov-mode))
+(use-package quickroam
+  :hook (org-mode . quickroam-enable))
 
 (setopt helpful-max-buffers nil) ;; what's the point of killing buffers
 (setopt iflipb-wrap-around t)
@@ -19,9 +21,6 @@
 (setopt calibredb-root-dir "~/Calibre Library/")
 (setopt calibredb-db-dir (expand-file-name "metadata.db" calibredb-root-dir))
 (setopt calibredb-format-width 8)
-
-(use-package quickroam
-  :hook (org-mode-hook . quickroam-enable))
 
 ;; (after! quickroam
 ;;   (setopt quickroam-extra-rg-args
