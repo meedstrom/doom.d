@@ -1,28 +1,68 @@
 ;; Experiment zone -*- lexical-binding: t; -*-
 
-;; BUG with subtree-re in progymnasmata.org: reports wrong line numbers
-;; https://github.com/BurntSushi/ripgrep/issues/2420
+;; Yep it's slow.  I see why org-roam-db-sync is slow - it's actually kind of
+;; fast for what it does.
+(defun quickroam-resolve-backlinks ()
+  "Using ripgrep, find all backlinks to current file."
+  (interactive)
+  (unless (org-roam-file-p)
+    (error "Not an org-roam file %s" (buffer-name)))
+  (let ((heading-ids-in-file nil)
+        (backlinks nil)
+        (default-directory org-roam-directory))
+    (save-excursion
+      (goto-char (point-min))
+      (while (not (eobp))
+        (when (org-roam-db-node-p)
+          (push (org-id-get) heading-ids-in-file))
+        (outline-next-heading)))
+    (dolist (id heading-ids-in-file)
+      (let* ((rg-result (apply #'quickroam--program-output "rg"
+                               `("--line-number"
+                                 "--no-heading"
+                                 "--with-filename"
+                                 "--only-matching"
+                                 "--replace" ""
+                                 ,@quickroam-extra-rg-args
+                                 ,(concat "\\[\\[id:" id "\\]"))))
+             (file-lnum-alist (--map (string-split it ":" t)
+                                     (string-split rg-result "\n" t)))
+             (by-file (-group-by #'car file-lnum-alist))
+             (n-files (length by-file))
+             (ctr 0))
+        (dolist (data by-file)
+          (org-roam-with-file (expand-file-name (car data) org-roam-directory) nil
+            ;; (message "Visiting... (%d/%d) %s" (cl-incf ctr) n-files (car data))
+            (cl-loop
+             for lnum in (cdadr data)
+             do (progn
+                  (goto-line (string-to-number lnum))
+                  (org-back-to-heading-or-point-min)
+                  (cl-loop until (or (bobp) (org-roam-db-node-p))
+                           do (org-roam-up-heading-or-point-min))
+                  (push (list :src-title (if (org-before-first-heading-p)
+                                             (org-get-title)
+                                           (nth 4 (org-heading-components)))
+                              :src-id (org-id-get))
+                        backlinks)))))))
+    (message "%s" backlinks)))
 
-(defun quickroam-node-by-id (id)
+
+;;; Crap
+
+(defvar qic (make-hash-table :test #'equal))
+(defun qic-make ()
+  (interactive)
+  (clrhash qic)
   (cl-loop for node being the hash-values of quickroam-cache
-           when (equal id (plist-get node :id))
-           return node))
+           do (progn ;; (plist-put node :backlinks nil)
+                (puthash (plist-get node :id) node qic))))
 
-:properties:
-:id: 2396483274129083
-:end:
-
-:properties:
-:id: 4353405235235253
-:end:
-
-:properties:
-:id: 1353405235235250
-:end:
-
-:properties:
-:id: 0353405235235251
-:end:
+(defun qic-peek ()
+  (interactive)
+  (let ((rows (hash-table-values qic)))
+    (dotimes (_ 4)
+      (print (nth (random (length rows)) rows)))))
 
 ;; Should probably use org-ql, not ripgrep directly.
 ;;
@@ -31,70 +71,53 @@
 ;; detect the local subtree.
 (defun quickroam-seek-backlinks ()
   (interactive)
-  (cl-letf ((cache-keyed-by-id
-             (cl-loop for v being the hash-values of quickroam-cache
-                      
-                      ))))
-  (let ((results (apply #'quickroam--program-output "rg"
-                        `("--line-number"
-                          "--only-matching"
-                          "--replace" "$1"
-                          ,@quickroam-extra-rg-args
-                          "\\[\\[id:(.+?)\\]"))))
+  (let* ((default-directory org-roam-directory)
+         (results (apply #'quickroam--program-output "rg"
+                         `("--line-number"
+                           "--only-matching"
+                           "--replace" "$1"
+                           ,@quickroam-extra-rg-args
+                           "\\[\\[id:(.+?)\\]"))))
     (dolist (line (string-split results "\n" t))
       (let* ((splits (string-split line ":"))
              (file (pop splits))
              (lnum (pop splits))
              (id (string-join splits)))
-        (cl-letf ((node (gethash id quickroam-cache)))
-          (push (list :id id
-                      :file file
-                      :line-number lnum
-                      :heading nil)
-                (plist-get node :backlinks)))))))
+        (if (gethash id qic)
+            (push (list :src-file file
+                        :src-lnum (string-to-number lnum)
+                        :src-title nil
+                        :src-id nil)
+                  (plist-get (gethash id qic) :backlinks))
+          (message "not found %s" id))))))
 
-(defvar quickroam-subtree-ids)
-
-(defvar quickroam-subtree)
-
-(defun quickroam-resolve-backlinks ()
+(defun quickroam-resolve-backlinks* ()
   (interactive)
-  (require 'kv)
-  ;; let-alist (kvplist->alist node)
-  (dolist ((node (hash-table-values quickroam-cache)))
-    (cl-loop
-     for (file . backlinks) in (--group-by (plist-get it :file)
-                                           (plist-get node :backlinks))
-     do (org-roam-with-file (expand-file-name file org-roam-directory) nil
-          (cl-loop
-           for backlink in backlinks
-           do (progn
-                (goto-line (plist-get backlink :line-number))
-                (if-let ((localmost-node (org-roam-node-at-point)))
-                    (progn
-                      (goto-char (org-roam-node-point localmost-node))
-                      (org-heading-components)
-                      )
+  (let ((all-backlinks (--mapcat (plist-get it :backlinks)
+                                 (hash-table-values qic))))
+    (dolist (node (hash-table-values qic))
+      (cl-loop
+       for (file . backlinks) in (--group-by (plist-get it :src-file)
+                                             all-backlinks)
+       do (org-roam-with-file (expand-file-name file org-roam-directory) nil
+            (message "Visiting... %s" file)
+            (cl-loop
+             for backlink in backlinks
+             do (progn
+                  (cl-letf ((push-mark #'ignore)
+                            (set-mark #'ignore))
+                    (goto-line (plist-get backlink :src-lnum))
+                    (org-back-to-heading-or-point-min)
+                    (cl-loop until (or (org-roam-db-node-p) (bobp))
+                             do (org-roam-up-heading-or-point-min)))
+                  (plist-put backlink :src-title
+                             (if (org-before-first-heading-p)
+                                 (org-get-title)
+                               (nth 4 (org-heading-components))))
+                  (plist-put backlink :src-id (org-id-get)))))))))
 
-                  )
-                )
-           )
-          )
-     )
-    ))
-
-;; To find:
-;; file-level nodes
-;; subtree nodes
-;; links and the "surrounding" node
-;; - 3 sorts of links: id-links, non-id links, and citations
+
 ;;
-;; and for nodes, see the struct type `org-roam-node'.
-;;  should get tags, todo state, all properties, scheduled, olp, level...
-;;
-;; See `org-roam-db-table-schemata'!.
-(org-ql)
-
 
 (hookgen doom-after-init-hook
   (setq my-stim-collection (my-stim-collection-generate)))
@@ -223,100 +246,6 @@ If FORCE, force a rebuild of the cache from scratch."
              (org-roam-db-clear-file file)
              (lwarn 'org-roam :error "Failed to process %s with error %s, skipping..."
                     file (error-message-string err)))))))))
-
-;; Try to implement a timeout
-
-;; (after! org-roam
-;;   (defun org-roam-file-p (&optional file)
-;;     "Return t if FILE is an Org-roam file, nil otherwise.
-;; If FILE is not specified, use the current buffer's file-path.
-
-;; FILE is an Org-roam file if:
-;; - It's located somewhere under `org-roam-directory'
-;; - It has a matching file extension (`org-roam-file-extensions')
-;; - It doesn't match excluded regexp (`org-roam-file-exclude-regexp')"
-;;     (setq file (or file (buffer-file-name (buffer-base-buffer))))
-;;     (when file
-;;       (save-match-data
-;;         (let* ((relative-path (file-relative-name file org-roam-directory))
-;;                (ext (org-roam--file-name-extension file))
-;;                (ext (if (or (string= ext "gpg")
-;;                             (string= ext "age"))
-;;                         (org-roam--file-name-extension (file-name-sans-extension file))
-;;                       ext))
-;;                (org-roam-dir-p (org-roam-descendant-of-p file org-roam-directory))
-;;                (valid-file-ext-p (member ext org-roam-file-extensions))
-;;                (match-exclude-regexp-p
-;;                 (cond
-;;                  ((not org-roam-file-exclude-regexp) nil)
-;;                  ((stringp org-roam-file-exclude-regexp)
-;;                   (string-match-p org-roam-file-exclude-regexp relative-path))
-;;                  ((listp org-roam-file-exclude-regexp)
-;;                   (let (is-match)
-;;                     (dolist (exclude-re org-roam-file-exclude-regexp)
-;;                       (setq is-match (or is-match (string-match-p exclude-re relative-path))))
-;;                     is-match))))
-;;                (top-level-exclude-p
-;;                 (with-temp-buffer
-;;                   (insert-file-contents file)
-;;                   ;; Bound the search to before the first heading
-;;                   (let ((end (re-search-forward "\n *\\*" nil t)))
-;;                     (goto-char (point-min))
-;;                     (re-search-forward "^ *:roam_exclude: +t$" end t))))
-;;                (has-title-p
-;;                 (with-temp-buffer
-;;                   (insert-file-contents file)
-;;                   (search-forward "\n#+title" nil t))))
-;;           (and
-;;            file
-;;            org-roam-dir-p
-;;            valid-file-ext-p
-;;            (not match-exclude-regexp-p)
-;;            has-title-p
-;;            (not top-level-exclude-p)))))))
-
-
-
-;; (let ((then (current-time))
-;;       (retry t))
-;;   (while retry
-;;     (if (eq 'done (while-no-input
-;;                     (my-org-roam-db-try-update content-hash)))
-;;         (setq retry nil)
-;;       (when (> (float-time (time-since then)) 10)
-;;         (warn "Timed out processing file %s" file-path)))))
-
-;; (defun my-org-roam-db-try-update (content-hash)
-;;   (emacsql-with-transaction (org-roam-db)
-;;     (org-with-wide-buffer
-;;      ;; please comment why
-;;      (org-set-regexps-and-options 'tags-only)
-;;      ;; Maybe not necessary anymore
-;;      ;; 2021 https://github.com/org-roam/org-roam/issues/1844
-;;      ;; 2023 https://code.tecosaur.net/tec/org-mode/commit/5ed3e1dfc3e3bc6f88a4300a0bcb46d23cdb57fa
-;;      ;; (org-refresh-category-properties)
-;;      (org-roam-db-clear-file)
-;;      (org-roam-db-insert-file content-hash)
-;;      (org-roam-db-insert-file-node)
-;;      ;; please comment why
-;;      (setq org-outline-path-cache nil)
-;;      (org-roam-db-map-nodes
-;;       (list #'org-roam-db-insert-node-data
-;;             #'org-roam-db-insert-aliases
-;;             #'org-roam-db-insert-tags
-;;             #'org-roam-db-insert-refs))
-;;      (setq org-outline-path-cache nil)
-;;      (setq info (org-element-parse-buffer))
-;;      (org-roam-db-map-links
-;;       (list #'org-roam-db-insert-link))
-;;      (when (featurep 'oc)
-;;        (org-roam-db-map-citations
-;;         info
-;;         (list #'org-roam-db-insert-citation)))))
-;;   'done)
-
-;; (setq counsel-ffdata-database-path "/home/me/.mozilla/firefox/wrki7yvc.dev-edition-default/places.sqlite")
-;; (setq helm-firefox-bookmark-user-directory "/home/me/.mozilla/firefox/wrki7yvc.dev-edition-default/")
 
 ;; ;; Fix
 ;; (defun helm-get-firefox-user-init-dir (directory)

@@ -18,6 +18,7 @@
 
 (require 'eager-state)
 (eager-state-preempt-kill-emacs-hook-mode)
+(advice-add #'kill-emacs :before (lambda (&rest _) (setq kill-emacs-hook nil)))
 
 (use-package circadian
   :disabled

@@ -4,6 +4,7 @@
 
 ;; Don't seek "roam:" links (slows saving)
 (setopt org-roam-link-auto-replace nil)
+(setopt org-roam-db-update-on-save nil)
 
 ;; I didn't realize for the longest time, but Logseq's logseq/ subdirectory has
 ;; a lot of backups ending in ".org", adding to the sync time.
@@ -16,87 +17,23 @@
 ;; NOTE: `setopt' breaks it, use `setq'
 (setq org-roam-db-gc-threshold (* 4 1024 1024 1024)) ;; 4 GiB
 
-;; Make the commands `org-roam-node-find' & `org-roam-node-insert' instant.
-;; Drawback: new notes won't be visible until it auto-refreshes the cached
-;; value after 10s of idle.  TODO: Integrate with consult-org-roam.
-
-(defun my-vulpea-memo-refresh ()
-  (memoize-restore #'vulpea-db-query)
-  (memoize         #'vulpea-db-query)
-  (vulpea-db-query nil))
-
-(let ((timer (timer-create)))
-  (defun my-vulpea-memo-schedule (&rest _)
-    "Schedule a re-caching for when the user is idle."
-    (cancel-timer timer)
-    (setq timer (run-with-idle-timer 4 nil #'my-vulpea-memo-refresh))))
-
-;; Perf lifesaver  https://github.com/d12frosted/vulpea
-(use-package vulpea
-  :disabled
-  :hook ((org-roam-db-autosync-mode . vulpea-db-autosync-enable))
-  :bind (([remap org-roam-node-find] . vulpea-find)
-         ([remap org-roam-node-insert] . vulpea-insert))
-  :config
-  ;; why the FUCK can't i just eval the use-package form and trust in the :bind
-  ;; clause to work?  seems it has no effect if the package has already loaded.
-  ;; and to bind the bindings anyway in a running session, i have to type so
-  ;; much to turn my :bind clauses into proper define-key expressions. this
-  ;; shit is the worst thing about use-package.
-  ;;
-  ;; i need to be able to eval it repeatedly while hacking on it, it should
-  ;; never be a no-op!  or it should at least message in loud letters "I DIDNT
-  ;; ACTUALLY DO ANYTHING, please call my manager and have me fired"!  stupid
-  ;;
-  ;; the no-op behavior would be acceptable if it applied to :init/:config
-  ;; since you can just place point on those sexps and eval them manually, but
-  ;; you CANNOT eval the :bind clause or the :hook clause or...  but ironically
-  ;; it seems that :config does execute but :bind doesn't...
-  ;;
-  ;; (define-key global-map [remap org-roam-node-find] #'vulpea-find)
-  ;; (define-key global-map [remap org-roam-node-insert] #'vulpea-insert)
-  (use-package memoize :demand)
-  (memoize #'vulpea-db-query)
-  (advice-add 'org-roam-db-update-file :after #'my-vulpea-memo-schedule))
-
-
-;;; The same memoize solution without vulpea
-
-(defun my-roam-memo-refresh ()
-  (memoize-restore #'org-roam-node-read--completions)
-  (memoize #'org-roam-node-read--completions)
-  (org-roam-node-read--completions nil nil))
-;; (my-roam-memo-refresh)
-
-(let ((timer1 (timer-create))
-      (timer2 (timer-create)))
-  (defun my-roam-memo-schedule (&rest _)
-    "Schedule a re-caching for when the user is idle."
-    (cancel-timer timer1)
-    (cancel-timer timer2)
-    ;; (setq timer1 (run-with-idle-timer 7 nil #'org-roam-db-sync))
-    (setq timer2 (run-with-idle-timer 10 nil #'my-roam-memo-refresh))))
-
 (after! org-roam
-  ;; Org-roam source ends up below recentf in consult-buffer, no me gusta.
+  ;; Org-roam completion source ends up shown below the massive recentf source
   ;; (consult-org-roam-mode)
-
-  (use-package memoize :demand)
-  (memoize #'org-roam-node-read--completions)
   
   (org-roam-db-autosync-mode)
-  ;; (advice-add 'org-roam-db-update-file :after #'my-roam-memo-schedule)
-  (setopt org-roam-db-update-on-save nil)
+
 
   ;; Because `org-roam-db-autosync-mode' is very slow saving large files,
   ;; set up only the other relevant things that it would have set up.
-  (add-hook 'org-mode-hook
-            (defun my-roam-setup ()
-              (when (org-roam-file-p)
-                (org-roam--register-completion-functions-h)
-                (add-hook 'post-command-hook #'org-roam-buffer--redisplay-h 0 t)
-                ;; (add-hook 'after-save-hook #'my-roam-memo-schedule 0 t)
-                ))))
+  ;; (add-hook 'org-mode-hook
+  ;;           (defun my-roam-setup ()
+  ;;             (when (org-roam-file-p)
+  ;;               (org-roam--register-completion-functions-h)
+  ;;               (add-hook 'post-command-hook #'org-roam-buffer--redisplay-h 0 t)
+  ;;               ;; (add-hook 'after-save-hook #'my-roam-memo-schedule 0 t)
+  ;;               )))
+  )
 
 
 
